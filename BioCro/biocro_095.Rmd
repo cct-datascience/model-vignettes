@@ -117,3 +117,52 @@ canopy_morelayers$CanopyAssim
 canopy_fewlayers$CanopyTrans
 canopy_morelayers$CanopyTrans
 ```
+
+## Determine biomass partitioning
+
+The function `OpBioGro` is used to estimate the proportion of biomass in each of five parts of the plant throughout six phenological stages. The first input this function requires is weather data, including solar radiation, temperature, relative humidity, wind speed, and precipitation, at hourly time steps. We use here a built-in dataset from the `BioCro` package. The second input is the biomass of the different plant parts across thermal temperature; an example dataset is generated below. 
+
+```{r}
+data(weather05)
+weather_data <- weather05
+biomass_data = data.frame(
+    ThermalT = c(0.21088112958955, 431.522425672787, 1005.62149992847,
+                 1644.3961341225, 2293.29763493264, 2877.88197263589,
+                 3414.94836181958, 3746.93356347913),
+        Stem = c(0.007329, 1.04151488848428, 5.11942776350724,
+                 7.81286730821308, 11.0907005177492, 13.2507662405245,
+                 14.4052150630531, 14.7401303915464),
+        Leaf = c(0.001036, 0.842484261465219, 1.39383059411517,
+                 1.46256196044261, 1.47410120058506, 1.47948442902015,
+                 1.07906869265829, 0.450513028403679),
+        Root = c(0.007035, 0.112702867880121, 1.20666362376652, 1.928688377409,
+                 2.62366412192997, 3.08821592657137, 3.3414401199094,
+                 3.52726574823008),
+     Rhizome = c(6.9993, 6.58508401628827, 6.1953811812003, 6.44908010432176,
+                 8.05287028398554, 9.12491291008107, 9.70927643316885,
+                 10.1381048062166),
+       Grain = c(0, 0, 0, 0, 0, 0, 0, 0),
+         LAI = c(0.00119, 1.43168584789548, 2.3693645451772, 2.48635533275244,
+                 2.5059720409946, 2.51512352933425, 1.83441677751909,
+                 0.765872148286255)
+)
+```
+
+The input biomass data is then used to create initial guesses at what the biomass coefficients for each part of the plant at each phenological stage will be. This is done using `idbp`, and the results are checked for errors using `valid_dpb`, which are both `BioCro` functions. 
+
+```{r}
+approx_biomass_coefs <- valid_dbp(idbp(biomass_data))
+```
+
+These initial coefficients, along with the weather and biomass data, are put into `OpBioGro`, which uses both the `BioGro` and `optim` functions. The `phen` argument is set as zero to return values optimized for all six stages. Otherwise, a particular stage to optimize can be specified. 
+
+```{r, results='hide'}
+biomass_coefs <- OpBioGro(phen = 0, WetDat = weather_data, data = biomass_data, 
+                          iCoef = approx_biomass_coefs)
+```
+
+The "Optimized coefficients" table in `biomass_coefs` contains the proportions of biomass allocated to each part of the plant in each of the phenological stages. 
+
+```{r}
+biomass_coefs
+```
