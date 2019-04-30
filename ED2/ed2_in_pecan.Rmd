@@ -5,17 +5,23 @@ date: "3/25/2019"
 output:
   pdf_document: default
   html_document: default
+urlcolor: blue
 ---
 
 ## Run model
 
-The Ecosystem Demography ([ED2](https://github.com/EDmodel/ED2)) model was run using the [PEcAn VM in Virtualbox](https://pecanproject.github.io/pecan-documentation/develop/GettingStarted.html#installing-and-running-pecan). The following settings were used: 
+The Ecosystem Demography ([ED2](https://github.com/EDmodel/ED2)) model was run using the [PEcAn VM in Virtualbox](https://pecanproject.github.io/pecan-documentation/develop/GettingStarted.html#installing-and-running-pecan). Follow steps 1-5 in section 4.2.1 to get the PEcAn virtual machine installed and running, and open the web interface for PEcAn by going to `localhost:6480/pecan/` in the browser. 
+
+Click "Next" button, then specify the following settings on the next page ("Select host, model, site"): 
 
  * Host = pecan.vm
  * Model = ED2.2 (git)
  * Site Group = All Sites
  * Site = EBI Energy farm
- * PFTs
+
+Select "Next" button and select the following: 
+
+ * PFTs (use control+click to select multiple)
     1. ebifarm.c3grass
     2. ebifarm.c4crop
     3. ebifarm.forb
@@ -30,7 +36,7 @@ The Ecosystem Demography ([ED2](https://github.com/EDmodel/ED2)) model was run u
  * Thermal sums = Earth Land Surface
  * Vegetation = OGE2
 
-The configuration file ED2IN was also edited by checking the "Edit config file" box. The following three sections were changed. 
+Check "Edit model config" box to be able to edit the configuration file for the model on the next page. The file was changed to match what is below: 
 
 ```{sh, eval=FALSE}
    !---------------------------------------------------------------------------------------!

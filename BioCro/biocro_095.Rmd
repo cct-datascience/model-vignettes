@@ -2,6 +2,7 @@
 title: "Introduction to BioCro Model"
 author: "Kristina Riemer"
 output: pdf_document
+urlcolor: blue
 ---
 
 ## Purpose of model
@@ -26,7 +27,7 @@ library(BioCro)
 
 The function `BioGro` is used for this. The only required input is a year of hourly weather data. Here we're using such weather data from a site in Illinois. 
 
-This returns a list where each element is a variable resulting from the model run. This includes biomass values for different parts of the plants and leaf traits such as stomatal conductance and maximum carboxylation rate. 
+This returns a list where each element is a variable resulting from the model run. This includes biomass values for different parts of the plants and leaf traits such as stomatal conductance and maximum carboxylation rate. For a complete list of outputs, see the `Value` section of the help page for the function (`?BioGro`).
 
 ```{r}
 data(cmi04)
@@ -43,7 +44,7 @@ plot(cmi04_results)
 plot(cmi04_results, plot.kind = "cumET")
 ```
 
-Many other model parameters can be specified. For example, information about soil properties can be added. The model outputs are plotted for low and high values for the effect of water stress on leaf growth. There is not a built-in way to plot 
+Many other model parameters can be specified, see the `Arguments` section for the function (`?BioGro`). For example, information about soil properties can be added. The model outputs are plotted for low and high values for the effect of water stress on leaf growth. There is not a built-in way to plot these. 
 
 ```{r}
 low_phi <- soilParms(FieldC = 0.37, WiltP = 0.2, phi2 = 1)
