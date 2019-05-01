@@ -1,0 +1,29 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+urlcolor: blue
+---
+# (PART) Demos and Vignettes {-}
+
+# BioCro Run Using the Virtual Machine
+
+
+1. Download the **VirtualBox** application from [here](https://www.virtualbox.org/) and open the application. Additionally, download the extension pack from the [Downloads page](https://www.virtualbox.org/wiki/Downloads) under the 'VirtualBox 6.0.6 Oracle VM VirtualBox Extension Pack' section. Add the extension pack by opening VirtualBox application, going to "Preferences" -> "Extensions", clicking on the blue box with the green plus sign, and adding the downloaded .vbox-extpack file. 
+
+2. Download the PEcAn **virtual machine** .ova file from [here](opensource.ncsa.illinois.edu/projects/artifacts.php?key=PECAN) and open it from within VirtualBox by going to "File" -> "Import appliance" and selecting the .ova. Start the virtual machine by clicking on the green arrow in VirtualBox. This will bring up a new window, and the virtual machine is ready when it displays `pecan login:`. 
+
+3. Open up the **RStudio** interface to the VM by going to [localhost:6480/rstudio/
+](localhost:6480/rstudio/) in your browser. To log in, the username is `carya` and the password is `illinois`. 
+
+4. Use ssh to open up the **command line** for the VM. Do this by opening up a command line program on your computer and execute `ssh -p 6422 carya@localhost`. You will be prompted for a password with `carya@localhost's password:`. The password is `illinois`, and the letters will not appear when you type them in. 
+
+5. Create a new folder for the run results using `mkdir biocro_results`. Edit the XML to include this file path by doing `nano pecan/tests/pecan64.biocro.xml` and changing the third line from `<outdir>pecan</outdir>` to `<outdir>biocro_results</outdir>` and saving these changes. Additionally, change the 19th line from `<name>Miscanthus_x_giganteus</name>` to `<name>salix<name>` to set the PFT to one that has trait data. Do the **model run** by putting the BioCro XML file through PEcAn by executing `pecan/web/workflow.R --settings pecan/tests/pecan64.biocro.xml`. 
+
+6. Go to the RStudio instance that is open in your browser. In the file directory, there should be a new `biocro_results` folder, and you can see all the files by clicking on it. The .nc data files that are in the `out` subfolder can be **plot** in an R script, as is shown for leaf area index. 
+
+```{r, eval=FALSE}
+PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/2004.nc", "LAI")
+```
+
+![](biocro_lai_plot.png)
