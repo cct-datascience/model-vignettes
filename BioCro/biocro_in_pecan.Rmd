@@ -107,7 +107,7 @@ knitr::include_graphics("biocro_lai_vm.png")
 
 4. The second file that needs to be created is an R script that runs through all of PEcAn's functions to run the model and produce the output. Create this file by clicking on the new file button and selecting R script. Copy and paste the below text into the new script and save in the `biocro_files` folder as `workflow.R`. 
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, size="small"}
 #!/usr/bin/env Rscript
 #-------------------------------------------------------------------------------
 # Copyright (c) 2012 University of Illinois, NCSA.
@@ -213,7 +213,8 @@ if (PEcAn.utils::status.check("CONFIG") == 0){
   settings <- PEcAn.settings::read.settings(file.path(settings$outdir, 'pecan.CONFIGS.xml'))
 }
 
-if ((length(which(commandArgs() == "--advanced")) != 0) && (PEcAn.utils::status.check("ADVANCED") == 0)) {
+if ((length(which(commandArgs() == "--advanced")) != 0) && 
+    (PEcAn.utils::status.check("ADVANCED") == 0)) {
   PEcAn.utils::status.start("ADVANCED")
   q();
 }
@@ -293,7 +294,11 @@ print("---------- PEcAn Workflow Complete ----------")
 
 ```
 
-5. We will then run the newly created XML file through the R script. First create a new folder in which to store the results by executing `mkdir biocro_results` in the Terminal. Then in the Terminal run `biocro_files/workflow.R --settings biocro_files/pecan64.biocro.xml`. This will take a few minutes to finish. The last line in the console should appear as follows. 
+5. We will then run the newly created XML file through the R script. First create a new folder in which to store the results by executing `mkdir biocro_results` in the Terminal. Then in the Terminal run `biocro_files/workflow.R --settings biocro_files/pecan64.biocro.xml`. 
+
+    If this returns an error that says `Permission denied`, first run `chmod u+x biocro_files/workflow.R` in the terminal to get sufficient permissions to the newly created workflow.R file. Then reattempt running the workflow. 
+    
+    This will take a few minutes to finish. The last line in the console should appear as follows. 
 
 ```{r, eval=FALSE}
 [1] "---------- PEcAn Workflow Complete ----------"
