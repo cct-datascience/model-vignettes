@@ -1,7 +1,6 @@
 Introduction to BioCro Model
 ================
 Kristina Riemer
-May 15, 2019
 
 ## Purpose of model
 
@@ -101,7 +100,6 @@ a built-in way to plot these.
 ``` r
 low_phi <- soilParms(FieldC = 0.37, WiltP = 0.2, phi2 = 1)
 high_phi <- soilParms(FieldC = 0.37, WiltP = 0.2, phi2 = 4)
-
 cmi04_results_lowphi <- BioGro(cmi04, soilControl = low_phi)
 ```
 
@@ -150,7 +148,6 @@ varies.
 ``` r
 photosynthesis_c4_lowco2 <- c4photo(Qp = 1250, Tl = 35, RH = 0.7, Catm = 350)
 photosynthesis_c4_highco2 <- c4photo(Qp = 1250, Tl = 35, RH = 0.7, Catm = 400)
-
 photosynthesis_c4_lowco2$Assim
 ```
 
@@ -222,7 +219,6 @@ canopy_fewlayers <- CanA(lai = 3, doy = 200, hr = 12, solar = 1500, temp = 25,
                          rh = 0.7, windspeed = 2)
 canopy_morelayers <- CanA(lai = 3, doy = 200, hr = 12, solar = 1500, temp = 25, 
                           rh = 0.7, windspeed = 2, nlayers = 14)
-
 canopy_fewlayers$CanopyAssim
 ```
 
