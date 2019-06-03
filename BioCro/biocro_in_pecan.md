@@ -1,42 +1,83 @@
----
-output: github_document
-urlcolor: blue
----
 
 # BioCro Run Using the Virtual Machine
 
-1. Download the **VirtualBox** application from [here](https://www.virtualbox.org/) and open the application. Additionally, download the extension pack from the [Downloads page](https://www.virtualbox.org/wiki/Downloads) under the 'VirtualBox 6.0.6 Oracle VM VirtualBox Extension Pack' section. Add the extension pack by opening VirtualBox application, going to "Preferences" -> "Extensions", clicking on the blue box with the green plus sign, and adding the downloaded .vbox-extpack file. 
+1.  Download the **VirtualBox** application from
+    [here](https://www.virtualbox.org/) and open the application.
+    Additionally, download the extension pack from the [Downloads
+    page](https://www.virtualbox.org/wiki/Downloads) under the
+    ‘VirtualBox 6.0.6 Oracle VM VirtualBox Extension Pack’ section.
+    Add the extension pack by opening VirtualBox application, going to
+    “Preferences” -\> “Extensions”, clicking on the blue box with the
+    green plus sign, and adding the downloaded .vbox-extpack file.
 
-2. Download the PEcAn **virtual machine** .ova file from [here](opensource.ncsa.illinois.edu/projects/artifacts.php?key=PECAN) and open it from within VirtualBox by going to "File" -> "Import appliance" and selecting the .ova. Start the virtual machine by clicking on the green arrow in VirtualBox. This will bring up a new window, and the virtual machine is ready when it displays `pecan login:`. 
+2.  Download the PEcAn **virtual machine** .ova file from
+    [here](opensource.ncsa.illinois.edu/projects/artifacts.php?key=PECAN)
+    and open it from within VirtualBox by going to “File” -\> “Import
+    appliance” and selecting the .ova. Start the virtual machine by
+    clicking on the green arrow in VirtualBox. This will bring up a new
+    window, and the virtual machine is ready when it displays `pecan
+    login:`.
 
-3. Open up the **RStudio** interface to the VM by going to [localhost:6480/rstudio/
-](localhost:6480/rstudio/) in your browser. To log in, the username is `carya` and the password is `illinois`. 
+3.  Open up the **RStudio** interface to the VM by going to
+    <localhost:6480/rstudio/> in your browser. To log in, the username
+    is `carya` and the password is `illinois`.
 
-4. Use ssh to open up the **command line** for the VM. Do this by opening up a command line program on your computer and execute `ssh -p 6422 carya@localhost`. You will be prompted for a password with `carya@localhost's password:`. The password is `illinois`, and the letters will not appear when you type them in. 
+4.  Use ssh to open up the **command line** for the VM. Do this by
+    opening up a command line program on your computer and execute `ssh
+    -p 6422 carya@localhost`. You will be prompted for a password with
+    `carya@localhost's password:`. The password is `illinois`, and the
+    letters will not appear when you type them in.
 
-5. Create a new folder for the run results using `mkdir biocro_results`. Edit the XML to include this file path by doing `nano pecan/tests/pecan64.biocro.xml` and changing the third line from `<outdir>pecan</outdir>` to `<outdir>biocro_results</outdir>` and saving these changes. Additionally, change the 19th line from `<name>Miscanthus_x_giganteus</name>` to `<name>salix<name>` to set the PFT to one that has trait data. Do the **model run** by putting the BioCro XML file through PEcAn by executing `pecan/web/workflow.R --settings pecan/tests/pecan64.biocro.xml`. 
+5.  Create a new folder for the run results using `mkdir
+    biocro_results`. Edit the XML to include this file path by doing
+    `nano pecan/tests/pecan64.biocro.xml` and changing the third line
+    from `<outdir>pecan</outdir>` to `<outdir>biocro_results</outdir>`
+    and saving these changes. Additionally, change the 19th line from
+    `<name>Miscanthus_x_giganteus</name>` to `<name>salix<name>` to set
+    the PFT to one that has trait data. Do the **model run** by putting
+    the BioCro XML file through PEcAn by executing `pecan/web/workflow.R
+    --settings pecan/tests/pecan64.biocro.xml`.
 
-6. Go to the RStudio instance that is open in your browser. In the file directory, there should be a new `biocro_results` folder, and you can see all the files by clicking on it. The .nc data files that are in the `out` subfolder can be **plot** in an R script, as is shown for leaf area index. 
+6.  Go to the RStudio instance that is open in your browser. In the file
+    directory, there should be a new `biocro_results` folder, and you
+    can see all the files by clicking on it. The .nc data files that are
+    in the `out` subfolder can be **plot** in an R script, as is shown
+    for leaf area
+index.
 
-```{r, eval=FALSE}
+<!-- end list -->
+
+``` r
 PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/2004.nc", "LAI")
 ```
 
-```{r, echo=FALSE, out.width="400px"}
-knitr::include_graphics("biocro_lai_vm.png")
-```
+<img src="biocro_lai_vm.png" width="400px" />
 
-# BioCro Run Using University of Arizona's RStudio Instance
+# BioCro Run Using University of Arizona’s RStudio Instance
 
-1. Access RStudio in a browser by navigating to [welsch.cyverse.org:8787/](welsch.cyverse.org:8787/). Log in using your username and password, which can be requested [here](). 
+1.  Access RStudio in a browser by navigating to
+    <welsch.cyverse.org:8787/>. Log in using your username and password,
+    which can be requested [here]().
 
-2. Create a new folder that will hold the necessary files for the run in your home directory by going to the Terminal tab and typing in `mkdir biocro_files`. This new folder should appear in your file structure under the Files tab. 
+2.  Create a new folder that will hold the necessary files for the run
+    in your home directory by going to the Terminal tab and typing in
+    `mkdir biocro_files`. This new folder should appear in your file
+    structure under the Files tab.
 
-3. The first needed file is an XML that contains the configuration information required to get the data and run the model. This example run is for the willow tree PFT for a site just outside of Champaign, Illinois using weather data from the entire year of 2004. We are also running ensemble and sensitivity analyses, and a meta-analysis. 
+3.  The first needed file is an XML that contains the configuration
+    information required to get the data and run the model. This example
+    run is for the willow tree PFT for a site just outside of Champaign,
+    Illinois using weather data from the entire year of 2004. We are
+    also running ensemble and sensitivity analyses, and a meta-analysis.
+    
+    Create the file by clicking the new file button with the green plus
+    sign in the upper left hand corner and selecting text file. Copy and
+    paste the content below into this file, click the save button, and
+    save this file as `pecan64.biocro.xml` in the `biocro_files` folder.
 
-    Create the file by clicking the new file button with the green plus sign in the upper left hand corner and selecting text file. Copy and paste the content below into this file, click the save button, and save this file as `pecan64.biocro.xml` in the `biocro_files` folder. 
+<!-- end list -->
 
-```{r, eval=FALSE}
+``` r
 <pecan>
   <outdir>biocro_results</outdir>
 
@@ -100,12 +141,17 @@ knitr::include_graphics("biocro_lai_vm.png")
     </host>
   </run>
 </pecan>
-
 ```
 
-4. The second file that needs to be created is an R script that runs through all of PEcAn's functions to run the model and produce the output. Create this file by clicking on the new file button and selecting R script. Copy and paste the below text into the new script and save in the `biocro_files` folder as `workflow.R`. 
+4.  The second file that needs to be created is an R script that runs
+    through all of PEcAn’s functions to run the model and produce the
+    output. Create this file by clicking on the new file button and
+    selecting R script. Copy and paste the below text into the new
+    script and save in the `biocro_files` folder as `workflow.R`.
 
-```{r, eval=FALSE, size="small"}
+<!-- end list -->
+
+``` r
 #!/usr/bin/env Rscript
 #-------------------------------------------------------------------------------
 # Copyright (c) 2012 University of Illinois, NCSA.
@@ -289,25 +335,37 @@ if (PEcAn.utils::status.check("FINISHED") == 0) {
 
 db.print.connections()
 print("---------- PEcAn Workflow Complete ----------")
-
 ```
 
-5. We will then run the newly created XML file through the R script. First create a new folder in which to store the results by executing `mkdir biocro_results` in the Terminal. Then in the Terminal run `biocro_files/workflow.R --settings biocro_files/pecan64.biocro.xml`. 
-
-    If this returns an error that says `Permission denied`, first run `chmod u+x biocro_files/workflow.R` in the terminal to get sufficient permissions to the newly created workflow.R file. Then reattempt running the workflow. 
+5.  We will then run the newly created XML file through the R script.
+    First create a new folder in which to store the results by executing
+    `mkdir biocro_results` in the Terminal. Then in the Terminal run
+    `biocro_files/workflow.R --settings
+    biocro_files/pecan64.biocro.xml`.
     
-    This will take a few minutes to finish. The last line in the console should appear as follows. 
+    If this returns an error that says `Permission denied`, first run
+    `chmod u+x biocro_files/workflow.R` in the terminal to get
+    sufficient permissions to the newly created workflow.R file. Then
+    reattempt running the workflow.
+    
+    This will take a few minutes to finish. The last line in the console
+    should appear as follows.
 
-```{r, eval=FALSE}
+<!-- end list -->
+
+``` r
 [1] "---------- PEcAn Workflow Complete ----------"
 ```
 
-6. To test if this works, plot the output data for leaf area index across time. In the console or a new R script, type the following R command and the plot shown should be generated. 
+6.  To test if this works, plot the output data for leaf area index
+    across time. In the console or a new R script, type the following R
+    command and the plot shown should be
+generated.
 
-```{r, eval=FALSE}
+<!-- end list -->
+
+``` r
 PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/2004.nc", "LAI")
 ```
 
-```{r, echo=FALSE, out.width="400px"}
-knitr::include_graphics("biocro_lai_welsch.png")
-```
+<img src="biocro_lai_welsch.png" width="400px" />
