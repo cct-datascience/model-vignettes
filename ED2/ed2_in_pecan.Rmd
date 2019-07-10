@@ -6,7 +6,7 @@ output: github_document
 urlcolor: blue
 ---
 
-# ED2 Run Using PEcAn's Virtual Machine
+# 1. ED2 Run Using PEcAn's Virtual Machine
 
 The Ecosystem Demography ([ED2](https://github.com/EDmodel/ED2)) model was run using the [PEcAn VM in Virtualbox](https://pecanproject.github.io/pecan-documentation/develop/GettingStarted.html#installing-and-running-pecan). Follow steps 1-5 in section 4.2.1 to get the PEcAn virtual machine installed and running, and open the web interface for PEcAn by going to `localhost:6480/pecan/` in the browser. 
 
@@ -156,7 +156,43 @@ ggplot(all_lai, aes(x = date, y = LAI, color = PFT)) +
   geom_line()
 ```
 
-# ED2 Run Using University of Arizona's RStudio Instance
+# 2. ED2 Run Using University of Arizona's Web Interface of PEcAn
+
+Access the web interface by navigating to [welsch.cyverse.org:8000/](welsch.cyverse.org:8000/) in the browser and clicking on the link that is the first bullet in the **Applications** section, which states *PEcAn web interface, from here you can run different models at different sites.* 
+
+Click "Next" button, then specify the following settings on the next page ("Select host, model, site"): 
+
+ * Host = UA
+ * Model = ED2.2 (git)
+ * Site Group = All Sites
+ * Site = Park Falls WLEF (US-PFa) (select blue site icon on map)
+
+Select "Next" button and select the following: 
+
+ * PFT = tempconif
+ * Start Date = 2004/01/01
+ * End Date = 2004/12/31
+ * Ed.met_driver_header = ED_MET_DRIVER_HEADER 1995-2005
+ * Land use = Earth Land Surface
+ * Soil = FAO_
+ * Thermal sums = Earth Land Surface
+ * Vegetation = OGE2
+
+Select "Next" button. This leads to an **Execution Status** page. When **Job Finished** is displayed in the upper left hand corner, the run is complete and can see results by clicking on the "Finished" button. 
+
+Under **Outputs** section, use the drop down menu to select "2004.nc" and hit "Show Output File" below that. This will save the results file to your computer, which can be plotted with R using the code shown below.  
+
+```{r, eval=FALSE}
+PEcAn.visualization::plot.netcdf("2004.nc", "LAI")
+```
+
+This specifically plots the leaf area index (LAI) variable, which should appear as shown. 
+
+```{r, echo=FALSE}
+knitr::include_graphics("ed2_lai_web.png")
+```
+
+# 3. ED2 Run Using University of Arizona's RStudio Instance
 
 1. Access RStudio in a browser by navigating to [welsch.cyverse.org:8787/](welsch.cyverse.org:8787/). Log in using your username and password, which can be requested [here](). 
 
@@ -437,6 +473,6 @@ had to get permissions using chmod u+x ed2_files/ed2.git
 PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/2004.nc", "LAI")
 ```
 
-```{r, echo=FALSE, out.width="400px"}
+```{r, eval=FALSE, echo=FALSE, out.width="400px"}
 knitr::include_graphics("biocro_lai_welsch.png")
 ```
