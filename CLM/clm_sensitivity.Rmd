@@ -1,9 +1,10 @@
 ---
 title: "CLM Sensitivity Analysis"
+author: "Kristina Riemer"
 output: github_document
 ---
 
-```{r}
+```{r, message=FALSE}
 library(broom)
 library(magrittr)
 library(dplyr)
@@ -14,7 +15,7 @@ library(cowplot)
 
 Data are parameter values with corresponding response variable values. 
 
-```{r}
+```{r, message=FALSE}
 sens_data <- readr::read_csv("clm5_Equ_C4g_default_ens_e500_output.txt", 
                                  skip = 1)
 colnames(sens_data) <- gsub(" ", "_", colnames(sens_data))
@@ -102,75 +103,50 @@ ggplot(SDs, aes(x = sd, y = term)) +
 
 
 ```{r}
-#function that does all plots and puts together (Cowplot)
-#test on TLAI
-
-output_var_name <- tail(colnames(sens_data_ex), 1)
-
-test_form <- as.formula(paste(output_var_name, "~", "."))
-
-slopes <- tidy(lm(data = sens_data_ex, formula = test_form)) %>% 
-  rename(sensitivity = estimate) %>% 
-  filter(term != "(Intercept)")
-
-plot_sensitivity <- function(data){
-  output_var_name <- tail(colnames(data), 1)
-  print(output_var_name)
-  slopes_formula <- as.formula(paste(output_var_name, "~", "."))
-  print(slopes_formula)
-  slopes <- tidy(lm(data = data, formula = slopes_formula)) 
-  # %>%
-  #   rename(sensitivity = estimate) %>%
-  #   filter(term != "(Intercept)")
-  print(slopes)
-  mean_response <- mean(data[output_var_name])
-  # mean_params <- data %>%
-  #   select(-output_var_name) %>%
-  #   summarise_all(funs(mean)) %>%
-  #   gather(parameter, mean) %>%
-  #   mutate(elasticity_multiplier = mean / mean_response)
-  # elasticity <- left_join(slopes, mean_params, by = c("term" = "parameter")) %>%
-  #   mutate(elasticity = sensitivity * elasticity_multiplier)
-  # elasticity_plot <- ggplot(elasticity, aes(x = elasticity, y = term)) +
-  #   geom_point() +
-  #   geom_vline(xintercept = 0)
-  # 
-  # CVs <- data %>% 
-  #   select(-TLAI) %>% 
-  #   gather(parameter, value) %>% 
-  #   group_by(parameter) %>% 
-  #   summarize(mean = mean(value), 
-  #             var = var(value)) %>% 
-  #   mutate(sd = sqrt(var), 
-  #          cv = (sd / mean) * 100)
-  # CV_plot <- ggplot(CVs, aes(x = cv, y = parameter)) +
-  #   geom_point() +
-  #   geom_vline(xintercept = 0) +
-  #   xlab("CV (%)")
-  # 
-  # SDs <- tidy(aov(TLAI ~ ., data = data)) %>% 
-  #   mutate(sd = sqrt(sumsq)) %>% 
-  #   select(term, sd)
-  # SD_plot <- ggplot(SDs, aes(x = sd, y = term)) +
-  #   geom_point() +
-  #   geom_vline(xintercept = 0)
-  # all_plots <- plot_grid(elasticity_plot, SD_plot, CV_plot, labels = )
-  # print(all_plots)
-}
-
-plot_sensitivity(sens_data_ex)
-
 for(output_var in colnames(sens_data)[10:17]){
-  sens_data_single_out <- sens_data %>% 
+  output_sens_data <- sens_data %>% 
     select(sla:root_dist, output_var)
-  plot_sensitivity(sens_data_single_out)
+  output_var_name <- tail(colnames(output_sens_data), 1)
+  slopes_formula <- as.formula(paste(output_var_name, "~", "."))
+  slopes <- tidy(lm(data = output_sens_data, formula = slopes_formula)) %>%
+    rename(sensitivity = estimate) %>%
+    filter(term != "(Intercept)")
+  mean_response <- mean(data.matrix(output_sens_data[output_var_name]))
+  mean_params <- output_sens_data %>%
+    select(-output_var_name) %>%
+    summarise_all(funs(mean)) %>%
+    gather(parameter, mean) %>%
+    mutate(elasticity_multiplier = mean / mean_response)
+  elasticity <- left_join(slopes, mean_params, by = c("term" = "parameter")) %>%
+    mutate(elasticity = sensitivity * elasticity_multiplier)
+  elasticity_plot <- ggplot(elasticity, aes(x = elasticity, y = term)) +
+    geom_point() +
+    geom_vline(xintercept = 0) +
+    ggtitle(output_var)
+  
+  CVs <- output_sens_data %>%
+    select(-output_var_name) %>%
+    gather(parameter, value) %>%
+    group_by(parameter) %>%
+    summarize(mean = mean(value),
+              var = var(value)) %>%
+    mutate(sd = sqrt(var),
+           cv = (sd / mean) * 100)
+  CV_plot <- ggplot(CVs, aes(x = cv, y = parameter)) +
+    geom_point() +
+    geom_vline(xintercept = 0) +
+    xlab("CV (%)")
+  
+  aov_formula <- as.formula(paste(output_var_name, "~", "."))
+  SDs <- tidy(aov(data = output_sens_data, formula = aov_formula)) %>%
+    mutate(sd = sqrt(sumsq)) %>%
+    select(term, sd)
+  SD_plot <- ggplot(SDs, aes(x = sd, y = term)) +
+    geom_point() +
+    geom_vline(xintercept = 0)
+  all_plots <- plot_grid(elasticity_plot, SD_plot, CV_plot)
+  print(all_plots)
 }
 
-
-```
-
-```{r}
-#remove other response vars first? 
-#for loop over all reponse vars
 ```
 
