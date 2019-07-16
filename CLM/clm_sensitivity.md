@@ -54,7 +54,22 @@ mean_params <- sens_data_ex %>%
   summarise_all(funs(mean)) %>% 
   gather(parameter, mean) %>% 
   mutate(elasticity_multiplier = mean / mean_response)
+```
 
+    ## Warning: funs() is soft deprecated as of dplyr 0.8.0
+    ## Please use a list of either functions or lambdas: 
+    ## 
+    ##   # Simple named list: 
+    ##   list(mean = mean, median = median)
+    ## 
+    ##   # Auto named with `tibble::lst()`: 
+    ##   tibble::lst(mean, median)
+    ## 
+    ##   # Using lambdas
+    ##   list(~ mean(., trim = .2), ~ median(., na.rm = TRUE))
+    ## This warning is displayed once per session.
+
+``` r
 elasticity <- left_join(slopes, mean_params, by = c("term" = "parameter")) %>% 
   mutate(elasticity = sensitivity * elasticity_multiplier)
 ```
@@ -132,33 +147,58 @@ for(output_var in colnames(sens_data)[10:17]){
     gather(parameter, mean) %>%
     mutate(elasticity_multiplier = mean / mean_response)
   elasticity <- left_join(slopes, mean_params, by = c("term" = "parameter")) %>%
-    mutate(elasticity = sensitivity * elasticity_multiplier)
-  elasticity_plot <- ggplot(elasticity, aes(x = elasticity, y = term)) +
+    mutate(elasticity = sensitivity * elasticity_multiplier,
+           parameter = case_when(term == "sla" ~ "Specific Leaf Area", 
+                                 term == "fineroot2leaf" ~ "Fine Root to Leaf Biomass Ratio", 
+                                 term == "c2n_leaf" ~ "Leaf C:N", 
+                                 term == "flnr_in" ~ "Fraction Leaf N in Rubisco", 
+                                 term == "target_c2n_froot" ~ "Fine Root C:N", 
+                                 term == "stom_slope_g1" ~ "Stomatal Conductance Slope", 
+                                 term == "min_stom_cond" ~ "Minimum Stomatal Conductance", 
+                                 term == "root_dist" ~ "Root Distribution"))
+  elasticity_plot <- ggplot(elasticity, aes(x = elasticity, y = parameter)) +
     geom_point() +
     geom_vline(xintercept = 0) +
     ggtitle(output_var)
   
-  CVs <- output_sens_data %>%
-    select(-output_var_name) %>%
-    gather(parameter, value) %>%
-    group_by(parameter) %>%
-    summarize(mean = mean(value),
-              var = var(value)) %>%
-    mutate(sd = sqrt(var),
-           cv = (sd / mean) * 100)
-  CV_plot <- ggplot(CVs, aes(x = cv, y = parameter)) +
-    geom_point() +
-    geom_vline(xintercept = 0) +
-    xlab("CV (%)")
+  # CVs <- output_sens_data %>%
+  #   select(-output_var_name) %>%
+  #   gather(term, value) %>%
+  #   group_by(term) %>%
+  #   summarize(mean = mean(value),
+  #             var = var(value)) %>%
+  #   mutate(sd = sqrt(var),
+  #          cv = (sd / mean) * 100, 
+  #          parameter = case_when(term == "sla" ~ "Specific Leaf Area", 
+  #                                term == "fineroot2leaf" ~ "Fine Root to Leaf Biomass Ratio", 
+  #                                term == "c2n_leaf" ~ "Leaf C:N", 
+  #                                term == "flnr_in" ~ "Fraction Leaf N in Rubisco", 
+  #                                term == "target_c2n_froot" ~ "Fine Root C:N", 
+  #                                term == "stom_slope_g1" ~ "Stomatal Conductance Slope", 
+  #                                term == "min_stom_cond" ~ "Minimum Stomatal Conductance", 
+  #                                term == "root_dist" ~ "Root Distribution"))
+  # CV_plot <- ggplot(CVs, aes(x = cv, y = parameter)) +
+  #   geom_point() +
+  #   geom_vline(xintercept = 0) +
+  #   xlab("CV (%)")
   
   aov_formula <- as.formula(paste(output_var_name, "~", "."))
   SDs <- tidy(aov(data = output_sens_data, formula = aov_formula)) %>%
     mutate(sd = sqrt(sumsq)) %>%
-    select(term, sd)
-  SD_plot <- ggplot(SDs, aes(x = sd, y = term)) +
+    select(term, sd) %>% 
+    filter(term != "Residuals") %>% 
+    mutate(parameter = case_when(term == "sla" ~ "Specific Leaf Area", 
+                                 term == "fineroot2leaf" ~ "Fine Root to Leaf Biomass Ratio", 
+                                 term == "c2n_leaf" ~ "Leaf C:N", 
+                                 term == "flnr_in" ~ "Fraction Leaf N in Rubisco", 
+                                 term == "target_c2n_froot" ~ "Fine Root C:N", 
+                                 term == "stom_slope_g1" ~ "Stomatal Conductance Slope", 
+                                 term == "min_stom_cond" ~ "Minimum Stomatal Conductance", 
+                                 term == "root_dist" ~ "Root Distribution"))
+  SD_plot <- ggplot(SDs, aes(x = sd, y = parameter)) +
     geom_point() +
     geom_vline(xintercept = 0)
-  all_plots <- plot_grid(elasticity_plot, SD_plot, CV_plot)
+  all_plots <- plot_grid(elasticity_plot, SD_plot, ncol = 1)
   print(all_plots)
 }
 ```
