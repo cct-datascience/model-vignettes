@@ -4,7 +4,7 @@ Kristina Riemer
 3/25/2019
 
 The specific settings chosen for sections 1-3 of this vignette,
-including plant functional typea (PFT), sites, and date ranges were
+including plant functional types (PFTs), sites, and date ranges were
 chosen as examples to illustrate how to use the PEcAn infrastructure to
 run the ED2 model.
 
