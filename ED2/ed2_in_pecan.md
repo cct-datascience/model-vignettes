@@ -3,14 +3,19 @@ Community Dynamics Simulation
 Kristina Riemer
 3/25/2019
 
+The specific settings chosen for sections 1-3 of this vignette,
+including plant functional typea (PFT), sites, and date ranges were
+chosen as examples to illustrate how to use the PEcAn infrastructure to
+run the ED2 model.
+
 # 1\. ED2 Run Using PEcAn’s Virtual Machine
 
 The Ecosystem Demography ([ED2](https://github.com/EDmodel/ED2)) model
-was run using the [PEcAn VM in
-Virtualbox](https://pecanproject.github.io/pecan-documentation/develop/GettingStarted.html#installing-and-running-pecan).
-Follow steps 1-5 in section 4.2.1 to get the PEcAn virtual machine
-installed and running, and open the web interface for PEcAn by going to
-`localhost:6480/pecan/` in the browser.
+was run using the PEcAn VM in Virtualbox. Follow steps 1-6 in section
+4.1 of the
+[documentation](https://pecanproject.github.io/pecan-documentation/develop/pecan-manual-setup.html#install-vm)
+to get the PEcAn virtual machine installed and running, and open the web
+interface for PEcAn by going to `localhost:6480/pecan/` in the browser.
 
 Click “Next” button, then specify the following settings on the next
 page (“Select host, model, site”):
@@ -38,7 +43,8 @@ Select “Next” button and select the following:
   - Vegetation = OGE2
 
 Check “Edit model config” box to be able to edit the configuration file
-for the model on the next page. The file was changed to match what is
+for the model. When the **Advanced Edit** page shows up, select the
+“ED2IN” file and change it to match what is
 below:
 
 ``` sh
@@ -112,6 +118,11 @@ below:
    NL%OUTSTATE = 0
    !---------------------------------------------------------------------------------------!
 ```
+
+Select the “Save” button at the bottom of the page, and then “Continue”
+button in the upper left. When the job is done executing, the next page
+will display **Job Finished** in the upper left corner. Select the
+“Finished” button to access the results.
 
 ## Visualize results
 
@@ -199,9 +210,9 @@ ggplot(all_lai, aes(x = date, y = LAI, color = PFT)) +
 # 2\. ED2 Run Using University of Arizona’s Web Interface of PEcAn
 
 Access the web interface by navigating to <welsch.cyverse.org:8000/> in
-the browser and clicking on the link that is the first bullet in the
-**Applications** section, which states *PEcAn web interface, from here
-you can run different models at different sites.*
+the browser and clicking the first link in the **Applications** section
+(*PEcAn web interface, from here you can run different models at
+different sites.*)
 
 Click “Next” button, then specify the following settings on the next
 page (“Select host, model, site”):
