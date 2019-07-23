@@ -28,9 +28,12 @@ sens_data_ex <- sens_data %>%
 
 Sensitivity is the change in the response variable given a change in an
 input variable, which can be a parameter, initial condition, etc. This
-is representated by the derivative dY/dX. This is calculated below from
+is representated by the derivative dY/dX. This is approximated below as
 the slope of the linear regression between the parameter values and
-response variable.
+response variable. This is a quick-and-dirty variant of the
+[`get.sensitivity`
+function](https://github.com/PecanProject/pecan/blob/develop/modules/uncertainty/R/sensitivity.analysis.R#L73)
+in PEcAn.
 
 ``` r
 output_var_name <- tail(colnames(sens_data_ex), 1)
