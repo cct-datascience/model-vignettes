@@ -585,12 +585,42 @@ print("---------- PEcAn Workflow Complete ----------")
 
 6. The results for these files will appear in a new folder called `biocro_darpa_results`. 
 
-    To test if this works, plot the output data for leaf area index across time. In the console or a new R script, type the following R command and the plot shown should be generated. 
+    To test if this works, you can plot the results from the ensemble runs for biomass. The following code will produce a plot of the time series throughout a year of biomass, of the median, 25th quantile, and 75th quantile for each time step. Create a new R script, copy and paste this code into the script, and run it to produce the figure. 
 
 ```{r, eval=FALSE}
-PEcAn.visualization::plot.netcdf("biocro_darpa_results/out/ENS-00001-9000000000/2004.nc", "LAI")
+library(matrixStats)
+library(tidyr)
+library(ggplot2)
+library(scales)
+
+load("~/biocro_darpa_results/ensemble.ts.NOENSEMBLEID.TotLivBiom.2004.2004.Rdata")
+biomass_df <- data.frame(ensemble.ts$TotLivBiom)
+
+quantiles <- rowQuantiles(t(ensemble.ts$TotLivBiom), probs = c(0.25, 0.5, 0.75))
+quantiles_df <- data.frame(quantiles)
+
+first_hour <- as.POSIXct("2004-01-01 01:00:00")
+datetime <- first_hour
+for(hour in 1:8759){
+  following_hour <- first_hour + hour*60*60
+  datetime <- c(datetime, following_hour)
+}
+quantiles_df$datetime <- datetime
+
+quantiles_df_long <- gather(quantiles_df, quantile, value, X25.:X75.)
+ggplot(quantiles_df_long, aes(x = datetime, y = value, color = quantile)) +
+  geom_line() +
+  scale_color_manual(labels = c("25%", "50%", "75%"), 
+                     values = c("grey", "black", "grey")) +
+  labs(x = "Date", y = "Total Biomass (kg C m-2)") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.title = element_blank()) +
+  scale_x_datetime(labels = date_format("%b"))
 ```
 
 ```{r, echo=FALSE, out.width="400px"}
-knitr::include_graphics("biocro_lai_welsch_setaria.png")
+knitr::include_graphics("biocro_biomass_welsch_setaria.png")
 ```
