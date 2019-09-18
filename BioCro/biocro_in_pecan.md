@@ -385,8 +385,9 @@ PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/200
     information required to get the data and run the model. This example
     run is for the Setaria wild type PFT for a site at the Donald
     Danforth Center in St. Louis, MO using weather data from the entire
-    year of 2004. We are also running ensemble analyse and a
-    meta-analysis, but no sensitivity analysis.
+    year of 2004. This runs a meta-analysis on specific leaf area (SLA),
+    sensitivity analysis and variance decomposition on eight parameters,
+    and 200 ensemble runs for total biomass.
     
     Create the file by clicking the new file button with the green plus
     sign in the upper left hand corner and selecting text file. Copy and
@@ -414,20 +415,25 @@ PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/200
 
   <pfts>
     <pft>
-      <name>Setaria WT</name>
+      <name>SetariaWT</name>
     </pft>
   </pfts>
 
   <ensemble>
-    <variable>AbvGrndWood</variable>
+    <size>200</size>
+    <variable>TotLivBiom</variable>
   </ensemble>
 
   <meta.analysis>
     <iter>3000</iter>
-    <random.effects>FALSE</random.effects>
+    <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
     <update>AUTO</update>
   </meta.analysis>
+
+  <sensitivity.analysis>
+    <variable>TotLivBiom</variable>
+  </sensitivity.analysis>
 
   <model>
     <type>BIOCRO</type>
@@ -437,7 +443,7 @@ PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/200
 
   <run>
     <site>
-      <id>9000000000</id>
+      <id>9000000004</id>
     </site>
     <inputs>
       <met>
