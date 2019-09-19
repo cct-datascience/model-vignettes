@@ -1,5 +1,5 @@
 ---
-output: github_document
+output: html_document
 urlcolor: blue
 ---
 
@@ -575,7 +575,7 @@ print("---------- PEcAn Workflow Complete ----------")
 
 5. We will then run the newly created XML file through the R script. Then in the Terminal run `biocro_darpa_files/workflow.R --settings biocro_darpa_files/pecan.biocro.darpa.xml`. 
 
-    If this returns an error that says `Permission denied`, first run `chmod u+x biocro_files/workflow.R` in the terminal to get sufficient permissions to the newly created workflow.R file. Then reattempt running the workflow. 
+    If this returns an error that says `Permission denied`, first run `chmod u+x biocro_darpa_files/workflow.R` in the terminal to get sufficient permissions to the newly created workflow.R file. Then reattempt running the workflow. 
     
     This will take a few minutes to finish. The last line in the console should appear as follows. 
 
