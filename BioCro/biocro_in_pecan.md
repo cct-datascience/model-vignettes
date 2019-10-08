@@ -1,5 +1,5 @@
 
-# BioCro Run Using the Virtual Machine
+# Section 1: BioCro Run Using the Virtual Machine
 
 1.  Download the **VirtualBox** application from
     [here](https://www.virtualbox.org/) and open the application.
@@ -53,7 +53,7 @@ PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/200
 
 <img src="biocro_lai_vm.png" width="400px" />
 
-# BioCro Run Using University of Arizona’s RStudio Instance
+# Section 2: BioCro Run Using University of Arizona’s RStudio Instance
 
 1.  Access RStudio in a browser by navigating to
     <welsch.cyverse.org:8787/>. Log in using your username and password,
@@ -370,7 +370,7 @@ PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/200
 
 <img src="biocro_lai_welsch.png" width="400px" />
 
-# BioCro Run Using Welsch With New PFT
+# Section 3: BioCro Run Using Welsch With New PFT
 
 1.  Access RStudio in a browser by navigating to
     <welsch.cyverse.org:8787/>. Log in using your username and password,
@@ -420,7 +420,8 @@ PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/200
   </pfts>
 
   <ensemble>
-    <size>200</size>
+    <size>50</size>
+    <variable>NPP</variable>
     <variable>TotLivBiom</variable>
   </ensemble>
 
@@ -432,13 +433,14 @@ PEcAn.visualization::plot.netcdf("biocro_results/out/SA-salix-chi_leaf-0.159/200
   </meta.analysis>
 
   <sensitivity.analysis>
+    <variable>NPP</variable>
     <variable>TotLivBiom</variable>
   </sensitivity.analysis>
 
   <model>
     <type>BIOCRO</type>
     <binary>/home/kristinariemer/pecan/models/biocro/inst/biocro.Rscript</binary>
-    <revision>1.0</revision>
+    <revision>0.95</revision>
   </model>
 
   <run>
@@ -658,7 +660,7 @@ print("---------- PEcAn Workflow Complete ----------")
     biocro_darpa_files/pecan.biocro.darpa.xml`.
     
     If this returns an error that says `Permission denied`, first run
-    `chmod u+x biocro_files/workflow.R` in the terminal to get
+    `chmod u+x biocro_darpa_files/workflow.R` in the terminal to get
     sufficient permissions to the newly created workflow.R file. Then
     reattempt running the workflow.
     
