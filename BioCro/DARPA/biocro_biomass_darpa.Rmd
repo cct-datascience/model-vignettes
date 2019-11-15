@@ -1,0 +1,90 @@
+---
+title: "How to Do Biomass Partitioning on DARPA Data Using BioCro Model"
+author: "Kristina Riemer, University of Arizona"
+output: github_document
+urlcolor: blue
+---
+
+For biomass partitioning using [`OpBioGro`](https://github.com/ebimodeling/biocro/blob/master/R/OpBioGro.R). 
+
+### Weather data
+
+From CLM file `clm_version.nc` to a dataframe with hourly rows and five weather variables. 
+
+BioCro var name   | BioCro var unit | CLM var name | CLM var unit    
+----------------- | --------------- | ------------ | ------------    
+solarR            | umol/m2/s       | FSDS         | W/m2            
+DailyTemp.C       | C               | TBOT         | K               
+RH                | 0-1             | RH           | %               
+WindSpeed         | m/s             | WIND         | m/s                
+precip            | mm (mm/h)       | PRECTmms     | mm/s                
+
+### TODO
+
+
+- Downscale from every three hours to every hour (`weach` from `BioCro` does daily to sub-daily); `OpBioGro` does not accomodate anything but hourly weather data currently
+    - for each row, copy twice and add value to hour
+
+```{r}
+library(ncdf4)
+
+clm_met <- nc_open("clm_version.nc")
+print(clm_met)
+```
+
+- Convert units (all weather variables except wind speed)
+  - From [Plant Growth Chamber Handbook](https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf): 1 W/m2 = 4.6 umol/m2/s
+  - Divide RH by 100
+  - Precip from rate to amount? Assuming BioCro precipitation is amount per hour. 
+
+```{r}
+clm_df <- data.frame(time = ncvar_get(clm_met, "time") , 
+                     solarR = ncvar_get(clm_met, "FSDS"), 
+                     DailyTemp.C = ncvar_get(clm_met, "TBOT"), 
+                     RH = ncvar_get(clm_met, "RH"), 
+                     WindSpeed = ncvar_get(clm_met, "WIND"), 
+                     precip = ncvar_get(clm_met, "PRECTmms"))
+```
+
+### Biomass data
+
+Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. 
+
+Columns needed: 
+
+- Thermal temperature = temp col * (harvest date - germination date)
+- Biomass = steam, leaf, root DW columns & zeroes for rhizome and grain
+- LAI = made up value? set as 1 for all (optional according to `idbp` documentation)
+
+The plants were grown at three different temperatures, and there were three genotypes. 
+
+```{r}
+library(dplyr)
+
+biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
+  filter(genotype == "ME034V-1", 
+         temperature_celsius == 31)
+
+biomass_data_by_tt <- biomass_data_all %>% 
+  mutate(days_grown = as.Date(as.character(biomas_harvested),format="%m/%d/%Y") - as.Date(as.character(seeds_in_germination),format="%m/%d/%Y"), 
+         ThermalT = as.numeric(days_grown * temperature_celsius)) %>% 
+  select(ThermalT, stemDW.mg., leaf.DW.mg., roots.DW..mg.) %>% 
+  group_by(ThermalT) %>% 
+  summarise(Stem = mean(stemDW.mg.), 
+            Leaf = mean(leaf.DW.mg.), 
+            Root = mean(roots.DW..mg.))
+
+biomass_data_by_tt$Rhizome <- rep(0, 6)
+biomass_data_by_tt$Grain <- rep(0, 6)
+#biomass_data_by_tt$LAI <- rep(1, 6)
+biomass_data_by_tt <- data.frame(biomass_data_by_tt)
+```
+
+### Estimate coefficients
+
+```{r}
+library(BioCro)
+
+#coef_estimates <- valid_dbp(idbp(biomass_data_by_tt))
+```
+
