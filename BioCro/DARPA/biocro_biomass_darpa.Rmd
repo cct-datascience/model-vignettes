@@ -21,24 +21,47 @@ precip            | mm (mm/h)       | PRECTmms     | mm/s
 
 ### TODO
 
-
 - Downscale from every three hours to every hour (`weach` from `BioCro` does daily to sub-daily); `OpBioGro` does not accomodate anything but hourly weather data currently
-    - for each row, copy twice and add value to hour
-
-```{r}
-library(ncdf4)
-
-clm_met <- nc_open("clm_version.nc")
-print(clm_met)
-```
-
+    - Use spline function (lines 94-96 https://github.com/PecanProject/pecan/blob/develop/modules/data.atmosphere/R/temporal.downscaling.R#L48) only for solar radiation to fill in extra hours
+    - Copy values for relative humidity and temp
+    - Fill in rest of wind and precip with zeroes
 - Convert units (all weather variables except wind speed)
   - From [Plant Growth Chamber Handbook](https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf): 1 W/m2 = 4.6 umol/m2/s
   - Divide RH by 100
   - Precip from rate to amount? Assuming BioCro precipitation is amount per hour. 
+  - Daily temp from K to C
 
 ```{r}
-clm_df <- data.frame(time = ncvar_get(clm_met, "time") , 
+library(ncdf4)
+clm_met <- nc_open("clm_version.nc")
+
+time <- data.frame(year = rep(2019, 8760), 
+                   doy = rep(1:365, each = 24), 
+                   hour = rep(seq(0, 23), 365))
+
+DailyTemp.C <- rep(ncvar_get(clm_met, "TBOT") - 273.15, each = 3)
+RH <- rep(ncvar_get(clm_met, "RH") / 100, each = 3)
+WindSpeed <- rep(ncvar_get(clm_met, "WIND"), each = 3)
+PRECTmms <- ncvar_get(clm_met, "PRECTmms")
+precip <- rep(c(unique(PRECTmms)[1], rep(0, 23)), 365)
+
+
+clm_df <- data.frame(time, solarR, DailyTemp.C, RH, WindSpeed, precip)
+```
+
+```{r}
+time <- ncvar_get(clm_met, "time")
+tunits <- ncatt_get(clm_met, "time", attname = "units")
+as.Date(time, origin = unlist(strsplit(tunits$value, " "))[3])
+
+FSDS <- ncvar_get(clm_met, "FSDS") * 4.6
+FSDS_df <- data.frame(time, FSDS)
+f <- stats::splinefun(as.double(FSDS_df$time, FSDS_df$FSDS / 1), method = "monoH.FC")
+```
+
+
+```{r}
+clm_df_test <- data.frame(time = ncvar_get(clm_met, "time") , 
                      solarR = ncvar_get(clm_met, "FSDS"), 
                      DailyTemp.C = ncvar_get(clm_met, "TBOT"), 
                      RH = ncvar_get(clm_met, "RH"), 
@@ -48,15 +71,16 @@ clm_df <- data.frame(time = ncvar_get(clm_met, "time") ,
 
 ### Biomass data
 
-Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. 
+Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. 
 
-Columns needed: 
+### TODO
 
-- Thermal temperature = temp col * (harvest date - germination date)
-- Biomass = steam, leaf, root DW columns & zeroes for rhizome and grain
-- LAI = made up value? set as 1 for all (optional according to `idbp` documentation)
-
-The plants were grown at three different temperatures, and there were three genotypes. 
+- Get correct columns
+    - Thermal temperature ~~= temp col * (harvest date - germination date)~~
+        - Is equal to growing degree days. Run weather data through BioCro to get thermal temperature
+    - Biomass = stem, leaf, root DW columns & zeroes for rhizome and grain
+    - LAI is SLA (use single value for all from other experiments) * leaf mass
+- Calculate coefficients for a single temperature and a single set of values for that temperature (1/3 of current values). Then average resulting coefficients. 
 
 ```{r}
 library(dplyr)
@@ -76,8 +100,9 @@ biomass_data_by_tt <- biomass_data_all %>%
 
 biomass_data_by_tt$Rhizome <- rep(0, 6)
 biomass_data_by_tt$Grain <- rep(0, 6)
-#biomass_data_by_tt$LAI <- rep(1, 6)
+biomass_data_by_tt$LAI <- biomass_data_by_tt$Leaf * 2
 biomass_data_by_tt <- data.frame(biomass_data_by_tt)
+biomass_data_by_tt[2, 1] <- 550
 ```
 
 ### Estimate coefficients
@@ -85,6 +110,7 @@ biomass_data_by_tt <- data.frame(biomass_data_by_tt)
 ```{r}
 library(BioCro)
 
-#coef_estimates <- valid_dbp(idbp(biomass_data_by_tt))
+coef_estimates <- valid_dbp(idbp(biomass_data_by_tt))
+biomass_coefs <- OpBioGro(phen = 0, WetDat = weather_data, data = biomass_data_by_tt, iCoef = approx_biomass_coefs)
 ```
 
