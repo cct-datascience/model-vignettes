@@ -50,13 +50,36 @@ clm_df <- data.frame(time, solarR, DailyTemp.C, RH, WindSpeed, precip)
 ```
 
 ```{r}
-time <- ncvar_get(clm_met, "time")
-tunits <- ncatt_get(clm_met, "time", attname = "units")
-as.Date(time, origin = unlist(strsplit(tunits$value, " "))[3])
+# time <- ncvar_get(clm_met, "time")
+# tunits <- ncatt_get(clm_met, "time", attname = "units")
+# as.Date(time, origin = unlist(strsplit(tunits$value, " "))[3])
+# as.POSIXct(paste(unlist(strsplit(tunits$value, " "))[3], unlist(strsplit(tunits$value, " "))[4])) + 3*60*60
 
 FSDS <- ncvar_get(clm_met, "FSDS") * 4.6
-FSDS_df <- data.frame(time, FSDS)
-f <- stats::splinefun(as.double(FSDS_df$time, FSDS_df$FSDS / 1), method = "monoH.FC")
+time_FSDS <- data.table::data.table(data.frame(date = seq(as.POSIXct(strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")), as.POSIXct(strptime("2000-12-30 21:00:00", "%Y-%m-%d %H:%M:%S")), 3*60*60), 
+                        year = rep(2000, 2920), 
+                        doy = rep(1:365, each = 8), 
+                        hour = rep(seq(0, 21, by = 3), 365), 
+                        FSDS = FSDS) %>% 
+  mutate(day = day(date), 
+         month = month(date)))
+
+output.dt <- 1
+hrscale <- 1
+downscaled.result <- list()
+
+new.date <- time_FSDS[,list(hour = 0:(23 / output.dt) / output.dt),
+                        by = c("year", "month", "day", "doy")]
+new.date$date <- new.date[,list(date = lubridate::ymd_h(paste(year, month, day, hour)))]
+
+
+f <- stats::splinefun(as.double(time_FSDS$date), (time_FSDS$FSDS / hrscale), method = "monoH.FC")
+downscaled.result$FSDS <- f(as.double(new.date$date))
+downscaled.result$FSDS[downscaled.result$FSDS < 0] <- 0
+downscaled.result <- cbind(new.date, data.table::as.data.table(downscaled.result))
+
+
+#f <- stats::splinefun(as.double(FSDS_df$time, FSDS_df$FSDS / 1), method = "monoH.FC")
 ```
 
 
