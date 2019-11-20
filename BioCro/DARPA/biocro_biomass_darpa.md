@@ -115,53 +115,59 @@ OpBioGro_weather <- data.frame(time, solarR = downscaled.result$FSDS, DailyTemp.
 
 Plants all started to grow at same time (Jan 3, 2019). Plants harvested
 on six different dates, from Jan 15 - Feb 19. The plants were grown at
-three different temperatures, and there were three genotypes.
+three different temperatures, and there were three genotypes. Initially
+only using data for the middle temperature (31\*C) and the first
+replicate from that.
 
-### TODO
-
-  - Get correct columns
-      - Thermal temperature ~~= temp col \* (harvest date - germination
-        date)~~
-          - Is equal to growing degree days. Run weather data through
-            BioCro to get thermal temperature
-      - Biomass = stem, leaf, root DW columns & zeroes for rhizome and
-        grain
-      - LAI is SLA (use single value for all from other experiments) \*
-        leaf mass
-  - Calculate coefficients for a single temperature and a single set of
-    values for that temperature (1/3 of current values). Then average
-    resulting coefficients.
-
-<!-- end list -->
+Got biomass data for stem, leaf, and root from data and used zeroes for
+rhizome and grain. Calculated thermal times for weather data using
+`BioGro`, then used the ones for the same day of year as the plants were
+grown before harvested. Last, used an estimated SLA combined with leaf
+mass to get LAI values.
 
 ``` r
-library(dplyr)
+library(BioCro)
 
 biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
   filter(genotype == "ME034V-1", 
-         temperature_celsius == 31)
+         temperature_celsius == 31) %>% 
+  group_by(biomas_harvested) %>% 
+  slice(1) %>% 
+  ungroup()
 
-biomass_data_by_tt <- biomass_data_all %>% 
-  mutate(days_grown = as.Date(as.character(biomas_harvested),format="%m/%d/%Y") - as.Date(as.character(seeds_in_germination),format="%m/%d/%Y"), 
-         ThermalT = as.numeric(days_grown * temperature_celsius)) %>% 
-  select(ThermalT, stemDW.mg., leaf.DW.mg., roots.DW..mg.) %>% 
-  group_by(ThermalT) %>% 
-  summarise(Stem = mean(stemDW.mg.), 
-            Leaf = mean(leaf.DW.mg.), 
-            Root = mean(roots.DW..mg.))
+biomass_data_single <- biomass_data_all %>% 
+  mutate(days_grown = as.Date(as.character(biomas_harvested),format="%m/%d/%Y") - as.Date(as.character(seeds_in_germination),format="%m/%d/%Y"))
 
-biomass_data_by_tt$Rhizome <- rep(0, 6)
-biomass_data_by_tt$Grain <- rep(0, 6)
-biomass_data_by_tt$LAI <- biomass_data_by_tt$Leaf * 2
-biomass_data_by_tt <- data.frame(biomass_data_by_tt)
-biomass_data_by_tt[2, 1] <- 550
+weather_only_run <- BioGro(OpBioGro_weather, day1 = 1, dayn = 365)
+```
+
+    ## [1] 6
+
+``` r
+weather_only_run_df <- as.data.frame(unclass(weather_only_run)[1:11]) %>%
+  select(Hour, DayofYear, ThermalT) %>% 
+  filter(Hour == 0, 
+         DayofYear %in% biomass_data_single$days_grown)
+
+SLA_mg <- 80 / 1000000
+OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = c("days_grown" = "DayofYear")) %>% 
+  select(ThermalT, Stem = stemDW.mg., Leaf = leaf.DW.mg., Root = roots.DW..mg.) %>% 
+  mutate(Rhizome = rep(0, 6), 
+         Grain = rep(0, 6), 
+         LAI = SLA_mg * Leaf)
+```
+
+    ## Warning: Column `days_grown`/`DayofYear` has different attributes on LHS
+    ## and RHS of join
+
+``` r
+OpBioGro_biomass <- data.frame(OpBioGro_biomass) %>% 
+  arrange(ThermalT)
 ```
 
 ### Estimate coefficients
 
 ``` r
-library(BioCro)
-
-#coef_estimates <- valid_dbp(idbp(biomass_data_by_tt))
+#coef_estimates <- valid_dbp(idbp(OpBioGro_biomass))
 #biomass_coefs <- OpBioGro(phen = 0, WetDat = weather_data, data = biomass_data_by_tt, iCoef = approx_biomass_coefs)
 ```
