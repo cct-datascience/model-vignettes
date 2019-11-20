@@ -19,77 +19,64 @@ RH                | 0-1             | RH           | %
 WindSpeed         | m/s             | WIND         | m/s                
 precip            | mm (mm/h)       | PRECTmms     | mm/s                
 
-### TODO
+Need to downscale all weather data from every three hours to hourly, and also convert some units, as shown in the table above. 
 
-- Downscale from every three hours to every hour (`weach` from `BioCro` does daily to sub-daily); `OpBioGro` does not accomodate anything but hourly weather data currently
-    - Use spline function (lines 94-96 https://github.com/PecanProject/pecan/blob/develop/modules/data.atmosphere/R/temporal.downscaling.R#L48) only for solar radiation to fill in extra hours
-    - Copy values for relative humidity and temp
-    - Fill in rest of wind and precip with zeroes
-- Convert units (all weather variables except wind speed)
-  - From [Plant Growth Chamber Handbook](https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf): 1 W/m2 = 4.6 umol/m2/s
-  - Divide RH by 100
-  - Precip from rate to amount? Assuming BioCro precipitation is amount per hour. 
-  - Daily temp from K to C
+Specific downscaling and conversion for each variable: 
 
+1. Radiation: used spline interpolation from PEcAn (https://github.com/PecanProject/pecan/blob/develop/modules/data.atmosphere/R/temporal.downscaling.R#L48), converted from W/m2 (1 W/m2 = 4.6 umol/m2/s)
+2. Temperature: made three copies of each value, and converted from K to C
+3. Humidity: made three copies of each value, and converted from percentage to 0-1 scale
+4. Wind: no wind, filled in with zeroes
+5. Precipitation: filled in with zeroes, didn't convert single daily value
+
+Read in data and libraries: 
 ```{r}
 library(ncdf4)
+library(dplyr)
+library(lubridate)
 clm_met <- nc_open("clm_version.nc")
+```
 
-time <- data.frame(year = rep(2019, 8760), 
-                   doy = rep(1:365, each = 24), 
-                   hour = rep(seq(0, 23), 365))
-
+Do variable conversions and downscaling: 
+```{r}
 DailyTemp.C <- rep(ncvar_get(clm_met, "TBOT") - 273.15, each = 3)
 RH <- rep(ncvar_get(clm_met, "RH") / 100, each = 3)
 WindSpeed <- rep(ncvar_get(clm_met, "WIND"), each = 3)
 PRECTmms <- ncvar_get(clm_met, "PRECTmms")
 precip <- rep(c(unique(PRECTmms)[1], rep(0, 23)), 365)
 
-
-clm_df <- data.frame(time, solarR, DailyTemp.C, RH, WindSpeed, precip)
-```
-
-```{r}
-# time <- ncvar_get(clm_met, "time")
-# tunits <- ncatt_get(clm_met, "time", attname = "units")
-# as.Date(time, origin = unlist(strsplit(tunits$value, " "))[3])
-# as.POSIXct(paste(unlist(strsplit(tunits$value, " "))[3], unlist(strsplit(tunits$value, " "))[4])) + 3*60*60
-
 FSDS <- ncvar_get(clm_met, "FSDS") * 4.6
-time_FSDS <- data.table::data.table(data.frame(date = seq(as.POSIXct(strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")), as.POSIXct(strptime("2000-12-30 21:00:00", "%Y-%m-%d %H:%M:%S")), 3*60*60), 
-                        year = rep(2000, 2920), 
-                        doy = rep(1:365, each = 8), 
-                        hour = rep(seq(0, 21, by = 3), 365), 
-                        FSDS = FSDS) %>% 
-  mutate(day = day(date), 
-         month = month(date)))
+FSDS_df <- data.table::data.table(data.frame(
+  date = seq(as.POSIXct(strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")), 
+             as.POSIXct(strptime("2000-12-30 21:00:00", "%Y-%m-%d %H:%M:%S")), 
+             3*60*60), 
+  year = rep(2000, 2920), 
+  doy = rep(1:365, each = 8), 
+  hour = rep(seq(0, 21, by = 3), 365), 
+  FSDS = FSDS) %>% 
+    mutate(day = day(date), 
+           month = month(date)))
 
 output.dt <- 1
 hrscale <- 1
 downscaled.result <- list()
 
-new.date <- time_FSDS[,list(hour = 0:(23 / output.dt) / output.dt),
+new.date <- FSDS_df[,list(hour = 0:(23 / output.dt) / output.dt),
                         by = c("year", "month", "day", "doy")]
 new.date$date <- new.date[,list(date = lubridate::ymd_h(paste(year, month, day, hour)))]
 
-
-f <- stats::splinefun(as.double(time_FSDS$date), (time_FSDS$FSDS / hrscale), method = "monoH.FC")
+f <- stats::splinefun(as.double(FSDS_df$date), (FSDS_df$FSDS / hrscale), method = "monoH.FC")
 downscaled.result$FSDS <- f(as.double(new.date$date))
 downscaled.result$FSDS[downscaled.result$FSDS < 0] <- 0
 downscaled.result <- cbind(new.date, data.table::as.data.table(downscaled.result))
-
-
-#f <- stats::splinefun(as.double(FSDS_df$time, FSDS_df$FSDS / 1), method = "monoH.FC")
 ```
 
-
+Assemble final weather dataframe: 
 ```{r}
-clm_df_test <- data.frame(time = ncvar_get(clm_met, "time") , 
-                     solarR = ncvar_get(clm_met, "FSDS"), 
-                     DailyTemp.C = ncvar_get(clm_met, "TBOT"), 
-                     RH = ncvar_get(clm_met, "RH"), 
-                     WindSpeed = ncvar_get(clm_met, "WIND"), 
-                     precip = ncvar_get(clm_met, "PRECTmms"))
+time <- data.frame(year = rep(2019, 8760), 
+                   doy = rep(1:365, each = 24), 
+                   hour = rep(seq(0, 23), 365))
+OpBioGro_weather <- data.frame(time, solarR = downscaled.result$FSDS, DailyTemp.C, RH, WindSpeed, precip)
 ```
 
 ### Biomass data
@@ -133,7 +120,7 @@ biomass_data_by_tt[2, 1] <- 550
 ```{r}
 library(BioCro)
 
-coef_estimates <- valid_dbp(idbp(biomass_data_by_tt))
-biomass_coefs <- OpBioGro(phen = 0, WetDat = weather_data, data = biomass_data_by_tt, iCoef = approx_biomass_coefs)
+#coef_estimates <- valid_dbp(idbp(biomass_data_by_tt))
+#biomass_coefs <- OpBioGro(phen = 0, WetDat = weather_data, data = biomass_data_by_tt, iCoef = approx_biomass_coefs)
 ```
 
