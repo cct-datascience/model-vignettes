@@ -158,7 +158,7 @@ OpBioGro_biomass <- data.frame(OpBioGro_biomass) %>%
 ### Estimate coefficients
 
 ```{r}
-coef_estimates <- valid_dbp(idbp(OpBioGro_biomass))
+#coef_estimates <- valid_dbp(idbp(OpBioGro_biomass))
 
 z <- OpBioGro_biomass
 library(ggplot2)
@@ -184,6 +184,36 @@ p['kRhizome6'] <- 0
 x <- idbp(z, phenoControl = p)
 x[8] <- 0
 valid_dbp(x)
-biomass_coefs <- OpBioGro(phen = 0, WetDat = OpBioGro_weather, data = OpBioGro_biomass, iCoef = x)
+#biomass_coefs <- OpBioGro(phen = 0, WetDat = OpBioGro_weather, data = OpBioGro_biomass, iCoef = x)
+```
+
+```{r}
+z <- OpBioGro_biomass
+ggplot(z %>% tidyr::pivot_longer(Stem:LAI), aes(ThermalT, value, color = name)) +
+  geom_line() 
+ p <- list(tp1 = 338.581104166667, tp2 = 553.227354166667, tp3 = 767.873604166667, 
+           tp4 = 982.519854166666, tp5 = 1197.16610416666, tp6 = 1411.81235416666, 
+           kStem1 = 0.25, kLeaf1 = 0.5, kRoot1 = 0.25, kRhizome1 = 0, #kGrain1 = 0.0, 
+           kStem2 = 0.25, kLeaf2 = 0.5, kRoot2 = 0.25, kRhizome2 = 0, #kGrain1 = 0.0,
+           kStem3 = 0.25, kLeaf3 = 0.25, kRoot3 = 0.25, kRhizome3 = 0, #kGrain1 = 0.25,
+           kStem4 = 0.25, kLeaf4 = 0.25, kRoot4 = 0.25, kRhizome4 = 0, #kGrain1 = 0.25,
+           kStem5 = 0.25, kLeaf5 = 0.25, kRoot5 = 0.25, kRhizome5 = 0, #kGrain1 = 0.25,
+           kStem6 = 0.25, kLeaf6 = 0.25, kRoot6 = 0.25, kRhizome6 = 0, kGrain1 = 0.25)
+p[1:6] <- OpBioGro_biomass$ThermalT
+x <- idbp(z, phenoControl = p)
+x[8] <- 0
+valid_dbp(x)
+zzz <- OpBioGro_biomass %>% 
+  mutate(LAI = LAI*10)
+zzz <- zzz[,c("ThermalT", "Stem", "Leaf", "Root", "Rhizome", "Grain", "LAI")]
+biomass_coefs <- constrOpBioGro(phen = c(1,3,4,5,6), 
+                          WetDat = OpBioGro_weather, 
+                          day1 = 1,
+                          dayn = 35,
+                          data = OpBioGro_biomass, 
+                          iCoef = x, 
+                          iRhizome=0,
+                          phenoControl = p)
+biomass_coefs
 ```
 
