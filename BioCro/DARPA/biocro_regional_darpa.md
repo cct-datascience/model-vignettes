@@ -201,49 +201,67 @@ time_vec <- ncvar_get(met_champaign, "time")
 time_origin1 <- ncatt_get(met_champaign, "time", "units")
 time_origin2 <- gsub( ".*(\\d{4}-\\d{2}-\\d{2}).*", "\\1", time_origin1$value)
 start_date <- as.Date(time_origin2) + time_vec[1]
-end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1
+end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1 #113589.9375 
 
 # Convert met from Pecan to BioCro format for all locations
 dir.create("biocro_regional_darpa_files/biocro_met_by_location/")
-```
-
-    ## Warning in dir.create("biocro_regional_darpa_files/
-    ## biocro_met_by_location/"): 'biocro_regional_darpa_files/
-    ## biocro_met_by_location' already exists
-
-``` r
 met_nc <- ncdf4::nc_open(metfile)
 point <- 1
+biocro_met_locations <- c()
 for(point in 1:nrow(latlon)){
   met <- load.cfmet(met_nc, lat = latlon$lat[point], lon = latlon$lon[point],
                     start.date = start_date, end.date = end_date)
-  biocro_met <- cf2biocro(met)
+  met_hourly <- cfmet.downscale.time(met, output.dt = 1)
+  biocro_met <- cf2biocro(met_hourly)
   biocro_met <- biocro_met %>%
     mutate(RH = case_when(RH >= 1 ~ 0.99999999999999,
                           RH < 1 ~ RH))
+  biocro_met_location <- biocro_met %>% 
+    mutate(latitude = latlon$lat[point], 
+           longitude = latlon$lon[point])
+  biocro_met_locations <- rbind(biocro_met_locations, biocro_met_location)
   biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
                             latlon$lat[point], "-", latlon$lon[point], ".2010.csv")
   write.csv(biocro_met, biocro_met_path, row.names = FALSE)
-  
 }
 ```
+
+We plot the first day of all the weather data variables to examine the
+daily patterns in them.
+
+``` r
+biocro_met_plot <- biocro_met_locations %>% 
+  tidyr::unite(latitudelongitude, latitude:longitude) %>% 
+  mutate(date = as.Date(paste0(year, "-01-01")) - 1 + doy, 
+         time = case_when(
+           hour < 10 ~ paste0("0", hour, ":00"), 
+           hour >= 10 ~ paste0(biocro_met_locations$hour, ":00")
+         ), 
+         datetime = as.POSIXct(paste(date, time))) 
+
+biocro_met_plot_sub <- biocro_met_plot %>% 
+  filter(date == as.Date("1979-06-01")) %>% 
+  select(datetime, latitudelongitude, solar:precip) %>% 
+  tidyr::gather(weather_var, weather_value, solar:precip)
+
+biocro_met_plot_sub$latitudelongitude <- as.factor(biocro_met_plot_sub$latitudelongitude)
+
+ggplot(biocro_met_plot_sub, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
+  geom_line() +
+  facet_wrap(~weather_var, scales = "free_y")
+```
+
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ## Run BioCro on each location
 
 The BioCro model is then run on weather and soil data for each of the
 locations, using *Setaria* input data. This produces hourly, daily, and
 yearly estimates for biomass, transpiration, etc. for the time range we
-specified in the config file. We are using only the daily
-    values.
+specified in the config file. We are using only the daily values.
 
 ``` r
 dir.create("biocro_regional_darpa_files/results_by_location/")
-```
-
-    ## Warning in dir.create("biocro_regional_darpa_files/results_by_location/"):
-    ## 'biocro_regional_darpa_files/results_by_location' already exists
-
-``` r
 biocro_results <- c()
 for(point in 1:nrow(latlon)){
   biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
@@ -317,7 +335,7 @@ ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = 
   theme(legend.position = "none")
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ``` r
 background_map <- map_data("state") %>% 
@@ -336,9 +354,9 @@ biomass_animation <- ggplot() +
 animate(biomass_animation, fps = 100)
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-6-1.gif)<!-- -->
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.gif)<!-- -->
 
 ``` r
-anim_save("biomass_animation_champaign.mp4", animation = biomass_animation, 
+anim_save("biomass_animation_champaign.gif", animation = biomass_animation, 
           path = "biocro_regional_darpa_files/", fps = 100)
 ```
