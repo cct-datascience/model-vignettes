@@ -80,18 +80,29 @@ biocro_met_plot <- biocro_met_locations %>%
   mutate(date = as.Date(paste0(year, "-01-01")) - 1 + doy, 
          time = case_when(
            hour < 10 ~ paste0("0", hour, ":00"), 
-           hour >= 10 ~ paste0(biocro_met_locations$hour, ":00")
+           hour >= 10 ~ paste0(hour, ":00")
          ), 
-         datetime = as.POSIXct(paste(date, time))) 
+         datetime_gmt = as.POSIXct(paste(date, time), tz = "GMT"), 
+         datetime = as.POSIXct(format(datetime_gmt, tz = "America/Chicago")), 
+         date = as.Date(datetime, tz = "America/Chicago"), 
+         year_plot = format(date, "%Y"), 
+         latitudelongitude = as.factor(latitudelongitude)) 
 
-biocro_met_plot_sub <- biocro_met_plot %>% 
+biocro_met_plot_year <- biocro_met_plot %>% 
+  filter(year_plot == 1995 & latitudelongitude == "40.375_-87.875") %>%
+  select(datetime, latitudelongitude, solar:precip) %>% 
+  tidyr::gather(weather_var, weather_value, solar:precip)
+  
+ggplot(biocro_met_plot_year, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
+  geom_line() +
+  facet_wrap(~weather_var, scales = "free_y")
+
+biocro_met_plot_day <- biocro_met_plot %>% 
   filter(date == as.Date("1979-06-01")) %>% 
   select(datetime, latitudelongitude, solar:precip) %>% 
   tidyr::gather(weather_var, weather_value, solar:precip)
 
-biocro_met_plot_sub$latitudelongitude <- as.factor(biocro_met_plot_sub$latitudelongitude)
-
-ggplot(biocro_met_plot_sub, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
+ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
   geom_line() +
   facet_wrap(~weather_var, scales = "free_y")
 ```
