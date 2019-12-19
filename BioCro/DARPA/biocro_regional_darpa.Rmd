@@ -135,7 +135,7 @@ for(point in 1:nrow(latlon)){
 The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) are then visualized. The code below plots these values across the 18 locations on a map of the state of Illinois, and then runs through these plots for each day of the year as a .gif. 
 ```{r}
 biocro_results <- biocro_results %>% 
-  mutate(date = as.Date(doy, "2003-12-31"), 
+  mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
          total_biomass = Stem + Leaf + Root + Rhizome + Grain)
 

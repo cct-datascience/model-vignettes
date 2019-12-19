@@ -201,10 +201,17 @@ time_vec <- ncvar_get(met_champaign, "time")
 time_origin1 <- ncatt_get(met_champaign, "time", "units")
 time_origin2 <- gsub( ".*(\\d{4}-\\d{2}-\\d{2}).*", "\\1", time_origin1$value)
 start_date <- as.Date(time_origin2) + time_vec[1]
-end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1 #113589.9375 
+end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1
 
 # Convert met from Pecan to BioCro format for all locations
 dir.create("biocro_regional_darpa_files/biocro_met_by_location/")
+```
+
+    ## Warning in dir.create("biocro_regional_darpa_files/
+    ## biocro_met_by_location/"): 'biocro_regional_darpa_files/
+    ## biocro_met_by_location' already exists
+
+``` r
 met_nc <- ncdf4::nc_open(metfile)
 point <- 1
 biocro_met_locations <- c()
@@ -235,33 +242,55 @@ biocro_met_plot <- biocro_met_locations %>%
   mutate(date = as.Date(paste0(year, "-01-01")) - 1 + doy, 
          time = case_when(
            hour < 10 ~ paste0("0", hour, ":00"), 
-           hour >= 10 ~ paste0(biocro_met_locations$hour, ":00")
+           hour >= 10 ~ paste0(hour, ":00")
          ), 
-         datetime = as.POSIXct(paste(date, time))) 
+         datetime_gmt = as.POSIXct(paste(date, time), tz = "GMT"), 
+         datetime = as.POSIXct(format(datetime_gmt, tz = "America/Chicago")), 
+         date = as.Date(datetime, tz = "America/Chicago"), 
+         year_plot = format(date, "%Y"), 
+         latitudelongitude = as.factor(latitudelongitude)) 
 
-biocro_met_plot_sub <- biocro_met_plot %>% 
-  filter(date == as.Date("1979-06-01")) %>% 
+biocro_met_plot_year <- biocro_met_plot %>% 
+  filter(year_plot == 1995 & latitudelongitude == "40.375_-87.875") %>%
   select(datetime, latitudelongitude, solar:precip) %>% 
   tidyr::gather(weather_var, weather_value, solar:precip)
-
-biocro_met_plot_sub$latitudelongitude <- as.factor(biocro_met_plot_sub$latitudelongitude)
-
-ggplot(biocro_met_plot_sub, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
+  
+ggplot(biocro_met_plot_year, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
   geom_line() +
   facet_wrap(~weather_var, scales = "free_y")
 ```
 
 ![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
+``` r
+biocro_met_plot_day <- biocro_met_plot %>% 
+  filter(date == as.Date("1979-06-01")) %>% 
+  select(datetime, latitudelongitude, solar:precip) %>% 
+  tidyr::gather(weather_var, weather_value, solar:precip)
+
+ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
+  geom_line() +
+  facet_wrap(~weather_var, scales = "free_y")
+```
+
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+
 ## Run BioCro on each location
 
 The BioCro model is then run on weather and soil data for each of the
 locations, using *Setaria* input data. This produces hourly, daily, and
 yearly estimates for biomass, transpiration, etc. for the time range we
-specified in the config file. We are using only the daily values.
+specified in the config file. We are using only the daily
+    values.
 
 ``` r
 dir.create("biocro_regional_darpa_files/results_by_location/")
+```
+
+    ## Warning in dir.create("biocro_regional_darpa_files/results_by_location/"):
+    ## 'biocro_regional_darpa_files/results_by_location' already exists
+
+``` r
 biocro_results <- c()
 for(point in 1:nrow(latlon)){
   biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
@@ -326,7 +355,7 @@ then runs through these plots for each day of the year as a .gif.
 
 ``` r
 biocro_results <- biocro_results %>% 
-  mutate(date = as.Date(doy, "2003-12-31"), 
+  mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
          total_biomass = Stem + Leaf + Root + Rhizome + Grain)
 
