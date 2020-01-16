@@ -29,7 +29,7 @@ A weather data file, such as that read in below, is required to run BioCro. The 
 
 We also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
 ```{r}
-metfile <- "biocro_regional_darpa_files/champaign.nc"
+metfile <- "biocro_regional_darpa_files/chiruss.nc"
 met_champaign <- nc_open(metfile)
 soil_nc <- nc_open("biocro_regional_darpa_files/hwsd.nc")
 ```
@@ -55,7 +55,7 @@ dir.create("biocro_regional_darpa_files/biocro_met_by_location/")
 met_nc <- ncdf4::nc_open(metfile)
 point <- 1
 biocro_met_locations <- c()
-for(point in 1:nrow(latlon)){
+for(point in 133:nrow(latlon)){
   met <- load.cfmet(met_nc, lat = latlon$lat[point], lon = latlon$lon[point],
                     start.date = start_date, end.date = end_date)
   met_hourly <- cfmet.downscale.time(met, output.dt = 1)
@@ -143,8 +143,10 @@ ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = 
   geom_line() +
   theme(legend.position = "none")
 
-background_map <- map_data("state") %>% 
-  filter(region == "illinois")
+background_map <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia") %>% 
+  filter(long > 65 & long < 110) %>% 
+  filter(lat > 25 & lat < 75)
 
 colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 biomass_animation <- ggplot() +
@@ -153,6 +155,7 @@ biomass_animation <- ggplot() +
   geom_raster(data = biocro_results, aes(x = lon, y = lat, fill = total_biomass)) +
   coord_quickmap() +
   scale_fill_gradientn(colors = colfunc(10)) +
+  #lims(x = c(50, 150)) +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 

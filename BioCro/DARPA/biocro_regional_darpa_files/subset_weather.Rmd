@@ -146,3 +146,69 @@ ggplot() +
   coord_quickmap() +
   lims(x = c(-150, -50), y = c(20, 80))
 ```
+
+
+
+china/russia code: 
+```{r}
+library(speciesgeocodeR)
+library(rgdal)
+library(maptools)
+library(ggplot2)
+library(dplyr)
+
+wwf_eco <- readOGR(file.path("BioCro/DARPA/biocro_regional_darpa_files", 
+                                                "WWF_ecoregions", "official", 
+                                                "wwf_terr_ecos.shp"))
+
+wwf_eco@data$id <- rownames(wwf_eco@data)
+wwf_eco_points <- fortify(wwf_eco, region = "id")
+wwf_eco_df <- plyr::join(wwf_eco_points, wwf_eco@data, by = "id")
+
+ wwf_eco_df2 <- wwf_eco_df %>% 
+   filter(lat > 20 & lat < 80,
+          long > 50 & long < 150)
+
+background_map <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia")
+chiruss_corners = expand.grid(lat = c(30.1, 70.1), 
+                              lon = c(87.1, 87.6))
+
+#ncks -O -d longitude,87.1,87.9 -d latitude,50.1,51.1 all.nc testchiruss.nc
+
+ggplot()  +
+  geom_polygon(data = wwf_eco_df2, aes(long, lat, group = group, fill = ECO_NAME)) +
+  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_point(data = chiruss_corners, aes(x = lon, y = lat), color = "red") +
+  geom_path(color = "white") +
+  coord_equal() +
+  theme(legend.position = "none")
+
+
+testchiruss <- nc_open("BioCro/DARPA/biocro_regional_darpa_files/testchiruss.nc")
+testchiruss_latlon <- expand.grid(lat = ncvar_get(testchiruss, "latitude"), 
+                                lon = ncvar_get(testchiruss, "longitude"))
+testchiruss_latlon$value <- sample(1:nrow(testchiruss_latlon), nrow(testchiruss_latlon))
+
+ggplot() +
+  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = testchiruss_latlon, aes(x = lon, y = lat, fill = value)) +
+  coord_quickmap() +
+  lims(x = c(75, 100), y = c(40, 60))
+
+#ncks -O -d longitude,87.1,87.9 -d latitude,30.1,70.1 all.nc chiruss.nc
+
+chiruss <- nc_open("BioCro/DARPA/biocro_regional_darpa_files/chiruss.nc")
+chiruss_latlon <- expand.grid(lat = ncvar_get(chiruss, "latitude"), 
+                                  lon = ncvar_get(chiruss, "longitude"))
+chiruss_latlon$value <- sample(1:nrow(chiruss_latlon), nrow(chiruss_latlon))
+
+ggplot() +
+  geom_polygon(data = wwf_eco_df2, aes(long, lat, group = group, fill = ECO_NAME)) +
+  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), 
+               fill = NA, color = "black") +
+  geom_raster(data = chiruss_latlon, aes(x = lon, y = lat, fill = value)) +
+  coord_quickmap()
+```
+
