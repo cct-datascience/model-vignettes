@@ -15,6 +15,9 @@ library(dplyr)
 library(ncdf.tools)
 library(ggplot2)
 library(maps)
+library(speciesgeocodeR)
+library(rgdal)
+library(maptools)
 library(gganimate)
 ```
 
@@ -29,8 +32,8 @@ A weather data file, such as that read in below, is required to run BioCro. The 
 
 We also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
 ```{r}
-metfile <- "biocro_regional_darpa_files/champaign.nc"
-met_champaign <- nc_open(metfile)
+metfile <- "biocro_regional_darpa_files/chiruss.nc"
+met_chiruss <- nc_open(metfile)
 soil_nc <- nc_open("biocro_regional_darpa_files/hwsd.nc")
 ```
 
@@ -39,13 +42,13 @@ soil_nc <- nc_open("biocro_regional_darpa_files/hwsd.nc")
 The weather dataset has to be converted from netCDF file format to the format required for BioCro. Data for each of the locations (unique latitude and longitude combinations) is turned into a flat csv file, with one row per hour for the time range of the weather dataset (approximately 32 years). 
 ```{r}
 # Get all locations
-lat <- ncvar_get(met_champaign, "latitude")
-lon <- ncvar_get(met_champaign, "longitude")
+lat <- ncvar_get(met_chiruss, "latitude")
+lon <- ncvar_get(met_chiruss, "longitude")
 latlon <- expand.grid(lat = lat, lon = lon)
 
 # Get met conversion inputs that apply across all locations
-time_vec <- ncvar_get(met_champaign, "time")
-time_origin1 <- ncatt_get(met_champaign, "time", "units")
+time_vec <- ncvar_get(met_chiruss, "time")
+time_origin1 <- ncatt_get(met_chiruss, "time", "units")
 time_origin2 <- gsub( ".*(\\d{4}-\\d{2}-\\d{2}).*", "\\1", time_origin1$value)
 start_date <- as.Date(time_origin2) + time_vec[1]
 end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1
@@ -132,8 +135,9 @@ for(point in 1:nrow(latlon)){
 
 ## Plot estimated biomass
 
-The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) are then visualized. The code below plots these values across the 18 locations on a map of the state of Illinois, and then runs through these plots for each day of the year as a .gif. 
+The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) are then visualized. 
 ```{r}
+biocro_results <- read.csv("biocro_regional_darpa_files/chiruss_results/all_biocro_results.csv")
 biocro_results <- biocro_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
@@ -142,9 +146,59 @@ biocro_results <- biocro_results %>%
 ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
   geom_line() +
   theme(legend.position = "none")
+```
 
-background_map <- map_data("state") %>% 
-  filter(region == "illinois")
+This shows where the locations are in the two countries
+```{r}
+overall_map <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia")
+
+ggplot() +
+  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = biocro_results, aes(x = lon, y = lat), fill = "red") +
+  coord_quickmap()
+```
+
+```{r}
+#TODO: close up with ecoregions
+
+background_map <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia") 
+# %>% 
+#   filter(long > 65 & long < 110) %>% 
+#   filter(lat > 25 & lat < 75)
+
+ecoregions <- readOGR(file.path("biocro_regional_darpa_files", 
+                                                "WWF_ecoregions", "official", 
+                                                "wwf_terr_ecos.shp"))
+
+ecoregions@data$id <- rownames(ecoregions@data)
+ecoregions_points <- fortify(ecoregions, region = "id")
+ecoregions_df <- plyr::join(ecoregions_points, ecoregions@data, by = "id")
+
+ ecoregions_df2 <- ecoregions_df %>% 
+   filter(lat > 20 & lat < 80,
+          long > 50 & long < 150)
+
+colfunc <- colorRampPalette(c("yellow", "darkgreen"))
+ggplot() +
+  geom_polygon(data = ecoregions_df2, aes(long, lat, group = group, color = ECO_NAME)) +
+  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_raster(data = biocro_results, aes(x = lon, y = lat), fill = "red") +
+  scale_fill_gradientn(colors = colfunc(10)) +
+  #coord_cartesian(xlim = c(65, 110), ylim = c(25, 75)) +
+  coord_quickmap() +
+  theme(legend.position = "none")
+```
+
+The code below plots these values across the 18 locations on a map of the state of Illinois, and then runs through these plots for each day of the year as a .gif. 
+```{r}
+#TODO: close up gif
+background_map <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia") %>% 
+  filter(long > 65 & long < 110) %>% 
+  filter(lat > 25 & lat < 75)
 
 colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 biomass_animation <- ggplot() +
@@ -153,10 +207,11 @@ biomass_animation <- ggplot() +
   geom_raster(data = biocro_results, aes(x = lon, y = lat, fill = total_biomass)) +
   coord_quickmap() +
   scale_fill_gradientn(colors = colfunc(10)) +
+  #lims(x = c(50, 150)) +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
 animate(biomass_animation, fps = 100)
-anim_save("biomass_animation_champaign.gif", animation = biomass_animation, 
+anim_save("biomass_animation_chiruss.gif", animation = biomass_animation, 
           path = "biocro_regional_darpa_files/", fps = 100)
 ```
