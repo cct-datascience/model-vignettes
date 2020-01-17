@@ -40,7 +40,7 @@ soil_nc <- nc_open("biocro_regional_darpa_files/hwsd.nc")
 ## Convert weather data
 
 The weather dataset has to be converted from netCDF file format to the format required for BioCro. Data for each of the locations (unique latitude and longitude combinations) is turned into a flat csv file, with one row per hour for the time range of the weather dataset (approximately 32 years). 
-```{r}
+```{r, eval=FALSE}
 # Get all locations
 lat <- ncvar_get(met_chiruss, "latitude")
 lon <- ncvar_get(met_chiruss, "longitude")
@@ -77,7 +77,7 @@ for(point in 1:nrow(latlon)){
 ```
 
 We plot the first day of all the weather data variables to examine the daily patterns in them. 
-```{r}
+```{r, eval=FALSE}
 biocro_met_plot <- biocro_met_locations %>% 
   tidyr::unite(latitudelongitude, latitude:longitude) %>% 
   mutate(date = as.Date(paste0(year, "-01-01")) - 1 + doy, 
@@ -113,7 +113,7 @@ ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitud
 ## Run BioCro on each location
 
 The BioCro model is then run on weather and soil data for each of the locations, using *Setaria* input data. This produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values. 
-```{r}
+```{r, eval=FALSE}
 dir.create("biocro_regional_darpa_files/results_by_location/")
 biocro_results <- c()
 for(point in 1:nrow(latlon)){
@@ -148,7 +148,7 @@ ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = 
   theme(legend.position = "none")
 ```
 
-This shows where the locations are in the two countries
+This map shows where the locations are in the two countries
 ```{r}
 overall_map <- map_data("world") %>% 
   filter(region == "China" | region == "Russia")
@@ -160,54 +160,44 @@ ggplot() +
   coord_quickmap()
 ```
 
+This map shows the locations closer up with the nearby ecoregions plotted in various colors. 
 ```{r}
-#TODO: close up with ecoregions
-
-background_map <- map_data("world") %>% 
+ecoregions_background <- map_data("world") %>% 
   filter(region == "China" | region == "Russia") 
-# %>% 
-#   filter(long > 65 & long < 110) %>% 
-#   filter(lat > 25 & lat < 75)
 
 ecoregions <- readOGR(file.path("biocro_regional_darpa_files", 
                                                 "WWF_ecoregions", "official", 
                                                 "wwf_terr_ecos.shp"))
-
 ecoregions@data$id <- rownames(ecoregions@data)
 ecoregions_points <- fortify(ecoregions, region = "id")
 ecoregions_df <- plyr::join(ecoregions_points, ecoregions@data, by = "id")
-
- ecoregions_df2 <- ecoregions_df %>% 
+ecoregions_df_chiruss <- ecoregions_df %>% 
    filter(lat > 20 & lat < 80,
-          long > 50 & long < 150)
+          long > 60 & long < 130)
 
-colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 ggplot() +
-  geom_polygon(data = ecoregions_df2, aes(long, lat, group = group, color = ECO_NAME)) +
-  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, fill = ECO_NAME)) +
+  geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
   geom_raster(data = biocro_results, aes(x = lon, y = lat), fill = "red") +
-  scale_fill_gradientn(colors = colfunc(10)) +
-  #coord_cartesian(xlim = c(65, 110), ylim = c(25, 75)) +
-  coord_quickmap() +
+  coord_cartesian(xlim = c(mean(biocro_results$lon) - 20, mean(biocro_results$lon) + 20), 
+                  ylim = c(min(biocro_results$lat) - 5, max(biocro_results$lat) + 5)) +
   theme(legend.position = "none")
 ```
 
-The code below plots these values across the 18 locations on a map of the state of Illinois, and then runs through these plots for each day of the year as a .gif. 
+The final map plots estimated biomass values for the `r length(unique(biocro_results$latlon))` locations on this zoomed in map of east Asia, running through each day's values. 
+
 ```{r}
-#TODO: close up gif
-background_map <- map_data("world") %>% 
-  filter(region == "China" | region == "Russia") %>% 
-  filter(long > 65 & long < 110) %>% 
-  filter(lat > 25 & lat < 75)
+gif_background <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia")
 
 colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 biomass_animation <- ggplot() +
-  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = biocro_results, aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
+    coord_cartesian(xlim = c(mean(biocro_results$lon) - 20, mean(biocro_results$lon) + 20), 
+                  ylim = c(min(biocro_results$lat) - 5, max(biocro_results$lat) + 5)) +
   scale_fill_gradientn(colors = colfunc(10)) +
-  #lims(x = c(50, 150)) +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
