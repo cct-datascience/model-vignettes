@@ -1,23 +1,23 @@
-How to Subset Large Weather Data Files
+How to Subset Large netCDF Weather Data Files
 ================
 Author: Kristina Riemer
 
 ## Data file information
 
-This is for how to subset the NARR `all.nc` file. It is on Globus in the
-UA Field Scanner collection
-[here](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fnarr%2Fthreehourly%2F).
-The file is ~650GB. This is not global, it is restricted to the northern
-hemisphere as below:
+These instructions walk through how to subset the NARR `all.nc` file.
+This data file is on Globus [in the UA Field Scanner
+collection](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fnarr%2Fthreehourly%2F).
+The file is ~650GB. These data do not have global coverage, but are
+rather restricted to the northern hemisphere as below:
 
   - Latitudinal range: 10.125 - 83.875
   - Longitudinal range: -169.875 to -50.125
 
 The entire global file is the CRUNCEP `all.nc`, which is ~1.3TB and in
-the same Globus collection
-[here](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fcruncep%2F).
-We will need more data space on the HPC to subset this because the upper
-limit is currently 1TB.
+the same Globus collection [in a different
+location](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fcruncep%2F).
+We will need more data space on the HPC to subset this global data file
+because the upper limit for HPC data storage is currently 1TB.
 
 ## Subsetting process
 
@@ -84,7 +84,7 @@ should be there now. You can see the subsetting command by looking at
 the first line under history after running this:
 
 ``` shell
-ncdump -h champaign.nc
+ncdump -h champaign.nc | grep ':history'
 ```
 
 The command is below. This is what was used to generate `champaign.nc`
@@ -112,7 +112,7 @@ USA/Canada:
 ncks -O -d longitude,-108.5,-105.5 -d latitude,45.5,55.5 all.nc usca.nc
 ```
 
-Russia/China (*this will only work with the CRUNCEP all.nc*):
+Russia/China (*this will only work with CRUNCEP all.nc data file*):
 
 ``` shell
 ncks -O -d longitude,123.9,127.1 -d latitude,44.9,55.1 all.nc chiruss.nc
@@ -122,10 +122,11 @@ ncks -O -d longitude,123.9,127.1 -d latitude,44.9,55.1 all.nc chiruss.nc
 
 Once the desired subset has been generated, you will need to transfer
 the file from the HPC collection `arizona#sdmz-dtn` on Globus to your
-own endpoint. This will require downloading Globus Connect Personal and
-following [these
-instructions](https://www.globus.org/globus-connect-personal) to create
-an endpoint on your machine.
+own endpoint. This will require downloading Globus Connect Personal.
+From the [Globus Connect Personal
+website](https://www.globus.org/globus-connect-personal), select the
+link for your operating system and follow the instructions on that page
+to create an endpoint on your machine.
 
 Once this is ready, select the file on the HPC collection and click the
 “Start” button to transfer to your local selected location. This can
