@@ -214,19 +214,66 @@ dir.create("biocro_regional_darpa_files/biocro_met_by_location/")
 ``` r
 met_nc <- ncdf4::nc_open(metfile)
 point <- 1
+biocro_met_locations <- c()
 for(point in 1:nrow(latlon)){
   met <- load.cfmet(met_nc, lat = latlon$lat[point], lon = latlon$lon[point],
                     start.date = start_date, end.date = end_date)
-  biocro_met <- cf2biocro(met)
+  met_hourly <- cfmet.downscale.time(met, output.dt = 1)
+  biocro_met <- cf2biocro(met_hourly)
   biocro_met <- biocro_met %>%
     mutate(RH = case_when(RH >= 1 ~ 0.99999999999999,
                           RH < 1 ~ RH))
+  biocro_met_location <- biocro_met %>% 
+    mutate(latitude = latlon$lat[point], 
+           longitude = latlon$lon[point])
+  biocro_met_locations <- rbind(biocro_met_locations, biocro_met_location)
   biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
                             latlon$lat[point], "-", latlon$lon[point], ".2010.csv")
   write.csv(biocro_met, biocro_met_path, row.names = FALSE)
-  
 }
 ```
+
+We plot the first day of all the weather data variables to examine the
+daily patterns in them.
+
+``` r
+biocro_met_plot <- biocro_met_locations %>% 
+  tidyr::unite(latitudelongitude, latitude:longitude) %>% 
+  mutate(date = as.Date(paste0(year, "-01-01")) - 1 + doy, 
+         time = case_when(
+           hour < 10 ~ paste0("0", hour, ":00"), 
+           hour >= 10 ~ paste0(hour, ":00")
+         ), 
+         datetime_gmt = as.POSIXct(paste(date, time), tz = "GMT"), 
+         datetime = as.POSIXct(format(datetime_gmt, tz = "America/Chicago")), 
+         date = as.Date(datetime, tz = "America/Chicago"), 
+         year_plot = format(date, "%Y"), 
+         latitudelongitude = as.factor(latitudelongitude)) 
+
+biocro_met_plot_year <- biocro_met_plot %>% 
+  filter(year_plot == 1995 & latitudelongitude == "40.375_-87.875") %>%
+  select(datetime, latitudelongitude, solar:precip) %>% 
+  tidyr::gather(weather_var, weather_value, solar:precip)
+  
+ggplot(biocro_met_plot_year, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
+  geom_line() +
+  facet_wrap(~weather_var, scales = "free_y")
+```
+
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+``` r
+biocro_met_plot_day <- biocro_met_plot %>% 
+  filter(date == as.Date("1979-06-01")) %>% 
+  select(datetime, latitudelongitude, solar:precip) %>% 
+  tidyr::gather(weather_var, weather_value, solar:precip)
+
+ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
+  geom_line() +
+  facet_wrap(~weather_var, scales = "free_y")
+```
+
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
 ## Run BioCro on each location
 
@@ -308,7 +355,7 @@ then runs through these plots for each day of the year as a .gif.
 
 ``` r
 biocro_results <- biocro_results %>% 
-  mutate(date = as.Date(doy, "2003-12-31"), 
+  mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
          total_biomass = Stem + Leaf + Root + Rhizome + Grain)
 
@@ -317,7 +364,7 @@ ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = 
   theme(legend.position = "none")
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ``` r
 background_map <- map_data("state") %>% 
@@ -336,9 +383,9 @@ biomass_animation <- ggplot() +
 animate(biomass_animation, fps = 100)
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-6-1.gif)<!-- -->
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.gif)<!-- -->
 
 ``` r
-anim_save("biomass_animation_champaign.mp4", animation = biomass_animation, 
+anim_save("biomass_animation_champaign.gif", animation = biomass_animation, 
           path = "biocro_regional_darpa_files/", fps = 100)
 ```

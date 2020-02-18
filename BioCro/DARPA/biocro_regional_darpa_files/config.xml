@@ -26,11 +26,11 @@
    <eteq>0</eteq>
   </canopyControl>
   <iPlantControl>
-   <iRhizome>3</iRhizome>
-   <iStem>1</iStem>
-   <iLeaf>0</iLeaf>
-   <iRoot>1</iRoot>
-   <ifrRhizome>0.01</ifrRhizome>
+   <iRhizome>0</iRhizome>
+   <iStem>0.1</iStem>
+   <iLeaf>0.1</iLeaf>
+   <iRoot>0.1</iRoot>
+   <ifrRhizome>0</ifrRhizome>
    <ifrStem>0.01</ifrStem>
   </iPlantControl>
   <photoParms>
@@ -85,11 +85,31 @@
    <kStem1>0.37</kStem1>
    <kLeaf1>0.33</kLeaf1>
    <kRoot1>0.3</kRoot1>
-   <kRhizome1>-0.0008</kRhizome1>
-   <kStem2>0.85</kStem2>
+   <kRhizome1>0</kRhizome1>
+   <kStem1>0.37</kStem1>
+   <kLeaf1>0.33</kLeaf1>
+   <kRoot1>0.3</kRoot1>
+   <kRhizome1>0</kRhizome1>
+   <kStem1>0.37</kStem1>
+   <kLeaf1>0.33</kLeaf1>
+   <kRoot1>0.3</kRoot1>
+   <kRhizome1>0</kRhizome1>
+   <kStem1>0.37</kStem1>
+   <kLeaf1>0.33</kLeaf1>
+   <kRoot1>0.3</kRoot1>
+   <kRhizome1>0</kRhizome1>
+   <kStem1>0.37</kStem1>
+   <kLeaf1>0.33</kLeaf1>
+   <kRoot1>0.3</kRoot1>
+   <kRhizome1>0</kRhizome1>
+   <kStem1>0.37</kStem1>
+   <kLeaf1>0.33</kLeaf1>
+   <kRoot1>0.3</kRoot1>
+   <kRhizome1>0</kRhizome1>
+<!--   <kStem2>0.85</kStem2>
    <kLeaf2>0.14</kLeaf2>
    <kRoot2>0.01</kRoot2>
-   <kRhizome2>-0.0005</kRhizome2>
+   <kRhizome2>0</kRhizome2>
    <kStem3>0.63</kStem3>
    <kLeaf3>0.01</kLeaf3>
    <kRoot3>0.01</kRoot3>
@@ -105,7 +125,7 @@
    <kStem6>0.63</kStem6>
    <kLeaf6>0.01</kLeaf6>
    <kRoot6>0.01</kRoot6>
-   <kRhizome6>0.35</kRhizome6>
+   <kRhizome6>0.35</kRhizome6> -->
    <kGrain6>0</kGrain6>
   </phenoParms>
  </pft>
