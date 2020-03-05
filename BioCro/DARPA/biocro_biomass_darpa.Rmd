@@ -39,36 +39,12 @@ clm_met <- nc_open("clm_version.nc")
 
 Do variable conversions and downscaling: 
 ```{r}
-DailyTemp.C <- rep(ncvar_get(clm_met, "TBOT") - 273.15, each = 3)
-RH <- rep(ncvar_get(clm_met, "RH") / 100, each = 3)
-WindSpeed <- rep(ncvar_get(clm_met, "WIND"), each = 3)
+DailyTemp.C <- rep(31, times = 365 * 24)
+RH <- rep(55.5 / 100,  times = 365 * 24)
+WindSpeed <- rep(0, times = 365 * 24) # always 0
 PRECTmms <- ncvar_get(clm_met, "PRECTmms")
 precip <- rep(c(unique(PRECTmms)[1], rep(0, 23)), 365)
-
-FSDS <- ncvar_get(clm_met, "FSDS") * 4.6
-FSDS_df <- data.table::data.table(data.frame(
-  date = seq(as.POSIXct(strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")), 
-             as.POSIXct(strptime("2000-12-30 21:00:00", "%Y-%m-%d %H:%M:%S")), 
-             3*60*60), 
-  year = rep(2000, 2920), 
-  doy = rep(1:365, each = 8), 
-  hour = rep(seq(0, 21, by = 3), 365), 
-  FSDS = FSDS) %>% 
-    mutate(day = day(date), 
-           month = month(date)))
-
-output.dt <- 1
-hrscale <- 1
-downscaled.result <- list()
-
-new.date <- FSDS_df[,list(hour = 0:(23 / output.dt) / output.dt),
-                        by = c("year", "month", "day", "doy")]
-new.date$date <- new.date[,list(date = lubridate::ymd_h(paste(year, month, day, hour)))]
-
-f <- stats::splinefun(as.double(FSDS_df$date), (FSDS_df$FSDS / hrscale), method = "monoH.FC")
-downscaled.result$FSDS <- f(as.double(new.date$date))
-downscaled.result$FSDS[downscaled.result$FSDS < 0] <- 0
-downscaled.result <- cbind(new.date, data.table::as.data.table(downscaled.result))
+FSDS <- rep(c(0, 936), times = 365, each = 12) #ncvar_get(clm_met, "FSDS") * 4.6
 ```
 
 Assemble final weather dataframe: 
@@ -76,7 +52,7 @@ Assemble final weather dataframe:
 time <- data.frame(year = rep(2019, 8760), 
                    doy = rep(1:365, each = 24), 
                    hour = rep(seq(0, 23), 365))
-OpBioGro_weather <- data.frame(time, solarR = downscaled.result$FSDS, DailyTemp.C, RH, WindSpeed, precip)
+OpBioGro_weather <- data.frame(time, solarR = FSDS, DailyTemp.C, RH, WindSpeed, precip)
 ```
 
 Several different visualizations to check these weather data are created. 
@@ -100,7 +76,7 @@ ggplot(t, aes(date, value)) +
   geom_line(size = 0.1) + 
   facet_wrap(~name, ncol = 1, scales = 'free_y')
 
-ggplot(t %>% filter(month(date) ==1), aes(date, value)) +
+ggplot(t %>% filter(month(date) ==1 & day(date) < 5), aes(date, value)) +
   geom_line(size = 0.1) + 
   facet_wrap(~name, ncol = 1, scales = 'free_y')
 ```
@@ -129,8 +105,10 @@ s <- biomass_data_all %>%
   select(temperature_celsius, date, contains('DW.')) %>% 
   tidyr::pivot_longer(panicle.DW.mg.:roots.DW..mg.)
 
-ggplot(s, aes(date, value, color = name)) +
-  geom_line() 
+ggplot(s, aes(date, value, group = name)) +
+  geom_line()+
+  geom_point(aes(color = name))
+
 ```
 
 Added how many days each plant was grown before harvested to the biomass dataframe. Then calculated thermal times for weather data using `BioGro`, using only the thermal times for the days of harvest. 
