@@ -13,7 +13,7 @@ From CLM file `clm_version.nc` to a dataframe with hourly rows and five weather 
 
 BioCro var name   | BioCro var unit | CLM var name | CLM var unit    
 ----------------- | --------------- | ------------ | ------------    
-solarR            | umol/m2/s       | FSDS         | W/m2            
+solarR            | umol/m2/s       | FSDS         | W/m2 (J/m2/s)           
 DailyTemp.C       | C               | TBOT         | K               
 RH                | 0-1             | RH           | %               
 WindSpeed         | m/s             | WIND         | m/s                
@@ -197,5 +197,33 @@ biomass_coefs <- constrOpBioGro(phen = 0,
                                 iRhizome = 0, 
                                 phenoControl = p)
 biomass_coefs
+```
+
+```{r}
+biomass_coefs_list <- list(tp1 = as.vector(unlist(biomass_coefs$list1$phenoP[1])), 
+                           tp2 = as.vector(unlist(biomass_coefs$list1$phenoP[2])), 
+                           tp3 = as.vector(unlist(biomass_coefs$list1$phenoP[3])), 
+                           tp4 = as.vector(unlist(biomass_coefs$list1$phenoP[4])), 
+                           tp5 = as.vector(unlist(biomass_coefs$list1$phenoP[5])), 
+                           tp6 = as.vector(unlist(biomass_coefs$list1$phenoP[6])), 
+           kLeaf1 = biomass_coefs$coefs[1], kStem1 = biomass_coefs$coefs[2], 
+           kRoot1 = biomass_coefs$coefs[3], kRhizome1 = biomass_coefs$coefs[4], #kGrain1 = 0.0, 
+           kLeaf2 = biomass_coefs$coefs[5], kStem2 = biomass_coefs$coefs[6], 
+           kRoot2 = biomass_coefs$coefs[7], kRhizome2 = biomass_coefs$coefs[8], #kGrain2 = 0.0,
+           kLeaf3 = biomass_coefs$coefs[9], kStem3 = biomass_coefs$coefs[10], 
+           kRoot3 = biomass_coefs$coefs[11], kRhizome3 = biomass_coefs$coefs[12], #kGrain3 = 0.0, 
+           kLeaf4 = biomass_coefs$coefs[13], kStem4 = biomass_coefs$coefs[14], 
+           kRoot4 = biomass_coefs$coefs[15], kRhizome4 = biomass_coefs$coefs[16], #kGrain4 = 0.0, 
+           kLeaf5 = biomass_coefs$coefs[17], kStem5 = biomass_coefs$coefs[18], 
+           kRoot5 = biomass_coefs$coefs[19], kRhizome5 = biomass_coefs$coefs[20], #kGrain5 = 0.0, 
+           kLeaf6 = biomass_coefs$coefs[21], kStem6 = biomass_coefs$coefs[22], 
+           kRoot6 = biomass_coefs$coefs[23], kRhizome6 = biomass_coefs$coefs[24], kGrain6 = biomass_coefs$coefs[25]) 
+
+biomass_ests <- BioGro(WetDat = OpBioGro_weather, 
+                       #iCoef = initial_coefs, 
+                       #iRhizome = 0, 
+                       phenoControl = biomass_coefs_list)
+plot(biomass_ests)
+#points(OpBioGro_biomass$ThermalT, OpBioGro_biomass$Stem)
 ```
 

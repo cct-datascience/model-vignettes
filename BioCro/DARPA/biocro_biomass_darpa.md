@@ -10,13 +10,13 @@ For biomass partitioning using
 From CLM file `clm_version.nc` to a dataframe with hourly rows and five
 weather variables.
 
-| BioCro var name | BioCro var unit | CLM var name | CLM var unit |
-| --------------- | --------------- | ------------ | ------------ |
-| solarR          | umol/m2/s       | FSDS         | W/m2         |
-| DailyTemp.C     | C               | TBOT         | K            |
-| RH              | 0-1             | RH           | %            |
-| WindSpeed       | m/s             | WIND         | m/s          |
-| precip          | mm (mm/h)       | PRECTmms     | mm/s         |
+| BioCro var name | BioCro var unit | CLM var name | CLM var unit  |
+| --------------- | --------------- | ------------ | ------------- |
+| solarR          | umol/m2/s       | FSDS         | W/m2 (J/m2/s) |
+| DailyTemp.C     | C               | TBOT         | K             |
+| RH              | 0-1             | RH           | %             |
+| WindSpeed       | m/s             | WIND         | m/s           |
+| precip          | mm (mm/h)       | PRECTmms     | mm/s          |
 
 Need to downscale all weather data from every three hours to hourly, and
 also convert some units, as shown in the table above.
@@ -111,7 +111,8 @@ time <- data.frame(year = rep(2019, 8760),
 OpBioGro_weather <- data.frame(time, solarR = downscaled.result$FSDS, DailyTemp.C, RH, WindSpeed, precip)
 ```
 
-Summarize Weather
+Several different visualizations to check these weather data are
+created.
 
 ``` r
 skimr::skim(OpBioGro_weather)
@@ -145,7 +146,7 @@ numeric**
 | precip         |          0 |              1 |    0.00 |   0.00 |    0.00 |    0.00 |    0.00 |    0.00 |    0.00 | ▇▁▁▁▁ |
 
 ``` r
-tabplot::tableplot(OpBioGro_weather)
+tabplot::tableplot(OpBioGro_weather, sortCol = "doy")
 ```
 
     ## Registered S3 methods overwritten by 'ffbase':
@@ -204,11 +205,8 @@ three different temperatures, and there were three genotypes. Initially
 only using data for the middle temperature (31\*C) and the first
 replicate from that.
 
-Got biomass data for stem, leaf, and root from data and used zeroes for
-rhizome and grain. Calculated thermal times for weather data using
-`BioGro`, then used the ones for the same day of year as the plants were
-grown before harvested. Last, used an estimated SLA combined with leaf
-mass to get LAI values.
+Biomass measurements are estimates from pixel sizes for images taken of
+plants.
 
 ``` r
 library(BioCro)
@@ -250,10 +248,13 @@ numeric**
 | leaf.DW.mg.          |          0 |              1 |  172.73 |  119.29 | 13.4 |   85.35 |  194.65 |  248.68 |  318.10 | ▇▁▃▃▇ |
 | roots.DW..mg.        |          0 |              1 |   97.57 |   82.81 |  4.3 |   32.75 |   93.30 |  143.28 |  222.00 | ▇▃▃▃▃ |
 
+Plot of first replicate 31\*C dry weights for stem, leaf, panicle/grain,
+and roots across six time points when biomass was measured.
+
 ``` r
 s <- biomass_data_all %>% 
   mutate(date = lubridate::mdy(biomas_harvested)) %>% 
-  select(temperature_celsius, date, contains('.DW.')) %>% 
+  select(temperature_celsius, date, contains('DW.')) %>% 
   tidyr::pivot_longer(panicle.DW.mg.:roots.DW..mg.)
 
 ggplot(s, aes(date, value, color = name)) +
@@ -261,6 +262,10 @@ ggplot(s, aes(date, value, color = name)) +
 ```
 
 ![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+Added how many days each plant was grown before harvested to the biomass
+dataframe. Then calculated thermal times for weather data using
+`BioGro`, using only the thermal times for the days of harvest.
 
 ``` r
 biomass_data_single <- biomass_data_all %>% 
@@ -277,7 +282,15 @@ weather_only_run_df <- as.data.frame(unclass(weather_only_run)[1:11]) %>%
   filter(Hour == 0, 
          DayofYear %in% biomass_data_single$days_grown) %>% 
   mutate(days_grown = DayofYear)
+```
 
+Combined biomass data for stem, leaf, panicle/grain, and root from data
+with corresponding calculated thermal time. Added in values of zero for
+rhizome at each thermal time point. Lastly estimated LAI using leaf
+biomass measurements with SLA. All values are plotted against thermal
+time.
+
+``` r
 SLA_mg <- 80 / 1000000
 OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "days_grown") %>% 
   select(ThermalT, Stem = stemDW.mg., Leaf = leaf.DW.mg., Root = roots.DW..mg., Grain = panicle.DW.mg.) %>% 
@@ -285,132 +298,86 @@ OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "da
          LAI = SLA_mg * Leaf)
 OpBioGro_biomass <- data.frame(OpBioGro_biomass) %>% 
   arrange(ThermalT)
-```
 
-### Estimate coefficients
-
-``` r
-#coef_estimates <- valid_dbp(idbp(OpBioGro_biomass))
-
-z <- OpBioGro_biomass
-library(ggplot2)
-library(tidyverse)
-```
-
-    ## ── Attaching packages ────────────────────────── tidyverse 1.2.1 ──
-
-    ## ✔ tibble  2.1.3     ✔ purrr   0.3.2
-    ## ✔ tidyr   1.0.0     ✔ stringr 1.4.0
-    ## ✔ readr   1.3.1     ✔ forcats 0.4.0
-
-    ## ── Conflicts ───────────────────────────── tidyverse_conflicts() ──
-    ## ✖ lubridate::as.difftime() masks base::as.difftime()
-    ## ✖ lubridate::date()        masks base::date()
-    ## ✖ dplyr::filter()          masks stats::filter()
-    ## ✖ lubridate::intersect()   masks base::intersect()
-    ## ✖ dplyr::lag()             masks stats::lag()
-    ## ✖ lubridate::setdiff()     masks base::setdiff()
-    ## ✖ lubridate::union()       masks base::union()
-
-``` r
-ggplot(z %>% tidyr::pivot_longer(Stem:LAI), aes(ThermalT, value, color = name)) +
-  geom_line() 
+OpBioGro_biomass_plot <- OpBioGro_biomass %>% 
+  tidyr::pivot_longer(Stem:LAI)
+ggplot(OpBioGro_biomass_plot %>% filter(name != "LAI"), aes(x = ThermalT, y = value, color = name)) +
+  geom_line() +
+  ylab("Dry Weight (mg)")
 ```
 
 ![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 ``` r
-# z[5,2:4] <- c(776, 318, 222)
-# z[6,2:4] <- c(800, 368, 252)
-# ggplot(z %>% tidyr::pivot_longer(Stem:LAI), aes(ThermalT, value, color = name)) +
-#   geom_line() 
+ggplot(OpBioGro_biomass_plot %>% filter(name == "LAI"), aes(x = ThermalT, y = value)) +
+  geom_line() +
+  ylab("Leaf Area Index (units?)")
+```
 
-zz<-rbind(rep(0,6), z)
+![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->
 
+### Estimate coefficients
+
+Updating phenological parameters that will go into partitioning
+estimates. This includes setting the thermal times to correspond to the
+dates of biomass measurements, and setting all rhizome growth values to
+zero so that this stays zero. Otherwise using default values.
+
+``` r
 p <- phenoParms() 
-p[1:6] <- z$ThermalT#c(400, 600, 800, 1000, 1200, 1500)
+p[1:6] <- OpBioGro_biomass$ThermalT#c(400, 600, 800, 1000, 1200, 1500)
 p['kRhizome1'] <- 0
 p['kRhizome2'] <- 0
 p['kRhizome3'] <- 0
 p['kRhizome4'] <- 0
 p['kRhizome5'] <- 0
 p['kRhizome6'] <- 0
-
-x <- idbp(z, phenoControl = p)
 ```
 
-    ## Warning in idbp(z, phenoControl = p): only one row for phen stage 1
+Generate initial guesses at coefficients using these updated
+phenological parameters and the measured biomass values using `idbp`.
+These values than are validated using `valid_dbp`. The eighth value had
+to be changed manually to pass this validation step because it was
+initially shown as
+    `Inf`.
 
 ``` r
-x[8] <- 0
-valid_dbp(x)
+initial_coefs <- idbp(OpBioGro_biomass, phenoControl = p)
+```
+
+    ## Warning in idbp(OpBioGro_biomass, phenoControl = p): only one row for phen stage
+    ## 1
+
+``` r
+initial_coefs[8] <- -0.000000000000001
+valid_dbp(initial_coefs)
 ```
 
     ##  [1]  5.654008e-01  2.531646e-01  1.814346e-01 -1.000000e-04  3.468809e-01
-    ##  [6]  5.189036e-01  1.342155e-01  0.000000e+00  1.787979e-01  3.977936e-01
+    ##  [6]  5.189036e-01  1.342155e-01 -1.000000e-15  1.787979e-01  3.977936e-01
     ## [11]  7.227999e-02  3.511286e-01  7.175234e-02  3.682129e-01  7.570643e-02
     ## [16]  4.843283e-01  2.500000e-01  2.500000e-01  2.500000e-01  2.500000e-01
     ## [21]  3.205882e-01  3.828877e-01  2.965241e-01  2.673797e-09  0.000000e+00
 
-``` r
-#biomass_coefs <- OpBioGro(phen = 0, WetDat = OpBioGro_weather, data = OpBioGro_biomass, iCoef = x)
-```
+The previously generated weather data, along with those initial
+estimated biomass coefficients and the biomass measurements, are passed
+to the function that optimizes for biomass partitioning coefficients.
+This is optimized for all six phenological stages because of the `phen`
+argument.
 
 ``` r
-z <- OpBioGro_biomass
-ggplot(z %>% tidyr::pivot_longer(Stem:LAI), aes(ThermalT, value, color = name)) +
-  geom_line() 
+# defaults day1 = 90; dayn = 330
+biomass_coefs <- constrOpBioGro(phen = 0, 
+                                WetDat = OpBioGro_weather,
+                                data = OpBioGro_biomass, 
+                                iCoef = initial_coefs, 
+                                iRhizome = 0, 
+                                phenoControl = p)
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+    ## Warning in max(WetDat1s[, 1]): no non-missing arguments to max; returning -Inf
 
-``` r
- p <- list(tp1 = 338.581104166667, tp2 = 553.227354166667, tp3 = 767.873604166667, 
-           tp4 = 982.519854166666, tp5 = 1197.16610416666, tp6 = 1411.81235416666, 
-           kStem1 = 0.25, kLeaf1 = 0.5, kRoot1 = 0.25, kRhizome1 = 0, #kGrain1 = 0.0, 
-           kStem2 = 0.25, kLeaf2 = 0.5, kRoot2 = 0.25, kRhizome2 = 0, #kGrain1 = 0.0,
-           kStem3 = 0.25, kLeaf3 = 0.25, kRoot3 = 0.25, kRhizome3 = 0, #kGrain1 = 0.25,
-           kStem4 = 0.25, kLeaf4 = 0.25, kRoot4 = 0.25, kRhizome4 = 0, #kGrain1 = 0.25,
-           kStem5 = 0.25, kLeaf5 = 0.25, kRoot5 = 0.25, kRhizome5 = 0, #kGrain1 = 0.25,
-           kStem6 = 0.25, kLeaf6 = 0.25, kRoot6 = 0.25, kRhizome6 = 0, kGrain1 = 0.25)
-p[1:6] <- OpBioGro_biomass$ThermalT
-x <- idbp(z, phenoControl = p)
-```
-
-    ## Warning in idbp(z, phenoControl = p): only one row for phen stage 1
-
-``` r
-x[8] <- 0
-valid_dbp(x)
-```
-
-    ##  [1]  5.654008e-01  2.531646e-01  1.814346e-01 -1.000000e-04  3.468809e-01
-    ##  [6]  5.189036e-01  1.342155e-01  0.000000e+00  1.787979e-01  3.977936e-01
-    ## [11]  7.227999e-02  3.511286e-01  7.175234e-02  3.682129e-01  7.570643e-02
-    ## [16]  4.843283e-01  2.500000e-01  2.500000e-01  2.500000e-01  2.500000e-01
-    ## [21]  3.205882e-01  3.828877e-01  2.965241e-01  2.673797e-09  0.000000e+00
-
-``` r
-zzz <- OpBioGro_biomass %>% 
-  mutate(LAI = LAI*10)
-zzz <- zzz[,c("ThermalT", "Stem", "Leaf", "Root", "Rhizome", "Grain", "LAI")]
-biomass_coefs <- constrOpBioGro(phen = c(1,3,4,5,6), 
-                          WetDat = OpBioGro_weather, 
-                          day1 = 1,
-                          dayn = 35,
-                          data = OpBioGro_biomass, 
-                          iCoef = x, 
-                          iRhizome=0,
-                          phenoControl = p)
-```
-
-    ## [1] 6
-
-    ## Warning in if (phen == 0) pheno <- TRUE else pheno <- FALSE: the condition
-    ## has length > 1 and only the first element will be used
-
-    ## Warning in if (phen == 0) convs <- numeric(6): the condition has length > 1
-    ## and only the first element will be used
+    ## Warning in min(WetDat1s[, 1]): no non-missing arguments to min; returning Inf
 
     ## [1] 6
     ## [1] 6
@@ -530,24 +497,463 @@ biomass_coefs <- constrOpBioGro(phen = c(1,3,4,5,6),
     ## [1] 6
     ## [1] 6
     ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ##  Stage 1. Converged:  YES... 
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ##  Stage 2. Converged:  YES... 
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ##  Stage 3. Converged:  YES... 
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ##  Stage 4. Converged:  YES... 
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ##  Stage 5. Converged:  YES... 
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ## [1] 6
+    ##  Stage 6. Converged:  YES.
 
 ``` r
 biomass_coefs
 ```
 
     ## 
-    ##  Optimization for stage: 1 3 4 5 6 
+    ##  Optimization for stage: 1 2 3 4 5 6 
     ## 
     ##  Optimized coefficients
-    ##           Leaf      Stem         Root       Rhizome Grain
-    ## 1 1.336005e-05 0.9999851 1.548261e-06 -1.270069e-01     0
-    ## 2 3.468809e-01 0.5189036 1.342155e-01  0.000000e+00     0
-    ## 3 1.787979e-01 0.3977936 7.227999e-02  3.511286e-01     0
-    ## 4 7.175234e-02 0.3682129 7.570643e-02  4.843283e-01     0
-    ## 5 2.500000e-01 0.2500000 2.500000e-01  2.500000e-01     0
-    ## 6 3.205882e-01 0.3828877 2.965241e-01  2.673797e-09     0
+    ##           Leaf         Stem         Root       Rhizome         Grain
+    ## 1 3.051125e-05 0.9999692287 2.600381e-07 -1.265702e-01  0.000000e+00
+    ## 2 3.834088e-03 0.9961625469 3.365196e-06 -5.249042e-04  0.000000e+00
+    ## 3 9.475528e-01 0.0412321575 1.120795e-02  7.131488e-06  0.000000e+00
+    ## 4 9.965629e-01 0.0015138245 1.157337e-04  1.807532e-03  0.000000e+00
+    ## 5 5.260159e-01 0.0000624169 9.305356e-03  4.646163e-01  0.000000e+00
+    ## 6 3.205882e-01 0.3828876885 2.965241e-01  1.092235e-07 -9.428291e-08
     ## 
-    ##  Residual Sum of Squares: 233.9398 
+    ##  Residual Sum of Squares: 2955744 
     ## 
     ##  Convergence 
-    ##   YES
+    ##   stage:  1 YES 
+    ##   stage:  2 YES 
+    ##   stage:  3 YES 
+    ##   stage:  4 YES 
+    ##   stage:  5 YES 
+    ##   stage:  6 YES
+
+``` r
+biomass_coefs_list <- list(tp1 = as.vector(unlist(biomass_coefs$list1$phenoP[1])), 
+                           tp2 = as.vector(unlist(biomass_coefs$list1$phenoP[2])), 
+                           tp3 = as.vector(unlist(biomass_coefs$list1$phenoP[3])), 
+                           tp4 = as.vector(unlist(biomass_coefs$list1$phenoP[4])), 
+                           tp5 = as.vector(unlist(biomass_coefs$list1$phenoP[5])), 
+                           tp6 = as.vector(unlist(biomass_coefs$list1$phenoP[6])), 
+           kLeaf1 = biomass_coefs$coefs[1], kStem1 = biomass_coefs$coefs[2], 
+           kRoot1 = biomass_coefs$coefs[3], kRhizome1 = biomass_coefs$coefs[4], #kGrain1 = 0.0, 
+           kLeaf2 = biomass_coefs$coefs[5], kStem2 = biomass_coefs$coefs[6], 
+           kRoot2 = biomass_coefs$coefs[7], kRhizome2 = biomass_coefs$coefs[8], #kGrain2 = 0.0,
+           kLeaf3 = biomass_coefs$coefs[9], kStem3 = biomass_coefs$coefs[10], 
+           kRoot3 = biomass_coefs$coefs[11], kRhizome3 = biomass_coefs$coefs[12], #kGrain3 = 0.0, 
+           kLeaf4 = biomass_coefs$coefs[13], kStem4 = biomass_coefs$coefs[14], 
+           kRoot4 = biomass_coefs$coefs[15], kRhizome4 = biomass_coefs$coefs[16], #kGrain4 = 0.0, 
+           kLeaf5 = biomass_coefs$coefs[17], kStem5 = biomass_coefs$coefs[18], 
+           kRoot5 = biomass_coefs$coefs[19], kRhizome5 = biomass_coefs$coefs[20], #kGrain5 = 0.0, 
+           kLeaf6 = biomass_coefs$coefs[21], kStem6 = biomass_coefs$coefs[22], 
+           kRoot6 = biomass_coefs$coefs[23], kRhizome6 = biomass_coefs$coefs[24], kGrain6 = biomass_coefs$coefs[25]) 
+
+biomass_ests <- BioGro(WetDat = OpBioGro_weather, 
+                       #iCoef = initial_coefs, 
+                       #iRhizome = 0, 
+                       phenoControl = biomass_coefs_list)
+```
+
+    ## [1] 6
+
+``` r
+plot(biomass_ests)
+```
+
+![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+``` r
+#points(OpBioGro_biomass$ThermalT, OpBioGro_biomass$Stem)
+```
