@@ -105,9 +105,9 @@ Combined biomass data for stem, leaf, panicle/grain, and root from data with cor
 SLA_mg <- 80 / 1000000
 
 OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "days_grown") %>% 
-  select(ThermalT, Stem, Leaf, Root, Grain) %>% 
   mutate(Rhizome = rep(0, nrow(biomass_data_single)), 
-         LAI = SLA_mg * Leaf) %>% 
+         LAI = SLA_mg * Leaf) %>%
+  select(ThermalT, Stem, Leaf, Root, Rhizome, Grain, LAI) %>% 
   arrange(ThermalT) %>% 
   data.frame()
 
@@ -137,13 +137,14 @@ p['kRhizome6'] <- 0
 
 Generate initial guesses at coefficients using these updated phenological parameters and the measured biomass values using `idbp`. These values than are validated using `valid_dbp`. The eighth value had to be changed manually to pass this validation step because it was initially shown as `Inf`. 
 ```{r}
+# all idbp uses from phenoControl is the thermal times
 initial_coefs <- idbp(OpBioGro_biomass, phenoControl = p)
 initial_coefs[8] <- -0.000000000000001
 valid_dbp(initial_coefs)
 ```
 
 The previously generated weather data, along with those initial estimated biomass coefficients and the biomass measurements, are passed to the function that optimizes for biomass partitioning coefficients. This is optimized for all six phenological stages because of the `phen` argument. 
-```{r, results='hide', message=FALSE}
+```{r, results='hide', message=FALSE, eval=FALSE}
 biomass_coefs <- constrOpBioGro(phen = 0, 
                                 WetDat = OpBioGro_weather,
                                 data = OpBioGro_biomass, 
@@ -154,7 +155,7 @@ biomass_coefs
 ```
 
 The biomass coefficients are converted into the format required by the function `BioGro` and then read into this function with the weather data to get biomass estimates. These are plotted, along with the biomass measurements. 
-```{r}
+```{r, eval=FALSE}
 biomass_coefs_list <- list(tp1 = as.vector(unlist(biomass_coefs$list1$phenoP[1])), 
                            tp2 = as.vector(unlist(biomass_coefs$list1$phenoP[2])), 
                            tp3 = as.vector(unlist(biomass_coefs$list1$phenoP[3])), 

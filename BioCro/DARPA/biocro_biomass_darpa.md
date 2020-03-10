@@ -170,9 +170,9 @@ time.
 SLA_mg <- 80 / 1000000
 
 OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "days_grown") %>% 
-  select(ThermalT, Stem, Leaf, Root, Grain) %>% 
   mutate(Rhizome = rep(0, nrow(biomass_data_single)), 
-         LAI = SLA_mg * Leaf) %>% 
+         LAI = SLA_mg * Leaf) %>%
+  select(ThermalT, Stem, Leaf, Root, Rhizome, Grain, LAI) %>% 
   arrange(ThermalT) %>% 
   data.frame()
 
@@ -215,10 +215,10 @@ Generate initial guesses at coefficients using these updated
 phenological parameters and the measured biomass values using `idbp`.
 These values than are validated using `valid_dbp`. The eighth value had
 to be changed manually to pass this validation step because it was
-initially shown as
-    `Inf`.
+initially shown as `Inf`.
 
 ``` r
+# all idbp uses from phenoControl is the thermal times
 initial_coefs <- idbp(OpBioGro_biomass, phenoControl = p)
 ```
 
@@ -231,10 +231,10 @@ valid_dbp(initial_coefs)
 ```
 
     ##  [1]  5.550787e-01  2.274678e-01  2.174535e-01 -1.000000e-04  3.405851e-01
-    ##  [6]  5.226307e-01  1.367842e-01 -1.000000e-15  1.940164e-01  4.043950e-01
-    ## [11]  6.391316e-02  3.376754e-01  2.887670e-09  2.877082e-01  8.518625e-02
-    ## [16]  6.271056e-01  1.107189e-01  5.151257e-01  7.109380e-02  3.030617e-01
-    ## [21]  2.272726e-07  2.272726e-07  9.999993e-01  2.272726e-07  0.000000e+00
+    ##  [6]  5.226307e-01  1.367842e-01 -1.000000e-15  2.929325e-01  6.105692e-01
+    ## [11]  9.649824e-02  0.000000e+00  7.743934e-09  7.715539e-01  2.284460e-01
+    ## [16]  0.000000e+00  1.588646e-01  7.391266e-01  1.020087e-01  0.000000e+00
+    ## [21]  2.272726e-07  2.272726e-07  9.999993e-01  0.000000e+00  2.272726e-07
 
 The previously generated weather data, along with those initial
 estimated biomass coefficients and the biomass measurements, are passed
@@ -249,13 +249,6 @@ biomass_coefs <- constrOpBioGro(phen = 0,
                                 iCoef = initial_coefs, 
                                 iRhizome = 0, 
                                 phenoControl = p)
-```
-
-    ## Warning in max(WetDat1s[, 1]): no non-missing arguments to max; returning -Inf
-
-    ## Warning in min(WetDat1s[, 1]): no non-missing arguments to min; returning Inf
-
-``` r
 biomass_coefs
 ```
 
@@ -288,16 +281,6 @@ biomass_ests <- BioGro(WetDat = OpBioGro_weather,
                        #iCoef = initial_coefs, 
                        #iRhizome = 0, 
                        phenoControl = biomass_coefs_list)
-```
-
-    ## [1] 6
-
-``` r
 plot(biomass_ests)
-```
-
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
-
-``` r
 #points(OpBioGro_biomass$ThermalT, OpBioGro_biomass$Stem)
 ```
