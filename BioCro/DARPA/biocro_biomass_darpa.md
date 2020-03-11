@@ -18,6 +18,8 @@ OpBioGro_weather <- data.frame(year = rep(2019, 8760),
                                RH = rep(55.5 / 100,  times = 365 * 24), 
                                WindSpeed = rep(0, times = 365 * 24), 
                                precip = rep(c(0.000462963, rep(0, 23)), 365))
+
+write.csv(OpBioGro_weather, "biocro_opt_darpa_files/OpBioGro_weather.csv", row.names = FALSE)
 ```
 
 Visualize these data:
@@ -175,6 +177,7 @@ OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "da
   select(ThermalT, Stem, Leaf, Root, Rhizome, Grain, LAI) %>% 
   arrange(ThermalT) %>% 
   data.frame()
+write.csv(OpBioGro_biomass, "biocro_opt_darpa_files/OpBioGro_biomass.csv", row.names = FALSE)
 
 OpBioGro_biomass_plot <- OpBioGro_biomass %>% 
   tidyr::pivot_longer(Stem:LAI)
