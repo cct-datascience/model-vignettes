@@ -90,7 +90,19 @@ harvesting plants, so plants from different harvest dates are different
 plants.
 
 ``` r
+library(udunits2)
+```
+
+    ## udunits system database read from /Library/Frameworks/R.framework/Versions/3.6/Resources/library/udunits2/share/udunits2.xml
+
+``` r
+area_cm2 <- 64
+area_ha <- ud.convert(area_cm2, "cm2", "ha")
 biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
+  mutate(panicle.DW.mg.byarea = ud.convert(panicle.DW.mg., "mg", "Mg") / area_ha, 
+         stemDW.mg.byarea = ud.convert(stemDW.mg., "mg", "Mg") / area_ha, 
+         leaf.DW.mg.byarea = ud.convert(leaf.DW.mg., "mg", "Mg") / area_ha, 
+         roots.DW.mg.byarea = ud.convert(roots.DW..mg., "mg", "Mg") / area_ha) %>% 
   filter(genotype == "ME034V-1", 
          temperature_celsius == 31)
 ```
@@ -101,8 +113,8 @@ and roots across six time points when biomass was measured.
 ``` r
 s <- biomass_data_all %>% 
   mutate(date = lubridate::mdy(biomas_harvested)) %>% 
-  select(temperature_celsius, date, contains('DW.')) %>% 
-  tidyr::pivot_longer(panicle.DW.mg.:roots.DW..mg.)
+  select(temperature_celsius, date, contains('DW.mg.byarea')) %>% 
+  tidyr::pivot_longer(panicle.DW.mg.byarea:roots.DW.mg.byarea)
 
 s2 <- s %>% 
   group_by(date, name) %>% 
@@ -144,7 +156,7 @@ only the thermal times for the days of harvest.
 library(BioCro)
 
 biomass_data_single <- biomass_data_all %>% 
-  select(biomas_harvested, Stem = stemDW.mg., Leaf = leaf.DW.mg., Root = roots.DW..mg., Grain = panicle.DW.mg.) %>% 
+  select(biomas_harvested, Stem = stemDW.mg.byarea, Leaf = leaf.DW.mg.byarea, Root = roots.DW.mg.byarea, Grain = panicle.DW.mg.byarea) %>% 
   group_by(biomas_harvested) %>% 
   summarise_at(vars(Stem:Grain), mean) %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomas_harvested), format = "%m/%d/%Y") - as.Date(as.character(biomass_data_all$seeds_in_germination[1]), format = "%m/%d/%Y")))
@@ -235,9 +247,9 @@ valid_dbp(initial_coefs)
 
     ##  [1]  5.550787e-01  2.274678e-01  2.174535e-01 -1.000000e-04  3.405851e-01
     ##  [6]  5.226307e-01  1.367842e-01 -1.000000e-15  2.929325e-01  6.105692e-01
-    ## [11]  9.649824e-02  0.000000e+00  7.743934e-09  7.715539e-01  2.284460e-01
+    ## [11]  9.649824e-02  0.000000e+00  4.956093e-06  7.715501e-01  2.284449e-01
     ## [16]  0.000000e+00  1.588646e-01  7.391266e-01  1.020087e-01  0.000000e+00
-    ## [21]  2.272726e-07  2.272726e-07  9.999993e-01  0.000000e+00  2.272726e-07
+    ## [21]  1.453911e-04  1.453911e-04  9.995638e-01  0.000000e+00  1.453911e-04
 
 The previously generated weather data, along with those initial
 estimated biomass coefficients and the biomass measurements, are passed

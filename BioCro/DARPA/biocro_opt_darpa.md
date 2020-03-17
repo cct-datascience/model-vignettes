@@ -106,6 +106,8 @@ sum(z[1:3]/sum(z[1:3]))
         that will not. op parms = 19 values, thermal = 6, rhizome = 6~~
       - ~~reassemble within opfn function~~
 
+  - Biomass measurements need to be in correct units (mg/ha)
+
 First create objective function `opfn`, and include parameter values to
 test if this function by itself works.
 
@@ -150,10 +152,15 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
                            kRhizome5 = rhizomeParms[5], 
                            kRhizome6 = rhizomeParms[6], 
                            kGrain6 = optimizingParms[19])
+  #print(params_list)
   t <- BioCro::BioGro(
     WetDat = WetDat,
     day1 = day1,
     dayn = dayn,
+    iRhizome = 0.001, 
+    iLeaf = 0.001, 
+    iStem = 0.001, 
+    iRoot = 0.001, 
     soilControl = l2n(config$pft$soilControl),
     canopyControl = l2n(config$pft$canopyControl),
     phenoControl = l2n(params_list),
@@ -186,12 +193,13 @@ opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
 
     ## [1] 6
 
-    ## [1] 5064.723
+    ## [1] 9.077688
 
 Run objective function through optimization with `DEoptim`, setting the
 upper and lower bounds for the varying parameters to 0 and 1 and
 providing values for the non-varying parameters thermal time and rhizome
-coefficients.
+coefficients. Reducing itermax reduces time to run `DEoptim`, but the
+resulting best value doesn’t change much.
 
 ``` r
 library(DEoptim)
@@ -201,7 +209,7 @@ thermaltimevals <- c(config$pft$phenoParms$tp1, config$pft$phenoParms$tp2,
                      config$pft$phenoParms$tp5, config$pft$phenoParms$tp6)
 rhizomevals <- rep(0, 6)
 
-opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 10))
+opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 2))
 ```
 
 Test that the resulting parameter values produce the same biomass
@@ -209,6 +217,8 @@ estimates. `parms_results` are the actual parameters that we would use
 because they’ve been adjusted for the sum to 1 constraint.
 
 ``` r
+library(ggplot2)
+
 parms_results <- as.vector(opt_results$optim$bestmem)
 parms_results[1:3] <- parms_results[1:3]/sum(parms_results[1:3])
 parms_results[4:6] <- parms_results[4:6]/sum(parms_results[4:6])
@@ -252,6 +262,10 @@ results_test <- BioCro::BioGro(
     WetDat = WetDat,
     day1 = day1,
     dayn = dayn,
+    iRhizome = 0.001, 
+    iLeaf = 0.001, 
+    iStem = 0.001, 
+    iRoot = 0.001, 
     soilControl = l2n(config$pft$soilControl),
     canopyControl = l2n(config$pft$canopyControl),
     phenoControl = l2n(optimalParms),
@@ -277,6 +291,21 @@ plot(results_test)
 ```
 
 ![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+``` r
+biomass_meas_plot <- OpBioGro_biomass %>% 
+  tidyr::pivot_longer(Stem:Grain)
+biomass_ests_plot <- results_test2 %>% 
+  tidyr::pivot_longer(Stem:Grain)
+ggplot(biomass_meas_plot, aes(ThermalT, value, color = name)) +
+  geom_point() +
+  geom_line(data = biomass_ests_plot, aes(ThermalT, value, color = name)) +
+  xlim(c(0, 2000))
+```
+
+    ## Warning: Removed 4260 rows containing missing values (geom_path).
+
+![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
 ### DEoptim examples
 
@@ -385,3 +414,7 @@ test$likelihood$density(c(1,1))
 test_run <- runMCMC(test)
 plot(test_run)
 ```
+
+prior distribution + likelihood distribution = posterior distribution
+MCMC is for estimating posterior when it can’t be calculated directly
+(e.g., from unusual prior and likelihood dists)

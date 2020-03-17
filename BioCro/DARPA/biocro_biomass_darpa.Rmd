@@ -51,7 +51,14 @@ ggplot(OpBioGro_weather_plot %>% filter(month(date) ==1 & day(date) < 3), aes(da
 
 Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31*C) and taking the mean of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.  
 ```{r}
+library(udunits2)
+area_cm2 <- 64
+area_ha <- ud.convert(area_cm2, "cm2", "ha")
 biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
+  mutate(panicle.DW.mg.byarea = ud.convert(panicle.DW.mg., "mg", "Mg") / area_ha, 
+         stemDW.mg.byarea = ud.convert(stemDW.mg., "mg", "Mg") / area_ha, 
+         leaf.DW.mg.byarea = ud.convert(leaf.DW.mg., "mg", "Mg") / area_ha, 
+         roots.DW.mg.byarea = ud.convert(roots.DW..mg., "mg", "Mg") / area_ha) %>% 
   filter(genotype == "ME034V-1", 
          temperature_celsius == 31)
 ```
@@ -60,8 +67,8 @@ Plot of three replicate 31*C dry weights for stem, leaf, panicle/grain, and root
 ```{r}
 s <- biomass_data_all %>% 
   mutate(date = lubridate::mdy(biomas_harvested)) %>% 
-  select(temperature_celsius, date, contains('DW.')) %>% 
-  tidyr::pivot_longer(panicle.DW.mg.:roots.DW..mg.)
+  select(temperature_celsius, date, contains('DW.mg.byarea')) %>% 
+  tidyr::pivot_longer(panicle.DW.mg.byarea:roots.DW.mg.byarea)
 
 s2 <- s %>% 
   group_by(date, name) %>% 
@@ -89,7 +96,7 @@ Calculated mean for each plant part and harvest date and added how many days eac
 library(BioCro)
 
 biomass_data_single <- biomass_data_all %>% 
-  select(biomas_harvested, Stem = stemDW.mg., Leaf = leaf.DW.mg., Root = roots.DW..mg., Grain = panicle.DW.mg.) %>% 
+  select(biomas_harvested, Stem = stemDW.mg.byarea, Leaf = leaf.DW.mg.byarea, Root = roots.DW.mg.byarea, Grain = panicle.DW.mg.byarea) %>% 
   group_by(biomas_harvested) %>% 
   summarise_at(vars(Stem:Grain), mean) %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomas_harvested), format = "%m/%d/%Y") - as.Date(as.character(biomass_data_all$seeds_in_germination[1]), format = "%m/%d/%Y")))
