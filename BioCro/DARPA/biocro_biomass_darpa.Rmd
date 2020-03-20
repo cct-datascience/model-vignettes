@@ -49,7 +49,7 @@ ggplot(OpBioGro_weather_plot %>% filter(month(date) ==1 & day(date) < 3), aes(da
 
 [These data](https://docs.google.com/spreadsheets/d/1Nc2g-gPEb-rUW9R4QLDqAZvRRYk1whWAJlb8kLEQZ5c/edit#gid=0) are in the project's Google Drive. They have been downloaded and saved as `biomass_setaria_me034_gehan.csv`. 
 
-Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31*C) and taking the mean of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.  
+Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31*C) and taking the median of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.  
 ```{r}
 library(udunits2)
 area_cm2 <- 64
@@ -72,7 +72,8 @@ s <- biomass_data_all %>%
 
 s2 <- s %>% 
   group_by(date, name) %>% 
-  summarize(value_mean = mean(value), 
+  summarize(value_mean = mean(value),
+            value_median = median(value), 
             value_sd = sd(value)) %>% 
   mutate(sd_high = value_mean + value_sd, 
          sd_low = value_mean - value_sd)
@@ -84,6 +85,7 @@ ggplot(s, aes(date, value, color = name)) +
 ggplot(s2, aes(date, value_mean, color = name)) +
   geom_point() +
   geom_errorbar(aes(ymin = sd_low, ymax = sd_high)) +
+  geom_point(aes(date, value_median), color = "black") +
   facet_wrap(~name)
 
 ggplot(s, aes(date, value, color = name)) +
@@ -91,14 +93,14 @@ ggplot(s, aes(date, value, color = name)) +
   geom_point(shape = 4)
 ```
 
-Calculated mean for each plant part and harvest date and added how many days each plant was grown before harvested to the biomass dataframe. Then calculated thermal times for weather data using `BioGro`, using only the thermal times for the days of harvest. 
+Calculated median for each plant part and harvest date and added how many days each plant was grown before harvested to the biomass dataframe. Then calculated thermal times for weather data using `BioGro`, using only the thermal times for the days of harvest. 
 ```{r}
 library(BioCro)
 
 biomass_data_single <- biomass_data_all %>% 
   select(biomas_harvested, Stem = stemDW.mg.byarea, Leaf = leaf.DW.mg.byarea, Root = roots.DW.mg.byarea, Grain = panicle.DW.mg.byarea) %>% 
   group_by(biomas_harvested) %>% 
-  summarise_at(vars(Stem:Grain), mean) %>% 
+  summarise_at(vars(Stem:Grain), median) %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomas_harvested), format = "%m/%d/%Y") - as.Date(as.character(biomass_data_all$seeds_in_germination[1]), format = "%m/%d/%Y")))
 
 weather_only_run <- BioGro(OpBioGro_weather, day1 = 1, dayn = 365)

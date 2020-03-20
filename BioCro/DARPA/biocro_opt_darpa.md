@@ -106,7 +106,7 @@ sum(z[1:3]/sum(z[1:3]))
         that will not. op parms = 19 values, thermal = 6, rhizome = 6~~
       - ~~reassemble within opfn function~~
 
-  - Biomass measurements need to be in correct units (mg/ha)
+  - ~~Biomass measurements need to be in correct units (Mg/ha)~~
 
 First create objective function `opfn`, and include parameter values to
 test if this function by itself works.
@@ -179,7 +179,23 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
   bio_ests <- select(ttt, -ThermalT)
   bio_meas <- select(OpBioGro_biomass, -ThermalT)
   diff <- abs(bio_ests - bio_meas)
-  return(sum(diff))
+  
+  bio_meas_sum <- bio_meas %>% 
+    mutate(stage = rownames(.)) %>% 
+    rowwise() %>% 
+    mutate(total_bio = sum(Stem:Grain)) %>% 
+    select(stage, total_bio)
+  
+  diff_norm <- diff %>% 
+    mutate(stage = rownames(.)) %>% 
+    left_join(., bio_meas_sum, by = c("stage")) %>% 
+    mutate(Stem_norm = Stem / total_bio, 
+         Leaf_norm = Leaf / total_bio, 
+         Root_norm = Root / total_bio) %>% 
+    select(Stem_norm, Leaf_norm, Root_norm, Rhizome, Grain, LAI) %>% 
+    rename(Stem = Stem_norm, Leaf = Leaf_norm, Root = Root_norm)
+  
+  return(sum(diff_norm))
 }
 
 # Check function itself by running with example parameter values
@@ -193,7 +209,7 @@ opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
 
     ## [1] 6
 
-    ## [1] 9.077688
+    ## [1] 14.09397
 
 Run objective function through optimization with `DEoptim`, setting the
 upper and lower bounds for the varying parameters to 0 and 1 and
@@ -300,7 +316,9 @@ biomass_ests_plot <- results_test2 %>%
 ggplot(biomass_meas_plot, aes(ThermalT, value, color = name)) +
   geom_point() +
   geom_line(data = biomass_ests_plot, aes(ThermalT, value, color = name)) +
-  xlim(c(0, 2000))
+  xlim(c(0, 2000)) +
+  labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") +
+  theme_classic()
 ```
 
     ## Warning: Removed 4260 rows containing missing values (geom_path).

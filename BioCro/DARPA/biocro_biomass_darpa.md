@@ -84,7 +84,7 @@ as `biomass_setaria_me034_gehan.csv`.
 Plants all started to grow at same time (Jan 3, 2019). Plants harvested
 on six different dates, from Jan 15 - Feb 19. The plants were grown at
 three different temperatures, and there were three genotypes. Initially
-only using data for the middle temperature (31\*C) and taking the mean
+only using data for the middle temperature (31\*C) and taking the median
 of the three values. Biomass measurements are from destructively
 harvesting plants, so plants from different harvest dates are different
 plants.
@@ -118,7 +118,8 @@ s <- biomass_data_all %>%
 
 s2 <- s %>% 
   group_by(date, name) %>% 
-  summarize(value_mean = mean(value), 
+  summarize(value_mean = mean(value),
+            value_median = median(value), 
             value_sd = sd(value)) %>% 
   mutate(sd_high = value_mean + value_sd, 
          sd_low = value_mean - value_sd)
@@ -134,6 +135,7 @@ ggplot(s, aes(date, value, color = name)) +
 ggplot(s2, aes(date, value_mean, color = name)) +
   geom_point() +
   geom_errorbar(aes(ymin = sd_low, ymax = sd_high)) +
+  geom_point(aes(date, value_median), color = "black") +
   facet_wrap(~name)
 ```
 
@@ -147,10 +149,10 @@ ggplot(s, aes(date, value, color = name)) +
 
 ![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-4-3.png)<!-- -->
 
-Calculated mean for each plant part and harvest date and added how many
-days each plant was grown before harvested to the biomass dataframe.
-Then calculated thermal times for weather data using `BioGro`, using
-only the thermal times for the days of harvest.
+Calculated median for each plant part and harvest date and added how
+many days each plant was grown before harvested to the biomass
+dataframe. Then calculated thermal times for weather data using
+`BioGro`, using only the thermal times for the days of harvest.
 
 ``` r
 library(BioCro)
@@ -158,7 +160,7 @@ library(BioCro)
 biomass_data_single <- biomass_data_all %>% 
   select(biomas_harvested, Stem = stemDW.mg.byarea, Leaf = leaf.DW.mg.byarea, Root = roots.DW.mg.byarea, Grain = panicle.DW.mg.byarea) %>% 
   group_by(biomas_harvested) %>% 
-  summarise_at(vars(Stem:Grain), mean) %>% 
+  summarise_at(vars(Stem:Grain), median) %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomas_harvested), format = "%m/%d/%Y") - as.Date(as.character(biomass_data_all$seeds_in_germination[1]), format = "%m/%d/%Y")))
 
 weather_only_run <- BioGro(OpBioGro_weather, day1 = 1, dayn = 365)
@@ -245,11 +247,11 @@ initial_coefs[8] <- -0.000000000000001
 valid_dbp(initial_coefs)
 ```
 
-    ##  [1]  5.550787e-01  2.274678e-01  2.174535e-01 -1.000000e-04  3.405851e-01
-    ##  [6]  5.226307e-01  1.367842e-01 -1.000000e-15  2.929325e-01  6.105692e-01
-    ## [11]  9.649824e-02  0.000000e+00  4.956093e-06  7.715501e-01  2.284449e-01
-    ## [16]  0.000000e+00  1.588646e-01  7.391266e-01  1.020087e-01  0.000000e+00
-    ## [21]  1.453911e-04  1.453911e-04  9.995638e-01  0.000000e+00  1.453911e-04
+    ##  [1]  5.654008e-01  2.531646e-01  1.814346e-01 -1.000000e-04  3.384734e-01
+    ##  [6]  5.188897e-01  1.426369e-01 -1.000000e-15  2.775358e-01  6.249741e-01
+    ## [11]  9.749015e-02  0.000000e+00  1.136754e-05  6.660670e-01  3.339216e-01
+    ## [16]  0.000000e+00  1.632373e-01  7.338820e-01  1.028807e-01  0.000000e+00
+    ## [21]  4.131710e-01  2.325334e-01  3.542892e-01  0.000000e+00  6.387185e-06
 
 The previously generated weather data, along with those initial
 estimated biomass coefficients and the biomass measurements, are passed
