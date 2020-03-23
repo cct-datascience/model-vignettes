@@ -1,0 +1,65 @@
+Setaria Biomass Data Cleaning & Visualization
+================
+Kristina Riemer, University of Arizona
+
+Data downloaded from [Google
+Sheet](https://docs.google.com/spreadsheets/d/134qzz1mcfKyGSS4vMOh0CONUECUuMiDyp6D_pzGjfi0/edit#gid=1249864874)
+as an .xlsx.
+
+``` r
+library(readxl)
+
+data_path <- "biocro_biomass_clean_darpa_files/Darpa_setaria_chambers_experiments.xlsx"
+sheets_names <- excel_sheets(data_path)
+
+biomass_sheets <- c(11, 9, 7, 5, 3, 2, 1)
+for(sheet in biomass_sheets){
+  exp_name <- paste0("exp", substr(sheets_names[sheet], 0, 1))
+  print(exp_name)
+  assign(exp_name, read_excel(data_path, sheet = sheets_names[sheet]))
+}
+```
+
+    ## [1] "exp1"
+    ## [1] "exp2"
+    ## [1] "exp3"
+    ## [1] "exp4"
+
+    ## New names:
+    ## * `` -> ...23
+    ## * `` -> ...24
+    ## * `` -> ...25
+    ## * `` -> ...26
+
+    ## [1] "exp5"
+    ## [1] "exp6"
+    ## [1] "exp7"
+
+Plots for first experiment. Plot by treatment started date (2), genotype
+(1), temperature (3), light intensity (3). Skipping conversion to mass
+by area. Removing yield for now.
+
+Questions:
+
+  - Why do some rows have no biomass or yield measurements?
+
+<!-- end list -->
+
+``` r
+library(dplyr)
+library(ggplot2)
+
+exp1_clean <- exp1 %>% 
+  filter(is.na(`Yield (mg)`), !is.na(`roots DW (g)`)) %>% 
+  #rename(biomas_harvested = `biomas harvested`) %>% 
+  mutate(date = lubridate::ymd(`biomas harvested`)) %>% 
+  select(2, 5, 6, 7, 8, 21, contains('DW')) %>% 
+  tidyr::pivot_longer(`panicle DW(g)`:`roots DW (g)`)
+
+ggplot(exp1_clean, aes(date, value)) +
+  geom_point()
+
+ggplot(exp1_clean, aes(date, value, color = name)) +
+  geom_point() +
+  facet_wrap(~`treatment started`)
+```
