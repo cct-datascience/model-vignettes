@@ -120,10 +120,23 @@ OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "da
          LAI = SLA_mg * Leaf) %>%
   select(ThermalT, Stem, Leaf, Root, Rhizome, Grain, LAI) %>% 
   arrange(ThermalT) %>% 
-  data.frame()
-write.csv(OpBioGro_biomass, "biocro_opt_darpa_files/OpBioGro_biomass.csv", row.names = FALSE)
+  data.frame() %>% 
+  slice(-6)
 
-OpBioGro_biomass_plot <- OpBioGro_biomass %>% 
+OpBioGro_biomass1 <- OpBioGro_biomass %>% 
+  slice(1:4) %>% 
+  mutate(Stem = Stem + Grain, 
+         Grain = rep(0, nrow(.)))
+OpBioGro_biomass2 <- OpBioGro_biomass %>% 
+  slice(5) %>% 
+  mutate(Stem = Stem + OpBioGro_biomass$Grain[4], 
+         Grain = Grain - OpBioGro_biomass$Grain[4])
+
+OpBioGro_biomass_comb <- bind_rows(OpBioGro_biomass1, OpBioGro_biomass2)
+
+write.csv(OpBioGro_biomass_comb, "biocro_opt_darpa_files/OpBioGro_biomass.csv", row.names = FALSE)
+
+OpBioGro_biomass_plot <- OpBioGro_biomass_comb %>% 
   tidyr::pivot_longer(Stem:LAI)
 ggplot(OpBioGro_biomass_plot %>% filter(name != "LAI"), aes(x = ThermalT, y = value, color = name)) +
   geom_line() +

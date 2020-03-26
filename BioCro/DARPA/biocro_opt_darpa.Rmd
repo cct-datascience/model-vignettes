@@ -123,7 +123,7 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
                            kRhizome5 = rhizomeParms[5], 
                            kRhizome6 = rhizomeParms[6], 
                            kGrain6 = optimizingParms[19])
-  #print(params_list)
+  
   t <- BioCro::BioGro(
     WetDat = WetDat,
     day1 = day1,
@@ -151,22 +151,22 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
   bio_meas <- select(OpBioGro_biomass, -ThermalT)
   diff <- abs(bio_ests - bio_meas)
   
-  bio_meas_sum <- bio_meas %>% 
-    mutate(stage = rownames(.)) %>% 
-    rowwise() %>% 
-    mutate(total_bio = sum(Stem:Grain)) %>% 
-    select(stage, total_bio)
+  # bio_meas_sum <- bio_meas %>% 
+  #   mutate(stage = rownames(.)) %>% 
+  #   rowwise() %>% 
+  #   mutate(total_bio = sum(Stem:Grain)) %>% 
+  #   select(stage, total_bio)
+  # 
+  # diff_norm <- diff %>% 
+  #   mutate(stage = rownames(.)) %>% 
+  #   left_join(., bio_meas_sum, by = c("stage")) %>% 
+  #   mutate(Stem_norm = Stem / total_bio, 
+  #        Leaf_norm = Leaf / total_bio, 
+  #        Root_norm = Root / total_bio) %>% 
+  #   select(Stem_norm, Leaf_norm, Root_norm, Rhizome, Grain, LAI) %>% 
+  #   rename(Stem = Stem_norm, Leaf = Leaf_norm, Root = Root_norm)
   
-  diff_norm <- diff %>% 
-    mutate(stage = rownames(.)) %>% 
-    left_join(., bio_meas_sum, by = c("stage")) %>% 
-    mutate(Stem_norm = Stem / total_bio, 
-         Leaf_norm = Leaf / total_bio, 
-         Root_norm = Root / total_bio) %>% 
-    select(Stem_norm, Leaf_norm, Root_norm, Rhizome, Grain, LAI) %>% 
-    rename(Stem = Stem_norm, Leaf = Leaf_norm, Root = Root_norm)
-  
-  return(sum(diff_norm))
+  return(sum(diff))
 }
 
 # Check function itself by running with example parameter values
@@ -261,15 +261,20 @@ diff <- sum(abs(results_test3 - OpBioGro_biomass))
 plot(results_test)
 
 biomass_meas_plot <- OpBioGro_biomass %>% 
-  tidyr::pivot_longer(Stem:Grain)
+  tidyr::pivot_longer(Stem:Grain) %>% 
+  mutate(data = "measurements")
 biomass_ests_plot <- results_test2 %>% 
-  tidyr::pivot_longer(Stem:Grain)
-ggplot(biomass_meas_plot, aes(ThermalT, value, color = name)) +
-  geom_point() +
-  geom_line(data = biomass_ests_plot, aes(ThermalT, value, color = name)) +
+  tidyr::pivot_longer(Stem:Grain) %>% 
+  mutate(data = "estimates")
+biomass_plot <- bind_rows(biomass_meas_plot, biomass_ests_plot)
+
+ggplot() +
+  geom_point(filter(biomass_plot, data == "measurements"), mapping = aes(x = ThermalT, y = value, color = name)) +
+  geom_line(filter(biomass_plot, data == "estimates"), mapping = aes(x = ThermalT, y = value, color = name)) +
   xlim(c(0, 2000)) +
   labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") +
-  theme_classic()
+  theme_classic() +
+  facet_wrap(~name)
 ```
 
 ### DEoptim examples

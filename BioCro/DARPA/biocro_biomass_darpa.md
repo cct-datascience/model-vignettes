@@ -190,10 +190,23 @@ OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "da
          LAI = SLA_mg * Leaf) %>%
   select(ThermalT, Stem, Leaf, Root, Rhizome, Grain, LAI) %>% 
   arrange(ThermalT) %>% 
-  data.frame()
-write.csv(OpBioGro_biomass, "biocro_opt_darpa_files/OpBioGro_biomass.csv", row.names = FALSE)
+  data.frame() %>% 
+  slice(-6)
 
-OpBioGro_biomass_plot <- OpBioGro_biomass %>% 
+OpBioGro_biomass1 <- OpBioGro_biomass %>% 
+  slice(1:4) %>% 
+  mutate(Stem = Stem + Grain, 
+         Grain = rep(0, nrow(.)))
+OpBioGro_biomass2 <- OpBioGro_biomass %>% 
+  slice(5) %>% 
+  mutate(Stem = Stem + OpBioGro_biomass$Grain[4], 
+         Grain = Grain - OpBioGro_biomass$Grain[4])
+
+OpBioGro_biomass_comb <- bind_rows(OpBioGro_biomass1, OpBioGro_biomass2)
+
+write.csv(OpBioGro_biomass_comb, "biocro_opt_darpa_files/OpBioGro_biomass.csv", row.names = FALSE)
+
+OpBioGro_biomass_plot <- OpBioGro_biomass_comb %>% 
   tidyr::pivot_longer(Stem:LAI)
 ggplot(OpBioGro_biomass_plot %>% filter(name != "LAI"), aes(x = ThermalT, y = value, color = name)) +
   geom_line() +
@@ -220,6 +233,12 @@ zero so that this stays zero. Otherwise using default values.
 ``` r
 p <- phenoParms() 
 p[1:6] <- OpBioGro_biomass$ThermalT#c(400, 600, 800, 1000, 1200, 1500)
+```
+
+    ## Warning in p[1:6] <- OpBioGro_biomass$ThermalT: number of items to replace is
+    ## not a multiple of replacement length
+
+``` r
 p['kRhizome1'] <- 0
 p['kRhizome2'] <- 0
 p['kRhizome3'] <- 0
@@ -251,7 +270,7 @@ valid_dbp(initial_coefs)
     ##  [6]  5.188897e-01  1.426369e-01 -1.000000e-15  2.775358e-01  6.249741e-01
     ## [11]  9.749015e-02  0.000000e+00  1.136754e-05  6.660670e-01  3.339216e-01
     ## [16]  0.000000e+00  1.632373e-01  7.338820e-01  1.028807e-01  0.000000e+00
-    ## [21]  4.131710e-01  2.325334e-01  3.542892e-01  0.000000e+00  6.387185e-06
+    ## [21]  2.500000e-01  2.500000e-01  2.500000e-01  0.000000e+00  2.500000e-01
 
 The previously generated weather data, along with those initial
 estimated biomass coefficients and the biomass measurements, are passed
