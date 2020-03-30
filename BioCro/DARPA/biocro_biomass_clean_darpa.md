@@ -2,6 +2,15 @@ Setaria Biomass Data Cleaning & Visualization
 ================
 Kristina Riemer, University of Arizona
 
+### Overall summary
+
+We can definitely use one experiment’s data (the second one), which we
+have already started to do. We might be able to use experiments 4 and 5,
+but they only have two harvest dates (do we need six harvest dates?).
+Some experiments (1, 3, 6) have only one harvest date for each unique
+treatment. And the last experiment definitely cannot be used currently
+because there’s no dry biomass measurements.
+
 ### Download data
 
 Data downloaded from [Google
@@ -33,9 +42,7 @@ Plots for first experiment. Plot by treatment started date (2), genotype
 (1), temperature (3), light intensity (3), separate plots by sowing date
 (2). Skipping conversion to mass by area. Removing yield for now.
 
-Questions:
-
-  - Why do some rows have no biomass or yield measurements?
+Why do some rows have no biomass or yield measurements?
 
 Each row has a unique plantID. There’s only one genotype (ME034) of
 Setaria viridis. There are three temperature treatments, with each
@@ -101,6 +108,8 @@ ggplot(exp1_sowing2_plot, aes(days_grown, value, color = name)) +
 
 ![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
+**Usable for BioCro optimization?**
+
 I don’t think we can use these data for the biomass validation because
 the data from different dates had different experimental treatments.
 
@@ -134,6 +143,8 @@ ggplot(exp2_plot, aes(date, value, color = name)) +
     ## Warning: Removed 3 rows containing missing values (geom_point).
 
 ![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+
+**Usable for BioCro optimization?**
 
 We can use these data.
 
@@ -173,5 +184,129 @@ ggplot(exp3_plot, aes(date, value, color = name)) +
 
 ![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-4-2.png)<!-- -->
 
+**Usable for BioCro optimization?**
+
 I don’t think we can use these because they’re only harvested on two
 dates, and each date has its own temperature treatment.
+
+### Fourth experiment
+
+3 genotypes (ME034, two les), three temps, one light intensity, same
+sowing and treatment started dates. Only two harvest dates. What does
+panicles bagged mean?
+
+``` r
+colnames(exp4) <- stringr::str_replace_all(colnames(exp4), " ", "_")
+exp4 <- data.frame(exp4)
+
+exp4 <- exp4 %>% 
+  slice(-153) %>% 
+  mutate(date = lubridate::ymd(as.Date(as.numeric(biomass_harvested), origin = "1899-12-30"))) %>% 
+  filter(is.na(yield_g))
+
+exp4_plot <- exp4 %>% 
+  select(date, genotype, temperature_..C._day.night, light_intensity.umol.m2.s., contains('DW')) %>% 
+  tidyr::pivot_longer(panicle_DW.mg.:roots_DW_.mg.) %>% 
+  filter(!is.na(value)) %>% 
+  mutate(value = as.numeric(value))
+
+ggplot(exp4_plot, aes(date, value, color = name)) +
+  geom_point() +
+  facet_wrap(vars(genotype, temperature_..C._day.night))
+```
+
+![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+**Usable for BioCro optimization?**
+
+Can we use this if there’s only two time points?
+
+### Fifth experiment
+
+2 genotypes (A10 & ME034), different day and night temps, one light
+intensity, one sowing and treatment started date, 3 harvest dates. Each
+genotype only has two harvest dates, different temp treatments were
+harvested on two consecutive days, except the high temp treatment only
+had one harvest date.
+
+``` r
+colnames(exp5) <- stringr::str_replace_all(colnames(exp5), " ", "_")
+exp5 <- data.frame(exp5)
+
+exp5 <- exp5 %>% 
+  mutate(date = lubridate::ymd(biomass_harvested)) %>% 
+  filter(is.na(yield_g))
+
+exp5_plot <- exp5 %>% 
+  select(date, genotype, temperature_..C._day.night, light_intensity.umol.m2.s., contains('DW')) %>% 
+  tidyr::pivot_longer(panicle_DW_mg:roots_DW_mg) %>% 
+  filter(!is.na(value))
+
+ggplot(exp5_plot, aes(date, value, color = name)) +
+  geom_point() +
+  facet_wrap(vars(genotype, temperature_..C._day.night))
+```
+
+![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+**Usable for BioCro optimization?**
+
+Can we use this if there’s only two time points?
+
+### Sixth experiment
+
+Two genotypes (what is “Svslrd”?), one temperature, two light
+intensities, one sowing and transplant date, two harvest dates.
+
+What’s the Eveland lab harvest? What’s the data at the bottom under
+**Chambers Map** label for? Removed these and the last value, which is
+labeled “dead” in all the biomass measurements columns.
+
+``` r
+colnames(exp6) <- stringr::str_replace_all(colnames(exp6), " ", "_")
+exp6 <- data.frame(exp6)
+
+exp6 <- exp6 %>% 
+  slice(1:160) %>% 
+  mutate(date = lubridate::ymd(biomass_harvest), 
+         sowing__date = as.Date(as.numeric(sowing__date), origin = "1899-12-30"))
+
+exp6_plot <- exp6 %>% 
+  select(date, genotype, temperature__.C, light_intensity, contains('dry_weight')) %>% 
+  tidyr::pivot_longer(panicle_dry_weight_mg:roots_dry_weight_mg) %>% 
+  filter(!is.na(value)) %>% 
+  mutate(value = as.numeric(value))
+
+ggplot(exp6_plot, aes(date, value, color = name)) +
+  geom_point() +
+  facet_wrap(vars(genotype))
+```
+
+![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+``` r
+ggplot(exp6_plot, aes(date, value, color = name)) +
+  geom_point() +
+  facet_wrap(vars(genotype, temperature__.C, light_intensity))
+```
+
+![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+
+**Usable for BioCro optimization?**
+
+Each genotype only has one harvest date.
+
+### Seventh experiment
+
+A bunch of genotypes, mostly numbers? Two temps, one light intensity,
+one sowing date but two transplanting dates, x harvest dates (need to
+fix), no dry weights.
+
+``` r
+colnames(exp7) <- stringr::str_replace_all(colnames(exp7), " ", "_")
+exp7 <- data.frame(exp7)
+```
+
+**Usable for BioCro optimization?**
+
+No, because there are no dry weight biomass measurements.
