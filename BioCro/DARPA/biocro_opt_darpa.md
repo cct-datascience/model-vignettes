@@ -320,13 +320,13 @@ biomass_plot <- bind_rows(biomass_meas_plot, biomass_ests_plot)
 ggplot() +
   geom_point(filter(biomass_plot, data == "measurements"), mapping = aes(x = ThermalT, y = value, color = name)) +
   geom_line(filter(biomass_plot, data == "estimates"), mapping = aes(x = ThermalT, y = value, color = name)) +
-  xlim(c(0, 2000)) +
+  xlim(c(0, 1800)) +
   labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") +
   theme_classic() +
   facet_wrap(~name)
 ```
 
-    ## Warning: Removed 4260 rows containing missing values (geom_path).
+    ## Warning: Removed 5035 rows containing missing values (geom_path).
 
 ![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
