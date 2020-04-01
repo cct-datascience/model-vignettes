@@ -51,7 +51,7 @@ TODO:
 * (later) figure out better metric for comparing biomass values
   * ~~sum of absolute value (because sign doesn't matter, magnitude of difference does)~~
   * log transform
-  * (ttt - OpBioGro_biomass) / OpBioGro_biomass
+  * ~~(ttt - OpBioGro_biomass) / OpBioGro_biomass~~
 * ~~upper and lower bounds are, initially, each between 0 and 1~~
   * Can use more restricted bounds, base on BioCro defaults? 
 * ~~additional param constraints: parameter values for each stage should sum to one (note: this MUST happen because `BioCro` will not use pheno params that do not equal one)~~
@@ -276,109 +276,3 @@ ggplot() +
   theme_classic() +
   facet_wrap(~name)
 ```
-
-### DEoptim examples
-
-#### Simple
-
-Has ten parameters (from n), which is also number of values in upper and lower bounds vector? 
-
-`ans$optim$bestmem` shows best ten parameter values, and `ans$optim$bestval` shows the resulting fval for those parameters values. 
-
-Minimizing fval
-
-```{r, eval=FALSE}
-genrose.f <- function(x){
-  n <- length(x)
-  fval <- 1.0 + sum (100 * (x[1:(n-1)]^2 - x[2:n])^2 + (x[2:n] - 1)^2)
-  return(fval)
-}
-n <- 10
-ans <- DEoptim(fn=genrose.f, lower=rep(-5, n), upper=rep(5, n),
-                control=list(NP=100, itermax=4000,trace=FALSE))
-```
-
-#### More complicated example
-
-This includes varying and non-varying parameters. This runs `DEoptim` multiple times in a loop for different non-varying params. 
-
-```{r, eval=FALSE}
-library(NMOF)
-# Define objective function
-error_heston <- function(x, P, S, K, tau, r, q) {
-  v0 <- x[1]
-  vT <- x[2]
-  rho <- x[3]
-  k <- x[4]
-  sigma <- x[5]
-  error <- abs(P - callHestoncf(S, K, tau, r, q, v0, vT, rho, k, sigma))
-  return(error)
-}
-
-# Only need to set bounds for varying parameters
-lower <- c(1e-4, 1e-4, -1, 1e-4, 1e-4)  
-upper <- c(  10, 10,    1,   10,   10)
-
-# Real option price
-C0116_P <- c(1328.70, 1316.05, 1333.05, 1337.90, 1344.80)
-# Strike price
-C0116_K <- c(500, 500, 500, 500, 500)
-# Time to maturity in years
-C0116_T_t <- c(1.660274, 1.657534, 1.654795, 1.652055, 1.649315)
-# Interest rate percentage
-C0116_r <- c(0.08, 0.08, 0.09, 0.09, 0.09)
-# Dividend yield percentage
-C0116_DY <- c(2.07, 2.09, 2.07, 2.07, 2.06) / 100
-# Price underlying
-C0116_SP_500_P <- c(1885.08, 1872.83, 1888.03, 1892.49, 1900.53)
-
-i <- 1
-outDEoptim <- DEoptim(error_heston, lower, upper,
-  DEoptim.control(VTR=0, itermax=100), P = C0116_P[i], S = C0116_SP_500_P[i],
-  K = C0116_K[i], tau = C0116_T_t[i], r = C0116_r[i], q = C0116_DY[i])
-```
-
-
-### MCMC approach
-
-BayesianSetup = model info and model parameter priors
-model = BioGro
-parameters = (varying) leaf, stem, root coeffs (& non-varying?)
-
-provide prior for each param, can have upper and lower boundaries and distribution
-
-likelihood = model
-
-Example has three parameters with uniform distributions bounded at -10 and 10. 
-
-```{r, eval=FALSE}
-library(BayesianTools)
-
-ll_ex <- generateTestDensityMultiNormal(sigma = "no correlation")
-bayesianSetup_ex <- createBayesianSetup(likelihood = ll_ex, lower = rep(-10, 3), upper = rep(10, 3))
-
-iter_ex = 10000
-settings_ex = list(iterations = iter_ex, nrChains = 3, message = FALSE)
-out <- runMCMC(bayesianSetup = bayesianSetup_ex, sampler = "Metropolis", settings = settings_ex)
-
-plot(out)
-getSample(out, start = 100, end = NULL, thin = 5, whichParameters = 1:2)
-```
-
-Possible ll for our case: 
-```{r, eval=FALSE}
-sum(log(dnorm(observed_biomasses-predicted_biomasses,0,1)))
-```
-
-```{r, eval=FALSE}
-ll <- function(x) sum(dnorm(x, log = TRUE))
-test <- createBayesianSetup(ll, prior = NULL, priorSampler = NULL, lower = -10, upper = 10)
-str(test)
-test$prior$density(0)
-test$likelihood$density(c(1,1))
-test_run <- runMCMC(test)
-plot(test_run)
-```
-
-prior distribution + likelihood distribution = posterior distribution
-MCMC is for estimating posterior when it can't be calculated directly (e.g., from unusual prior and likelihood dists)
