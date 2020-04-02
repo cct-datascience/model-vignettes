@@ -82,12 +82,12 @@
    <rsdf>0.44</rsdf>
   </soilControl>
   <phenoParms>
-   <tp1>300</tp1>
-   <tp2>600</tp2>
-   <tp3>900</tp3>
-   <tp4>1200</tp4>
-   <tp5>1500</tp5>
-   <tp6>1800</tp6>
+   <tp1>150</tp1>
+   <tp2>300</tp2>
+   <tp3>450</tp3>
+   <tp4>600</tp4>
+   <tp5>750</tp5>
+   <tp6>900</tp6>
    <kStem1>0.37</kStem1>
    <kLeaf1>0.33</kLeaf1>
    <kRoot1>0.3</kRoot1>

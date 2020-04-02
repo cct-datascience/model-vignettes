@@ -56,7 +56,7 @@ genus <- config$pft$type$genus
 years <- lubridate::year(start.date):lubridate::year(end.date)
 l2n <- function(x) lapply(x, as.numeric)
 day1 <- 1
-dayn <- 100
+dayn <- 50
 
 OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 ```
@@ -225,7 +225,7 @@ thermaltimevals <- c(config$pft$phenoParms$tp1, config$pft$phenoParms$tp2,
                      config$pft$phenoParms$tp5, config$pft$phenoParms$tp6)
 rhizomevals <- rep(0, 6)
 
-opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 2))
+opt_results <- DEoptim(fn = opfn, lower = c(rep(0, 2), rep(0.6, 4), 0.3, 0.1, rep(0, 11)), upper = c(rep(1, 8), rep(0.1, 4), rep(1, 7)), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 20))
 ```
 
 Test that the resulting parameter values produce the same biomass
@@ -303,12 +303,6 @@ results_test3 <- results_test2 %>%
   filter(round(results_test2$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
 diff <- sum(abs(results_test3 - OpBioGro_biomass))
 
-plot(results_test)
-```
-
-![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
-
-``` r
 biomass_meas_plot <- OpBioGro_biomass %>% 
   tidyr::pivot_longer(Stem:Grain) %>% 
   mutate(data = "measurements")
@@ -326,6 +320,4 @@ ggplot() +
   facet_wrap(~name)
 ```
 
-    ## Warning: Removed 5035 rows containing missing values (geom_path).
-
-![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
