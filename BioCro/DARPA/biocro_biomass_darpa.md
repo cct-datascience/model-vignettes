@@ -26,32 +26,9 @@ Visualize these data:
 
 ``` r
 library(dplyr)
-```
-
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-``` r
 library(ggplot2)
 library(lubridate)
-```
 
-    ## 
-    ## Attaching package: 'lubridate'
-
-    ## The following object is masked from 'package:base':
-    ## 
-    ##     date
-
-``` r
 OpBioGro_weather_plot <- OpBioGro_weather %>% 
   mutate(date = seq(as.POSIXct("2019-01-01 00:00:00"), 
                     as.POSIXct("2019-12-31 23:00:00"), 
@@ -91,11 +68,6 @@ plants.
 
 ``` r
 library(udunits2)
-```
-
-    ## udunits system database read from /Library/Frameworks/R.framework/Versions/3.6/Resources/library/udunits2/share/udunits2.xml
-
-``` r
 area_cm2 <- 64
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
 biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
@@ -222,101 +194,3 @@ ggplot(OpBioGro_biomass_plot %>% filter(name == "LAI"), aes(x = ThermalT, y = va
 ```
 
 ![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
-
-### Estimate coefficients
-
-Updating phenological parameters that will go into partitioning
-estimates. This includes setting the thermal times to correspond to the
-dates of biomass measurements, and setting all rhizome growth values to
-zero so that this stays zero. Otherwise using default values.
-
-``` r
-p <- phenoParms() 
-p[1:6] <- OpBioGro_biomass$ThermalT#c(400, 600, 800, 1000, 1200, 1500)
-```
-
-    ## Warning in p[1:6] <- OpBioGro_biomass$ThermalT: number of items to replace is
-    ## not a multiple of replacement length
-
-``` r
-p['kRhizome1'] <- 0
-p['kRhizome2'] <- 0
-p['kRhizome3'] <- 0
-p['kRhizome4'] <- 0
-p['kRhizome5'] <- 0
-p['kRhizome6'] <- 0
-```
-
-Generate initial guesses at coefficients using these updated
-phenological parameters and the measured biomass values using `idbp`.
-These values than are validated using `valid_dbp`. The eighth value had
-to be changed manually to pass this validation step because it was
-initially shown as `Inf`.
-
-``` r
-# all idbp uses from phenoControl is the thermal times
-initial_coefs <- idbp(OpBioGro_biomass, phenoControl = p)
-```
-
-    ## Warning in idbp(OpBioGro_biomass, phenoControl = p): only one row for phen stage
-    ## 1
-
-``` r
-initial_coefs[8] <- -0.000000000000001
-valid_dbp(initial_coefs)
-```
-
-    ##  [1]  5.654008e-01  2.531646e-01  1.814346e-01 -1.000000e-04  3.384734e-01
-    ##  [6]  5.188897e-01  1.426369e-01 -1.000000e-15  2.775358e-01  6.249741e-01
-    ## [11]  9.749015e-02  0.000000e+00  1.136754e-05  6.660670e-01  3.339216e-01
-    ## [16]  0.000000e+00  1.632373e-01  7.338820e-01  1.028807e-01  0.000000e+00
-    ## [21]  2.500000e-01  2.500000e-01  2.500000e-01  0.000000e+00  2.500000e-01
-
-The previously generated weather data, along with those initial
-estimated biomass coefficients and the biomass measurements, are passed
-to the function that optimizes for biomass partitioning coefficients.
-This is optimized for all six phenological stages because of the `phen`
-argument.
-
-``` r
-biomass_coefs <- constrOpBioGro(phen = 0, 
-                                WetDat = OpBioGro_weather,
-                                data = OpBioGro_biomass, 
-                                iCoef = initial_coefs, 
-                                iRhizome = 0, 
-                                phenoControl = p)
-biomass_coefs
-```
-
-The biomass coefficients are converted into the format required by the
-function `BioGro` and then read into this function with the weather data
-to get biomass estimates. These are plotted, along with the biomass
-measurements.
-
-``` r
-biomass_coefs_list <- list(tp1 = as.vector(unlist(biomass_coefs$list1$phenoP[1])), 
-                           tp2 = as.vector(unlist(biomass_coefs$list1$phenoP[2])), 
-                           tp3 = as.vector(unlist(biomass_coefs$list1$phenoP[3])), 
-                           tp4 = as.vector(unlist(biomass_coefs$list1$phenoP[4])), 
-                           tp5 = as.vector(unlist(biomass_coefs$list1$phenoP[5])), 
-                           tp6 = as.vector(unlist(biomass_coefs$list1$phenoP[6])), 
-                           kLeaf1 = biomass_coefs$coefs[1], kStem1 = biomass_coefs$coefs[2], 
-                           kRoot1 = biomass_coefs$coefs[3], kRhizome1 = biomass_coefs$coefs[4], #kGrain1 = 0.0, 
-                           kLeaf2 = biomass_coefs$coefs[5], kStem2 = biomass_coefs$coefs[6], 
-                           kRoot2 = biomass_coefs$coefs[7], kRhizome2 = biomass_coefs$coefs[8], #kGrain2 = 0.0,
-                           kLeaf3 = biomass_coefs$coefs[9], kStem3 = biomass_coefs$coefs[10], 
-                           kRoot3 = biomass_coefs$coefs[11], kRhizome3 = biomass_coefs$coefs[12], #kGrain3 = 0.0, 
-                           kLeaf4 = biomass_coefs$coefs[13], kStem4 = biomass_coefs$coefs[14], 
-                           kRoot4 = biomass_coefs$coefs[15], kRhizome4 = biomass_coefs$coefs[16], #kGrain4 = 0.0, 
-                           kLeaf5 = biomass_coefs$coefs[17], kStem5 = biomass_coefs$coefs[18], 
-                           kRoot5 = biomass_coefs$coefs[19], kRhizome5 = biomass_coefs$coefs[20], #kGrain5 = 0.0, 
-                           kLeaf6 = biomass_coefs$coefs[21], kStem6 = biomass_coefs$coefs[22], 
-                           kRoot6 = biomass_coefs$coefs[23], kRhizome6 = biomass_coefs$coefs[24], kGrain6 = biomass_coefs$coefs[25]) 
-
-biomass_ests <- BioGro(WetDat = OpBioGro_weather, 
-                       #iCoef = initial_coefs, 
-                       #iRhizome = 0, 
-                       phenoControl = biomass_coefs_list)
-plot(biomass_ests)
-#points(OpBioGro_biomass$ThermalT, OpBioGro_biomass$Stem)
-```

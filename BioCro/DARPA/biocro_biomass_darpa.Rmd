@@ -10,7 +10,7 @@ For biomass partitioning using [`OpBioGro`](https://github.com/ebimodeling/biocr
 ### Weather data
 
 Assemble weather dataframe: 
-```{r}
+```{r, message=FALSE}
 OpBioGro_weather <- data.frame(year = rep(2019, 8760), 
                                doy = rep(1:365, each = 24), 
                                hour = rep(seq(0, 23), 365), 
@@ -24,7 +24,7 @@ write.csv(OpBioGro_weather, "biocro_opt_darpa_files/OpBioGro_weather.csv", row.n
 ```
 
 Visualize these data: 
-```{r, fig.width=10}
+```{r, fig.width=10, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(lubridate)
@@ -50,7 +50,7 @@ ggplot(OpBioGro_weather_plot %>% filter(month(date) ==1 & day(date) < 3), aes(da
 [These data](https://docs.google.com/spreadsheets/d/1Nc2g-gPEb-rUW9R4QLDqAZvRRYk1whWAJlb8kLEQZ5c/edit#gid=0) are in the project's Google Drive. They have been downloaded and saved as `biomass_setaria_me034_gehan.csv`. 
 
 Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31*C) and taking the median of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.  
-```{r}
+```{r, message=FALSE}
 library(udunits2)
 area_cm2 <- 64
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
@@ -64,7 +64,7 @@ biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>%
 ```
 
 Plot of three replicate 31*C dry weights for stem, leaf, panicle/grain, and roots across six time points when biomass was measured. 
-```{r}
+```{r, message=FALSE}
 s <- biomass_data_all %>% 
   mutate(date = lubridate::mdy(biomas_harvested)) %>% 
   select(temperature_celsius, date, contains('DW.mg.byarea')) %>% 
@@ -94,7 +94,7 @@ ggplot(s, aes(date, value, color = name)) +
 ```
 
 Calculated median for each plant part and harvest date and added how many days each plant was grown before harvested to the biomass dataframe. Then calculated thermal times for weather data using `BioGro`, using only the thermal times for the days of harvest. 
-```{r}
+```{r, message=FALSE}
 library(BioCro)
 
 biomass_data_single <- biomass_data_all %>% 
@@ -112,7 +112,7 @@ weather_only_run_df <- as.data.frame(unclass(weather_only_run)[1:11]) %>%
 ```
 
 Combined biomass data for stem, leaf, panicle/grain, and root from data with corresponding calculated thermal time. Added in values of zero for rhizome at each thermal time point. Lastly estimated LAI using leaf biomass measurements with SLA. All values are plotted against thermal time. 
-```{r}
+```{r, message=FALSE}
 SLA_mg <- 80 / 1000000
 
 OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "days_grown") %>% 
@@ -145,66 +145,3 @@ ggplot(OpBioGro_biomass_plot %>% filter(name == "LAI"), aes(x = ThermalT, y = va
   geom_line() +
   ylab("Leaf Area Index (m2 leaf/m2 ground)")
 ```
-
-### Estimate coefficients
-
-Updating phenological parameters that will go into partitioning estimates. This includes setting the thermal times to correspond to the dates of biomass measurements, and setting all rhizome growth values to zero so that this stays zero. Otherwise using default values. 
-```{r}
-p <- phenoParms() 
-p[1:6] <- OpBioGro_biomass$ThermalT#c(400, 600, 800, 1000, 1200, 1500)
-p['kRhizome1'] <- 0
-p['kRhizome2'] <- 0
-p['kRhizome3'] <- 0
-p['kRhizome4'] <- 0
-p['kRhizome5'] <- 0
-p['kRhizome6'] <- 0
-```
-
-Generate initial guesses at coefficients using these updated phenological parameters and the measured biomass values using `idbp`. These values than are validated using `valid_dbp`. The eighth value had to be changed manually to pass this validation step because it was initially shown as `Inf`. 
-```{r}
-# all idbp uses from phenoControl is the thermal times
-initial_coefs <- idbp(OpBioGro_biomass, phenoControl = p)
-initial_coefs[8] <- -0.000000000000001
-valid_dbp(initial_coefs)
-```
-
-The previously generated weather data, along with those initial estimated biomass coefficients and the biomass measurements, are passed to the function that optimizes for biomass partitioning coefficients. This is optimized for all six phenological stages because of the `phen` argument. 
-```{r, results='hide', message=FALSE, eval=FALSE}
-biomass_coefs <- constrOpBioGro(phen = 0, 
-                                WetDat = OpBioGro_weather,
-                                data = OpBioGro_biomass, 
-                                iCoef = initial_coefs, 
-                                iRhizome = 0, 
-                                phenoControl = p)
-biomass_coefs
-```
-
-The biomass coefficients are converted into the format required by the function `BioGro` and then read into this function with the weather data to get biomass estimates. These are plotted, along with the biomass measurements. 
-```{r, eval=FALSE}
-biomass_coefs_list <- list(tp1 = as.vector(unlist(biomass_coefs$list1$phenoP[1])), 
-                           tp2 = as.vector(unlist(biomass_coefs$list1$phenoP[2])), 
-                           tp3 = as.vector(unlist(biomass_coefs$list1$phenoP[3])), 
-                           tp4 = as.vector(unlist(biomass_coefs$list1$phenoP[4])), 
-                           tp5 = as.vector(unlist(biomass_coefs$list1$phenoP[5])), 
-                           tp6 = as.vector(unlist(biomass_coefs$list1$phenoP[6])), 
-                           kLeaf1 = biomass_coefs$coefs[1], kStem1 = biomass_coefs$coefs[2], 
-                           kRoot1 = biomass_coefs$coefs[3], kRhizome1 = biomass_coefs$coefs[4], #kGrain1 = 0.0, 
-                           kLeaf2 = biomass_coefs$coefs[5], kStem2 = biomass_coefs$coefs[6], 
-                           kRoot2 = biomass_coefs$coefs[7], kRhizome2 = biomass_coefs$coefs[8], #kGrain2 = 0.0,
-                           kLeaf3 = biomass_coefs$coefs[9], kStem3 = biomass_coefs$coefs[10], 
-                           kRoot3 = biomass_coefs$coefs[11], kRhizome3 = biomass_coefs$coefs[12], #kGrain3 = 0.0, 
-                           kLeaf4 = biomass_coefs$coefs[13], kStem4 = biomass_coefs$coefs[14], 
-                           kRoot4 = biomass_coefs$coefs[15], kRhizome4 = biomass_coefs$coefs[16], #kGrain4 = 0.0, 
-                           kLeaf5 = biomass_coefs$coefs[17], kStem5 = biomass_coefs$coefs[18], 
-                           kRoot5 = biomass_coefs$coefs[19], kRhizome5 = biomass_coefs$coefs[20], #kGrain5 = 0.0, 
-                           kLeaf6 = biomass_coefs$coefs[21], kStem6 = biomass_coefs$coefs[22], 
-                           kRoot6 = biomass_coefs$coefs[23], kRhizome6 = biomass_coefs$coefs[24], kGrain6 = biomass_coefs$coefs[25]) 
-
-biomass_ests <- BioGro(WetDat = OpBioGro_weather, 
-                       #iCoef = initial_coefs, 
-                       #iRhizome = 0, 
-                       phenoControl = biomass_coefs_list)
-plot(biomass_ests)
-#points(OpBioGro_biomass$ThermalT, OpBioGro_biomass$Stem)
-```
-

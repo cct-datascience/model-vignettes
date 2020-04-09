@@ -16,27 +16,16 @@ across all stages at once within our objective function.
 First read in all the necessary input data:
 
   - BioCro config file
-  - weather file created for biomass partitioning
-  - biomass file from Setaria experiments
+  - weather file created for biomass partitioning in
+    [biocro\_biomass\_darpa.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/biocro_biomass_darpa.md)
+  - biomass file from Setaria experiments in
+    [biocro\_biomass\_darpa.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/biocro_biomass_darpa.md)
 
 <!-- end list -->
 
 ``` r
 library(dplyr)
-```
 
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-``` r
 rundir <- getwd()
 
 OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv")
@@ -64,49 +53,6 @@ OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 We want biomass estimates from `BioGro` (i.e., ttt) to be as close to
 the actual biomass values as possible (i.e., OpBioGro\_biomass). Will be
 optimizing over the parameters, which are the biomass coefficients.
-
-TODO:
-
-  - ~~Remove thermal times from biomass tables~~
-  - (later) figure out better metric for comparing biomass values
-      - ~~sum of absolute value (because sign doesn’t matter, magnitude
-        of difference does)~~
-      - log transform
-      - ~~(ttt - OpBioGro\_biomass) / OpBioGro\_biomass~~
-  - ~~upper and lower bounds are, initially, each between 0 and 1~~
-      - Can use more restricted bounds, base on BioCro defaults?
-  - ~~additional param constraints: parameter values for each stage
-    should sum to one (note: this MUST happen because `BioCro` will not
-    use pheno params that do not equal one)~~
-      - ~~fnMap argument is only for number of parameters constraints?~~
-    
-      - ~~include something like the below, see `?DEoptim` for another
-        example~~ function(x){ if(x\[1:5\] == 1){ ifelse(x\[6:10\]){ … }
-        }
-    
-      - ~~another option for this sum to one constraint is something
-        like the following for each stage as the first part of `opfn`~~
-
-<!-- end list -->
-
-``` r
-z <- c(0.1, 0.2, 0.15)
-z[1:3]
-sum(z[1:3])
-z[1:3]/sum(z[1:3])
-sum(z[1:3]/sum(z[1:3]))
-```
-
-  - ~~keep thermal times the same, can set them in the phenoControl
-    line, and set rhizome values == 0~~
-
-  - ~~phenoParms = vector of 25 values~~
-    
-      - ~~split up parameters into the ones that will vary and the ones
-        that will not. op parms = 19 values, thermal = 6, rhizome = 6~~
-      - ~~reassemble within opfn function~~
-
-  - ~~Biomass measurements need to be in correct units (Mg/ha)~~
 
 First create objective function `opfn`, and include parameter values to
 test if this function by itself works.
@@ -320,4 +266,4 @@ ggplot() +
   facet_wrap(~name)
 ```
 
-![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](biocro_opt_darpa_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
