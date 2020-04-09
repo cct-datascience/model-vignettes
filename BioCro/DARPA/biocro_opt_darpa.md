@@ -47,7 +47,8 @@ l2n <- function(x) lapply(x, as.numeric)
 day1 <- 1
 dayn <- 50
 
-OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
+OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv") %>% 
+  select(-LAI)
 ```
 
 We want biomass estimates from `BioGro` (i.e., ttt) to be as close to
@@ -118,8 +119,7 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
                    Leaf = t$Leaf,
                    Root = t$Root,
                    Rhizome = t$Rhizome,
-                   Grain = t$Grain,
-                   LAI = t$LAI)
+                   Grain = t$Grain)
   ttt <- tt %>% 
     filter(round(tt$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
   bio_ests <- select(ttt, -ThermalT)
@@ -138,7 +138,7 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
   #   mutate(Stem_norm = Stem / total_bio, 
   #        Leaf_norm = Leaf / total_bio, 
   #        Root_norm = Root / total_bio) %>% 
-  #   select(Stem_norm, Leaf_norm, Root_norm, Rhizome, Grain, LAI) %>% 
+  #   select(Stem_norm, Leaf_norm, Root_norm, Rhizome, Grain) %>% 
   #   rename(Stem = Stem_norm, Leaf = Leaf_norm, Root = Root_norm)
   
   return(sum(diff))
@@ -155,7 +155,7 @@ opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
 
     ## [1] 6
 
-    ## [1] 6.440337
+    ## [1] 5.049612
 
 Run objective function through optimization with `DEoptim`, setting the
 upper and lower bounds for the varying parameters to 0 and 1 and
@@ -243,8 +243,7 @@ results_test2 <- data.frame(ThermalT = results_test$ThermalT,
                  Leaf = results_test$Leaf,
                  Root = results_test$Root,
                  Rhizome = results_test$Rhizome,
-                 Grain = results_test$Grain,
-                 LAI = results_test$LAI)
+                 Grain = results_test$Grain)
 results_test3 <- results_test2 %>% 
   filter(round(results_test2$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
 diff <- sum(abs(results_test3 - OpBioGro_biomass))
