@@ -25,7 +25,9 @@ library(BioCro)
 sessionInfo()
 ```
 
-### Read in data
+### Running new version on set parameters
+
+#### Read in data
 
 ```{r}
 library(dplyr)
@@ -34,7 +36,7 @@ OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>%
  OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 ```
 
-### Set up parameters
+#### Set up parameters
 
 The following code uses BioCro 1.0. 
 
@@ -212,6 +214,8 @@ sorghum_modules <- list(canopy_module_name='c4_canopy',
                        stomata_water_stress_module_name='stomata_water_stress_linear')
 ```
 
+#### Run model 
+
 Use these three inputs, along with a weather file included with the package, to generate biomass values for **Setaria**. 
 
 ```{r}
@@ -221,7 +225,7 @@ setaria_result <- Gro(setaria_initial_state,
                       sorghum_modules)
 ```
 
-### Plot results with data
+#### Plot results with data
 
 We are plotting the estimated biomass values from BioCro with the measured values that were used to estimate the parameters, in order to compare them. 
 
@@ -244,3 +248,24 @@ ggplot() +
   theme_classic() +
   facet_wrap(~name)
 ```
+
+### Optimizing `Gro` for *Setaria* parameters
+
+#### Set up and test objective function
+
+k_params are part of setaria_parameters (`setaria_parameters[53:82]`)
+```{r, eval=FALSE}
+opfn <- function(k_params){
+  
+}
+
+setaria_parameters[53:82] <- list(rep(0.2, (82-53)))
+setaria_parameters[53:57] <- list(0.2, 0.2, 0.2, 0.2, 0.2)
+opfn()
+```
+
+```{r}
+library(DEoptim)
+```
+
+

@@ -54,7 +54,9 @@ sessionInfo()
     ##  [9] grid_3.6.1      knitr_1.28      stringr_1.4.0   xfun_0.12      
     ## [13] digest_0.6.25   rlang_0.4.5     lattice_0.20-38 evaluate_0.14
 
-### Read in data
+### Running new version on set parameters
+
+#### Read in data
 
 ``` r
 library(dplyr)
@@ -77,7 +79,7 @@ OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>%
  OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 ```
 
-### Set up parameters
+#### Set up parameters
 
 The following code uses BioCro 1.0.
 
@@ -258,6 +260,8 @@ sorghum_modules <- list(canopy_module_name='c4_canopy',
                        stomata_water_stress_module_name='stomata_water_stress_linear')
 ```
 
+#### Run model
+
 Use these three inputs, along with a weather file included with the
 package, to generate biomass values for **Setaria**.
 
@@ -268,7 +272,7 @@ setaria_result <- Gro(setaria_initial_state,
                       sorghum_modules)
 ```
 
-### Plot results with data
+#### Plot results with data
 
 We are plotting the estimated biomass values from BioCro with the
 measured values that were used to estimate the parameters, in order to
@@ -297,3 +301,30 @@ ggplot() +
     ## Warning: Removed 21950 rows containing missing values (geom_path).
 
 ![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+### Optimizing `Gro` for *Setaria* parameters
+
+#### Set up and test objective function
+
+k\_params are part of setaria\_parameters (`setaria_parameters[53:82]`)
+
+``` r
+opfn <- function(k_params){
+  
+}
+
+setaria_parameters[53:82] <- list(rep(0.2, (82-53)))
+setaria_parameters[53:57] <- list(0.2, 0.2, 0.2, 0.2, 0.2)
+opfn()
+```
+
+``` r
+library(DEoptim)
+```
+
+    ## Loading required package: parallel
+
+    ## 
+    ## DEoptim package
+    ## Differential Evolution algorithm in R
+    ## Authors: D. Ardia, K. Mullen, B. Peterson and J. Ulrich
