@@ -54,7 +54,30 @@ sessionInfo()
     ##  [9] grid_3.6.1      knitr_1.28      stringr_1.4.0   xfun_0.12      
     ## [13] digest_0.6.25   rlang_0.4.5     lattice_0.20-38 evaluate_0.14
 
-### Run BioCro
+### Read in data
+
+``` r
+library(dplyr)
+```
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
+``` r
+OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>% 
+  rename(solar = solarR, temp = DailyTemp.C, rh = RH, windspeed = WindSpeed)
+ OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
+```
+
+### Set up parameters
 
 The following code uses BioCro 1.0.
 
@@ -262,7 +285,7 @@ package, to generate biomass values for **Setaria**.
 ``` r
 setaria_result <- Gro(setaria_initial_state, 
                       setaria_parameters, 
-                      get_growing_season_climate(weather05), 
+                      get_growing_season_climate(OpBioGro_weather), 
                       sorghum_modules)
 ```
 
@@ -273,13 +296,11 @@ measured values that were used to estimate the parameters, in order to
 compare them.
 
 ``` r
-library(dplyr)
 setaria_result_plot <- setaria_result %>% 
   select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
   tidyr::pivot_longer(Stem:Grain) %>% 
   rename(ThermalT = TTc)
 
-OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 setaria_data_plot <- OpBioGro_biomass %>% 
   select(-LAI) %>% 
   tidyr::pivot_longer(Stem:Grain)
@@ -294,6 +315,6 @@ ggplot() +
   facet_wrap(~name)
 ```
 
-    ## Warning: Removed 11500 rows containing missing values (geom_path).
+    ## Warning: Removed 21950 rows containing missing values (geom_path).
 
-![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->

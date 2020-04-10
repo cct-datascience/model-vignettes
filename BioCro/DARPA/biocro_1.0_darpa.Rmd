@@ -25,7 +25,16 @@ library(BioCro)
 sessionInfo()
 ```
 
-### Run BioCro
+### Read in data
+
+```{r}
+library(dplyr)
+OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>% 
+  rename(solar = solarR, temp = DailyTemp.C, rh = RH, windspeed = WindSpeed)
+ OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
+```
+
+### Set up parameters
 
 The following code uses BioCro 1.0. 
 
@@ -229,7 +238,7 @@ Use these three inputs, along with a weather file included with the package, to 
 ```{r}
 setaria_result <- Gro(setaria_initial_state, 
                       setaria_parameters, 
-                      get_growing_season_climate(weather05), 
+                      get_growing_season_climate(OpBioGro_weather), 
                       sorghum_modules)
 ```
 
@@ -238,13 +247,11 @@ setaria_result <- Gro(setaria_initial_state,
 We are plotting the estimated biomass values from BioCro with the measured values that were used to estimate the parameters, in order to compare them. 
 
 ```{r, message=FALSE}
-library(dplyr)
 setaria_result_plot <- setaria_result %>% 
   select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
   tidyr::pivot_longer(Stem:Grain) %>% 
   rename(ThermalT = TTc)
 
-OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 setaria_data_plot <- OpBioGro_biomass %>% 
   select(-LAI) %>% 
   tidyr::pivot_longer(Stem:Grain)
