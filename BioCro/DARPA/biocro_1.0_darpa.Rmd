@@ -33,14 +33,14 @@ sessionInfo()
 library(dplyr)
 OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>% 
   rename(solar = solarR, temp = DailyTemp.C, rh = RH, windspeed = WindSpeed)
- OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
+OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 ```
 
 #### Set up parameters
 
 The following code uses BioCro 1.0. 
 
-Set up the parameters for *Setaria* with these two lists, `setaria_initial_state` and `setaria_parameters`. 
+Set up the parameters for *Setaria* with these two lists, `setaria_initial_state` and `setaria_parameters`. This uses parameter values from optimizing the older version of BioCro. 
 ```{r, message=FALSE}
 setaria_initial_state <- with(list(), {
   datalines =
@@ -230,42 +230,114 @@ setaria_result <- Gro(setaria_initial_state,
 We are plotting the estimated biomass values from BioCro with the measured values that were used to estimate the parameters, in order to compare them. 
 
 ```{r, message=FALSE}
-setaria_result_plot <- setaria_result %>% 
-  select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
-  tidyr::pivot_longer(Stem:Grain) %>% 
-  rename(ThermalT = TTc)
-
-setaria_data_plot <- OpBioGro_biomass %>% 
-  select(-LAI) %>% 
-  tidyr::pivot_longer(Stem:Grain)
-
 library(ggplot2)
-ggplot() +
-  geom_point(setaria_data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
-  geom_line(setaria_result_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
+plot_biomass <- function(biomass_estimates){
+  est_plot <- biomass_estimates %>% 
+    select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
+    tidyr::pivot_longer(Stem:Grain) %>% 
+    rename(ThermalT = TTc)
+  data_plot <- OpBioGro_biomass %>% 
+    select(-LAI) %>% 
+    tidyr::pivot_longer(Stem:Grain)
+  biomass_plot <- ggplot() +
+    geom_point(data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
+    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
   xlim(c(0, 1800)) +
   labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") +
   theme_classic() +
   facet_wrap(~name)
+  print(biomass_plot)
+}
+plot_biomass(setaria_result)
 ```
 
 ### Optimizing `Gro` for *Setaria* parameters
 
 #### Set up and test objective function
 
-k_params are part of setaria_parameters (`setaria_parameters[53:82]`)
+k_params are part of setaria_parameters (`setaria_parameters[53:82]`). kRhizome6 has to be zero?
+
+What's below isn't actually optimizing, as each iteration has the same values. 
 ```{r, eval=FALSE}
+nonk_params <- setaria_parameters[-c(53:80, 82)]
 opfn <- function(k_params){
+  k_params <- with(list(), {
+  datalines =
+    "symbol value
+    kStem1 0.312482562
+    kLeaf1 0.350204711
+    kRoot1 0.337312727
+    kRhizome1 0
+    kGrain1 0
+    kStem2 0.28215246
+    kLeaf2 0.385131018
+    kRoot2 0.332716522
+    kRhizome2 0
+    kGrain2 0
+    kStem3 0.449611092
+    kLeaf3 0.549167954
+    kRoot3 0.001220954
+    kRhizome3 0
+    kGrain3 0
+    kStem4 0.450730685
+    kLeaf4 0.38210712
+    kRoot4 0.167162195
+    kRhizome4 0
+    kGrain4 0
+    kStem5 0.687613079
+    kLeaf5 0.197814203
+    kRoot5 0.114572719
+    kRhizome5 0
+    kGrain5 0
+    kStem6 0.758825523
+    kLeaf6 0.01127437
+    kRoot6 0.143217809
+    kGrain6 0.086682298"
   
+  data_frame = utils::read.table(textConnection(datalines), header=TRUE)
+  values = as.list(data_frame$value)
+  names(values) = data_frame$symbol
+  values
+})
+  all_params <- c(nonk_params, k_params)
+  #print(all_params)
+  t <- Gro(setaria_initial_state,
+           all_params,
+           get_growing_season_climate(OpBioGro_weather),
+           sorghum_modules)
+  #plot_biomass(t)
+  tt <- t %>% 
+    select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
+    rename(ThermalT = TTc)
+  ttt <- tt %>% 
+    filter(round(tt$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
+  bio_ests <- select(ttt, -ThermalT)
+  bio_meas <- select(OpBioGro_biomass, -ThermalT, -LAI)
+  diff <- abs(bio_ests - bio_meas)
+  return(sum(diff))
 }
 
-setaria_parameters[53:82] <- list(rep(0.2, (82-53)))
-setaria_parameters[53:57] <- list(0.2, 0.2, 0.2, 0.2, 0.2)
-opfn()
+# setaria_k_params <- setaria_parameters[c(53:80, 82)]
+# for(i in 1:length(setaria_k_params)){
+#   setaria_k_params[[i]] <- 0.2
+# }
+# opfn(setaria_k_params)
+
+library(DEoptim)
+opt_results <- DEoptim(fn = opfn, lower = rep(0, 29), upper = rep(1, 29), control = DEoptim.control(itermax = 2))
 ```
 
 ```{r}
-library(DEoptim)
+optimal_k_params <- as.list(opt_results$optim$bestmem)
+names(optimal_k_params) <- names(setaria_parameters[c(53:80, 82)])
+optimal_params <- c(nonk_params, optimal_k_params)
+
+results_test <- Gro(setaria_initial_state, 
+                    optimal_params,
+                    get_growing_season_climate(OpBioGro_weather), 
+                    sorghum_modules)
+
+plot_biomass(results_test)
 ```
 
 
