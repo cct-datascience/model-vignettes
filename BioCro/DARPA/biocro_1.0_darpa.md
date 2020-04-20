@@ -4,6 +4,36 @@ Author: Kristina Riemer
 
 ### Switching between BioCro versions locally
 
+Needs to be run using BioCro version 1.0. Check your BioCro version:
+
+``` r
+library(BioCro)
+sessionInfo()
+```
+
+    ## R version 3.6.1 (2019-07-05)
+    ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
+    ## Running under: macOS Catalina 10.15.4
+    ## 
+    ## Matrix products: default
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRblas.0.dylib
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRlapack.dylib
+    ## 
+    ## locale:
+    ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## attached base packages:
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## 
+    ## other attached packages:
+    ## [1] BioCro_1.00
+    ## 
+    ## loaded via a namespace (and not attached):
+    ##  [1] compiler_3.6.1  magrittr_1.5    tools_3.6.1     htmltools_0.4.0
+    ##  [5] yaml_2.2.1      Rcpp_1.0.4      stringi_1.4.6   rmarkdown_2.1  
+    ##  [9] grid_3.6.1      knitr_1.28      stringr_1.4.0   xfun_0.12      
+    ## [13] digest_0.6.25   rlang_0.4.5     lattice_0.20-38 evaluate_0.14
+
 Download repos for [BioCro 0.95](https://github.com/ebimodeling/biocro)
 and
 [BioCro 1.0](https://github.com/ebimodeling/biocro/tree/new-framework),
@@ -58,6 +88,11 @@ sessionInfo()
 
 #### Read in data
 
+These two dataframes include hourly weather data for a year that match
+the conditions the *Setaria* plants were grown in, and measured biomass
+values for plants at six harvest dates. The former will be used to run
+the model and the latter to tune the model parameters.
+
 ``` r
 library(dplyr)
 ```
@@ -83,7 +118,7 @@ OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 
 The following code uses BioCro 1.0.
 
-Set up the parameters for *Setaria* with these two lists,
+Set up the parameters for *Setaria* using these two lists,
 `setaria_initial_state` and `setaria_parameters`. This uses parameter
 values from optimizing the older version of BioCro.
 
@@ -253,7 +288,7 @@ setaria_parameters <- with(list(), {
 Create the modules, which are currently developed for *Sorghum*.
 
 ``` r
-sorghum_modules <- list(canopy_module_name='c4_canopy',
+setaria_modules <- list(canopy_module_name='c4_canopy',
                        soil_module_name='one_layer_soil_profile',
                        growth_module_name='partitioning_growth',
                        senescence_module_name='thermal_time_senescence',
@@ -263,21 +298,22 @@ sorghum_modules <- list(canopy_module_name='c4_canopy',
 
 #### Run model
 
-Use these three inputs, along with a weather file included with the
-package, to generate biomass values for **Setaria**.
+Use these three inputs, along with the weather data, to generate biomass
+values for **Setaria**.
 
 ``` r
-setaria_result <- Gro(setaria_initial_state, 
-                      setaria_parameters, 
-                      get_growing_season_climate(OpBioGro_weather), 
-                      sorghum_modules)
+biomass_set_params <- Gro(setaria_initial_state, 
+                          setaria_parameters,
+                          get_growing_season_climate(OpBioGro_weather), 
+                          setaria_modules)
 ```
 
 #### Plot results with data
 
 We are plotting the estimated biomass values from BioCro with the
 measured values that were used to estimate the parameters, in order to
-compare them.
+compare them. The biomass estimates from the model do not track the
+measured values very well.
 
 ``` r
 library(ggplot2)
@@ -291,24 +327,39 @@ plot_biomass <- function(biomass_estimates){
     tidyr::pivot_longer(Stem:Grain)
   biomass_plot <- ggplot() +
     geom_point(data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
-    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
-  #xlim(c(0, 1800)) +
-  lims(x = c(0, 1800), y = c(0, 2)) +
-  labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") +
-  theme_classic() +
-  facet_wrap(~name)
+    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) + 
+    lims(x = c(0, 1800), y = c(0, 2)) +
+    labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") + 
+    theme_classic() +
+    theme(legend.position = "none") +
+    facet_wrap(~name)
   print(biomass_plot)
 }
-plot_biomass(setaria_result)
+plot_set_params <- plot_biomass(biomass_set_params)
 ```
 
     ## Warning: Removed 21950 rows containing missing values (geom_path).
 
-![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ### Optimizing `Gro` for *Setaria* parameters
 
+This optimizes the biomass coefficients so that BioCro biomass estimates
+better match the measured values. Parameters that are optimized are the
+leaf, stem, root, and grain coefficients (e.g., `kStem1`), not including
+the value for the sixth rhizome stage (`kRhizome6`), which must be zero.
+
+The optimization returns these values for biomass growth by plant part
+and stage where the difference between measured and estimated biomass
+values is minimized. We optimized across all six stages simultaneously.
+
 #### Set up and test objective function
+
+First the objective function `opfn` is created, which has its only
+argument as the parameters to be optimized over, called `k_params`.
+
+The function is tested with example parameters, which are all set to
+0.2.
 
 ``` r
 nonk_params <- setaria_parameters[-c(53:80, 82)]
@@ -320,7 +371,7 @@ opfn <- function(k_params){
   t <- Gro(setaria_initial_state,
            all_params,
            get_growing_season_climate(OpBioGro_weather),
-           sorghum_modules)
+           setaria_modules)
   tt <- t %>%
     select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>%
     rename(ThermalT = TTc)
@@ -341,6 +392,13 @@ opfn(k_params_ex)
 
     ## [1] 5.619547
 
+#### Run optimization and plot
+
+The objective function is run through optimization with `DEoptim`, with
+upper and lower bounds for the parameters set to 0 and 1. The `itermax`
+value is set low enough for this to complete in a few minutes, though
+the difference is increasingly minimized with more iterations.
+
 ``` r
 library(DEoptim)
 ```
@@ -356,22 +414,55 @@ library(DEoptim)
 opt_results <- DEoptim(fn = opfn, lower = rep(0, 29), upper = rep(1, 29), control = DEoptim.control(itermax = 2))
 ```
 
-    ## Iteration: 1 bestvalit: 4.191659 bestmemit:    0.209155    0.965525    0.621404    0.654492    0.616338    0.735601    0.177788    0.527247    0.955080    0.682869    0.193226    0.866364    0.066404    0.411921    0.035961    0.976971    0.919139    0.815863    0.081399    0.189383    0.920777    0.288634    0.764125    0.125380    0.601107    0.776367    0.861998    0.204806    0.486154
-    ## Iteration: 2 bestvalit: 4.191659 bestmemit:    0.209155    0.965525    0.621404    0.654492    0.616338    0.735601    0.177788    0.527247    0.955080    0.682869    0.193226    0.866364    0.066404    0.411921    0.035961    0.976971    0.919139    0.815863    0.081399    0.189383    0.920777    0.288634    0.764125    0.125380    0.601107    0.776367    0.861998    0.204806    0.486154
+    ## Iteration: 1 bestvalit: 3.822002 bestmemit:    0.318821    0.523835    0.299610    0.647970    0.585247    0.885641    0.804572    0.005966    0.570937    0.239837    0.620227    0.733022    0.377734    0.395310    0.873652    0.616819    0.929603    0.009875    0.583064    0.631905    0.935113    0.876700    0.863132    0.441604    0.319974    0.948997    0.768811    0.003453    0.176466
+    ## Iteration: 2 bestvalit: 3.811085 bestmemit:    0.318821    0.523835    0.299610    0.647970    0.585247    0.885641    0.804572    0.005966    0.570937    0.714425    0.989828    0.733022    0.377734    0.395310    0.873652    0.616819    0.929603    0.009875    0.583064    0.631905    0.935113    0.876700    0.863132    0.441604    0.319974    0.948997    0.768811    0.003453    0.176466
+
+The resulting optimized parameters are put through the model again, and
+the resulting biomass estimates are plotted agaist the measured values.
 
 ``` r
 optimal_k_params <- as.list(opt_results$optim$bestmem)
 names(optimal_k_params) <- names(setaria_parameters[c(53:80, 82)])
 optimal_params <- c(nonk_params, optimal_k_params)
 
-results_test <- Gro(setaria_initial_state, 
-                    optimal_params,
-                    get_growing_season_climate(OpBioGro_weather), 
-                    sorghum_modules)
+biomass_opt_parms <- Gro(setaria_initial_state, 
+                         optimal_params,
+                         get_growing_season_climate(OpBioGro_weather),
+                         setaria_modules)
 
-plot_biomass(results_test)
+plot_opt_params <- plot_biomass(biomass_opt_parms)
+```
+
+    ## Warning: Removed 22057 rows containing missing values (geom_path).
+
+![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+The optimization has improved the fit compared to the previously used
+parameter values. See results from set parameters on the left and
+optimized parameters results on the right.
+
+``` r
+library(cowplot)
+```
+
+    ## 
+    ## ********************************************************
+
+    ## Note: As of version 1.0.0, cowplot does not change the
+
+    ##   default ggplot2 theme anymore. To recover the previous
+
+    ##   behavior, execute:
+    ##   theme_set(theme_cowplot())
+
+    ## ********************************************************
+
+``` r
+plot_grid(plot_set_params, plot_opt_params)
 ```
 
     ## Warning: Removed 21950 rows containing missing values (geom_path).
 
-![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+    ## Warning: Removed 22057 rows containing missing values (geom_path).
+
+![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
