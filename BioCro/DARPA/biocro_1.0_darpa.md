@@ -362,12 +362,26 @@ The function is tested with example parameters, which are all set to
 0.2.
 
 ``` r
-nonk_params <- setaria_parameters[-c(53:80, 82)]
+k_params_index <- c(53:55, 58:60, 63:65, 68:70, 73:75, 78:80, 82)
+nonk_params <- setaria_parameters[-k_params_index]
+
 opfn <- function(k_params){
-  k_params_names <- names(setaria_parameters[c(53:80, 82)])
+  k_params_names <- names(setaria_parameters[k_params_index])
   length(k_params) <- length(k_params_names)
+  k_params_vec <- unlist(k_params)
+  k_params[1:3] <- as.list(k_params_vec[1:3]/sum(k_params_vec[1:3]))
+  k_params_vec <- unlist(k_params)
+  k_params[4:6] <- as.list(k_params_vec[4:6]/sum(k_params_vec[4:6]))
+  k_params_vec <- unlist(k_params)
+  k_params[7:9] <- as.list(k_params_vec[7:9]/sum(k_params_vec[7:9]))
+  k_params_vec <- unlist(k_params)
+  k_params[10:12] <- as.list(k_params_vec[10:12]/sum(k_params_vec[10:12]))
+  k_params_vec <- unlist(k_params)
+  k_params[13:15] <- as.list(k_params_vec[13:15]/sum(k_params_vec[13:15]))
+  k_params_vec <- unlist(k_params)
+  k_params[16:19] <- as.list(k_params_vec[16:19]/sum(k_params_vec[16:19]))
   all_params <- c(nonk_params, k_params)
-  names(all_params)[78:106] <- k_params_names
+  names(all_params)[88:106] <- k_params_names
   t <- Gro(setaria_initial_state,
            all_params,
            get_growing_season_climate(OpBioGro_weather),
@@ -383,14 +397,14 @@ opfn <- function(k_params){
   return(sum(diff))
 }
 
-k_params_ex <- setaria_parameters[c(53:80, 82)]
+k_params_ex <- setaria_parameters[k_params_index]
 for(i in 1:length(k_params_ex)){
   k_params_ex[[i]] <- 0.2
 }
 opfn(k_params_ex)
 ```
 
-    ## [1] 5.619547
+    ## [1] 5.511087
 
 #### Run optimization and plot
 
@@ -411,18 +425,32 @@ library(DEoptim)
     ## Authors: D. Ardia, K. Mullen, B. Peterson and J. Ulrich
 
 ``` r
-opt_results <- DEoptim(fn = opfn, lower = rep(0, 29), upper = rep(1, 29), control = DEoptim.control(itermax = 2))
+opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), control = DEoptim.control(itermax = 2))
 ```
 
-    ## Iteration: 1 bestvalit: 3.822002 bestmemit:    0.318821    0.523835    0.299610    0.647970    0.585247    0.885641    0.804572    0.005966    0.570937    0.239837    0.620227    0.733022    0.377734    0.395310    0.873652    0.616819    0.929603    0.009875    0.583064    0.631905    0.935113    0.876700    0.863132    0.441604    0.319974    0.948997    0.768811    0.003453    0.176466
-    ## Iteration: 2 bestvalit: 3.811085 bestmemit:    0.318821    0.523835    0.299610    0.647970    0.585247    0.885641    0.804572    0.005966    0.570937    0.714425    0.989828    0.733022    0.377734    0.395310    0.873652    0.616819    0.929603    0.009875    0.583064    0.631905    0.935113    0.876700    0.863132    0.441604    0.319974    0.948997    0.768811    0.003453    0.176466
+    ## Iteration: 1 bestvalit: 5.272419 bestmemit:    0.058955    0.607596    0.038007    0.882056    0.915125    0.326528    0.162950    0.197402    0.006885    0.636163    0.858917    0.742719    0.385782    0.146395    0.527944    0.735297    0.889393    0.628602    0.941879
+    ## Iteration: 2 bestvalit: 5.221585 bestmemit:    0.027452    0.704713    0.080740    0.601273    0.831019    0.386918    0.257487    0.693798    0.223302    0.874506    0.504661    0.027959    0.780694    0.779251    0.416428    0.994281    0.280753    0.465156    0.917949
 
 The resulting optimized parameters are put through the model again, and
 the resulting biomass estimates are plotted agaist the measured values.
 
 ``` r
 optimal_k_params <- as.list(opt_results$optim$bestmem)
-names(optimal_k_params) <- names(setaria_parameters[c(53:80, 82)])
+names(optimal_k_params) <- names(setaria_parameters[k_params_index])
+
+opt_vec <- unlist(optimal_k_params)
+optimal_k_params[1:3] <- as.list(opt_vec[1:3]/sum(opt_vec[1:3]))
+opt_vec <- unlist(optimal_k_params)
+optimal_k_params[4:6] <- as.list(opt_vec[4:6]/sum(opt_vec[4:6]))
+opt_vec <- unlist(optimal_k_params)
+optimal_k_params[7:9] <- as.list(opt_vec[7:9]/sum(opt_vec[7:9]))
+opt_vec <- unlist(optimal_k_params)
+optimal_k_params[10:12] <- as.list(opt_vec[10:12]/sum(opt_vec[10:12]))
+opt_vec <- unlist(optimal_k_params)
+optimal_k_params[13:15] <- as.list(opt_vec[13:15]/sum(opt_vec[13:15]))
+opt_vec <- unlist(optimal_k_params)
+optimal_k_params[16:19] <- as.list(opt_vec[16:19]/sum(opt_vec[16:19]))
+
 optimal_params <- c(nonk_params, optimal_k_params)
 
 biomass_opt_parms <- Gro(setaria_initial_state, 
@@ -433,7 +461,7 @@ biomass_opt_parms <- Gro(setaria_initial_state,
 plot_opt_params <- plot_biomass(biomass_opt_parms)
 ```
 
-    ## Warning: Removed 22057 rows containing missing values (geom_path).
+    ## Warning: Removed 21950 rows containing missing values (geom_path).
 
 ![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
@@ -462,7 +490,7 @@ plot_grid(plot_set_params, plot_opt_params)
 ```
 
     ## Warning: Removed 21950 rows containing missing values (geom_path).
-
-    ## Warning: Removed 22057 rows containing missing values (geom_path).
+    
+    ## Warning: Removed 21950 rows containing missing values (geom_path).
 
 ![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
