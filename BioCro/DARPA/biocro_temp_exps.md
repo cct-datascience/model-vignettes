@@ -69,11 +69,11 @@ treatments. The control plants were at 31\(^\circ\)C during the day and
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/kristinariemer/pecan/models/biocro/tests/testthat/data/US-Bo1</path>
+        <path>/home/kristinariemer/biocro_temp_exps_files/danforth-chamber</path>
       </met>
     </inputs>
-      <start.date>2004/01/01</start.date>
-      <end.date>2004/12/30</end.date>
+      <start.date>2019/01/01</start.date>
+      <end.date>2019/12/30</end.date>
     <host>
       <name>localhost</name>
     </host>
@@ -270,7 +270,32 @@ db.print.connections()
 print("---------- PEcAn Workflow Complete ----------")
 ```
 
-5.  To run: `biocro_temp_exps_files/workflow.R
-    --settingsbiocro_temp_exps_files/pecan.biocro.darpa.temp.exps.xml`
+5.  Generate weather data `danforth-chamber.2019.csv` with this R
+    script.
+
+<!-- end list -->
+
+``` r
+hightempchamber_weather <- data.frame(year = rep(2019, 8760), 
+                                      doy = rep(1:365, each = 24), 
+                                      hour = rep(seq(0, 23), 365), 
+                                      SolarR = rep(c(0, 936), times = 365, each = 12),
+                                      Temp = rep(31, times = 365 * 24), 
+                                      RH = rep(55.5 / 100,  times = 365 * 24), 
+                                      WS = rep(0, times = 365 * 24), 
+                                      precip = rep(c(0.000462963, rep(0, 23)), 365))
+
+write.csv(hightempchamber_weather, "biocro_temp_exps_files/danforth-chamber.2019.csv", 
+          row.names = FALSE)
+```
+
+6.  To run model for control
+treatment.
+
+<!-- end list -->
+
+``` bash
+biocro_temp_exps_files/workflow.R --settings biocro_temp_exps_files/pecan.biocro.darpa.temp.exps.xml
+```
 
 # Section 2: BioCro Run for High Night Temp
