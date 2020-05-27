@@ -40,3 +40,8 @@ vignettes/*.pdf
 
 # pkgdown site
 docs/
+
+# config and data files
+*.xml
+*.nc
+*.csv
