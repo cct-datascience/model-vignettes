@@ -84,9 +84,7 @@ sessionInfo()
     ##  [9] grid_3.6.1      knitr_1.28      stringr_1.4.0   xfun_0.12      
     ## [13] digest_0.6.25   rlang_0.4.5     lattice_0.20-38 evaluate_0.14
 
-### Running new version on set parameters
-
-#### Read in data
+### Read in data
 
 These two dataframes include hourly weather data for a year that match
 the conditions the *Setaria* plants were grown in, and measured biomass
@@ -114,7 +112,7 @@ OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>%
 OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 ```
 
-#### Set up parameters
+### Set up parameters
 
 The following code uses BioCro 1.0.
 
@@ -296,51 +294,10 @@ setaria_modules <- list(canopy_module_name='c4_canopy',
                        stomata_water_stress_module_name='stomata_water_stress_linear')
 ```
 
-#### Run model
+### Run model
 
 Use these three inputs, along with the weather data, to generate biomass
-values for **Setaria**.
-
-``` r
-biomass_set_params <- Gro(setaria_initial_state, 
-                          setaria_parameters,
-                          get_growing_season_climate(OpBioGro_weather), 
-                          setaria_modules)
-```
-
-#### Plot results with data
-
-We are plotting the estimated biomass values from BioCro with the
-measured values that were used to estimate the parameters, in order to
-compare them. The biomass estimates from the model do not track the
-measured values very well.
-
-``` r
-library(ggplot2)
-plot_biomass <- function(biomass_estimates){
-  est_plot <- biomass_estimates %>% 
-    select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
-    tidyr::pivot_longer(Stem:Grain) %>% 
-    rename(ThermalT = TTc)
-  data_plot <- OpBioGro_biomass %>% 
-    select(-LAI) %>% 
-    tidyr::pivot_longer(Stem:Grain)
-  biomass_plot <- ggplot() +
-    geom_point(data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
-    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) + 
-    lims(x = c(0, 1800), y = c(0, 2)) +
-    labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") + 
-    theme_classic() +
-    theme(legend.position = "none") +
-    facet_wrap(~name)
-  print(biomass_plot)
-}
-plot_set_params <- plot_biomass(biomass_set_params)
-```
-
-    ## Warning: Removed 21950 rows containing missing values (geom_path).
-
-![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+values for **Setaria** using BioCro function `Gro`.
 
 ### Optimizing `Gro` for *Setaria* parameters
 
@@ -353,7 +310,7 @@ The optimization returns these values for biomass growth by plant part
 and stage where the difference between measured and estimated biomass
 values is minimized. We optimized across all six stages simultaneously.
 
-#### Set up and test objective function
+### Set up and test objective function
 
 First the objective function `opfn` is created, which has its only
 argument as the parameters to be optimized over, called `k_params`.
@@ -406,7 +363,7 @@ opfn(k_params_ex)
 
     ## [1] 5.511087
 
-#### Run optimization and plot
+### Run optimization and plot
 
 The objective function is run through optimization with `DEoptim`, with
 upper and lower bounds for the parameters set to 0 and 1. The `itermax`
@@ -428,11 +385,10 @@ library(DEoptim)
 opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), control = DEoptim.control(itermax = 2))
 ```
 
-    ## Iteration: 1 bestvalit: 5.272419 bestmemit:    0.058955    0.607596    0.038007    0.882056    0.915125    0.326528    0.162950    0.197402    0.006885    0.636163    0.858917    0.742719    0.385782    0.146395    0.527944    0.735297    0.889393    0.628602    0.941879
-    ## Iteration: 2 bestvalit: 5.221585 bestmemit:    0.027452    0.704713    0.080740    0.601273    0.831019    0.386918    0.257487    0.693798    0.223302    0.874506    0.504661    0.027959    0.780694    0.779251    0.416428    0.994281    0.280753    0.465156    0.917949
+    ## Iteration: 1 bestvalit: 5.213012 bestmemit:    0.035186    0.236113    0.191350    0.143494    0.809243    0.049690    0.394099    0.535299    0.073443    0.046050    0.749915    0.265888    0.639519    0.350709    0.494354    0.962520    0.702855    0.123164    0.761511
+    ## Iteration: 2 bestvalit: 5.178262 bestmemit:    0.060361    0.832525    0.208351    0.363691    0.767208    0.206144    0.218434    0.718856    0.150816    0.603654    0.986502    0.841803    0.677864    0.543521    0.179073    0.993378    0.542835    0.414788    0.610184
 
-The resulting optimized parameters are put through the model again, and
-the resulting biomass estimates are plotted agaist the measured values.
+The resulting optimized parameters are put through the model again.
 
 ``` r
 optimal_k_params <- as.list(opt_results$optim$bestmem)
@@ -457,40 +413,34 @@ biomass_opt_parms <- Gro(setaria_initial_state,
                          optimal_params,
                          get_growing_season_climate(OpBioGro_weather),
                          setaria_modules)
-
-plot_opt_params <- plot_biomass(biomass_opt_parms)
 ```
 
-    ## Warning: Removed 21950 rows containing missing values (geom_path).
-
-![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
-
-The optimization has improved the fit compared to the previously used
-parameter values. See results from set parameters on the left and
-optimized parameters results on the right.
+The resulting biomass estimates are plotted agaist the measured values.
 
 ``` r
-library(cowplot)
-```
+library(ggplot2)
+plot_biomass <- function(biomass_estimates){
+  est_plot <- biomass_estimates %>% 
+    select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
+    tidyr::pivot_longer(Stem:Grain) %>% 
+    rename(ThermalT = TTc)
+  data_plot <- OpBioGro_biomass %>% 
+    select(-LAI) %>% 
+    tidyr::pivot_longer(Stem:Grain)
+  biomass_plot <- ggplot() +
+    geom_point(data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
+    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) + 
+    lims(x = c(0, 1800), y = c(0, 2)) +
+    labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") + 
+    theme_classic() +
+    theme(legend.position = "none") +
+    facet_wrap(~name)
+  print(biomass_plot)
+}
 
-    ## 
-    ## ********************************************************
-
-    ## Note: As of version 1.0.0, cowplot does not change the
-
-    ##   default ggplot2 theme anymore. To recover the previous
-
-    ##   behavior, execute:
-    ##   theme_set(theme_cowplot())
-
-    ## ********************************************************
-
-``` r
-plot_grid(plot_set_params, plot_opt_params)
+plot_biomass(biomass_opt_parms)
 ```
 
     ## Warning: Removed 21950 rows containing missing values (geom_path).
-    
-    ## Warning: Removed 21950 rows containing missing values (geom_path).
 
-![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
