@@ -22,16 +22,16 @@ library(gganimate)
 
 The config file here is based on [the default *Setaria* file](https://github.com/PecanProject/pecan/blob/ac5aef2e755a8961591196428753eb184fb4c6cb/models/biocro/inst/extdata/defaults/setaria.xml) used for PEcAn. This one was generated from a run on the Sentinel project data. 
 ```{r}
-config <- read.biocro.config("biocro_regional_darpa_files/config.xml")
+config <- read.biocro.config("regional_runs_inputs/config.xml")
 ```
 
 A weather data file, such as that read in below, is required to run BioCro. The weather data comes from [the North American Regional Reanalysis (NARR)](https://www.esrl.noaa.gov/psd/data/gridded/data.narr.html) global gridded dataset provided by NOAA. We are using a subset of NARR in the eastern part of Illinois, near Chapaign. This subset is in the Pecan standard format, which is a netCDF file. The dimensions are latitude x longitude x time (3 x 6 x 93,504). These time steps are every three hours from 1979 through 2010. There are 10 weather variables, including temperature, precipitation flux, and solar radiation. 
 
 We also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
 ```{r}
-metfile <- "biocro_regional_darpa_files/champaign.nc"
+metfile <- "regional_runs_inputs/champaign.nc"
 met_champaign <- nc_open(metfile)
-soil_nc <- nc_open("biocro_regional_darpa_files/hwsd.nc")
+soil_nc <- nc_open("regional_runs_inputs/hwsd.nc")
 ```
 
 ## Convert weather data
@@ -51,7 +51,7 @@ start_date <- as.Date(time_origin2) + time_vec[1]
 end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1
 
 # Convert met from Pecan to BioCro format for all locations
-dir.create("biocro_regional_darpa_files/biocro_met_by_location/")
+dir.create("regional_runs_inputs/biocro_met_by_location/")
 met_nc <- ncdf4::nc_open(metfile)
 point <- 1
 biocro_met_locations <- c()
@@ -67,7 +67,7 @@ for(point in 1:nrow(latlon)){
     mutate(latitude = latlon$lat[point], 
            longitude = latlon$lon[point])
   biocro_met_locations <- rbind(biocro_met_locations, biocro_met_location)
-  biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
                             latlon$lat[point], "-", latlon$lon[point], ".2010.csv")
   write.csv(biocro_met, biocro_met_path, row.names = FALSE)
 }
@@ -111,22 +111,22 @@ ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitud
 
 The BioCro model is then run on weather and soil data for each of the locations, using *Setaria* input data. This produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values. 
 ```{r}
-dir.create("biocro_regional_darpa_files/results_by_location/")
+dir.create("regional_runs_inputs/results_by_location/")
 biocro_results <- c()
 for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
                             latlon$lat[point], "-", latlon$lon[point])
   biocro_results_all <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
                                soil.nc = soil_nc,
                                config = config)
   biocro_results_daily <- biocro_results_all$daily
-  write.csv(biocro_results_daily, paste0("biocro_regional_darpa_files/results_by_location/daily-", 
+  write.csv(biocro_results_daily, paste0("regional_runs_inputs/results_by_location/daily-", 
                                          latlon$lat[point], "-", latlon$lon[point], ".csv"))
   biocro_results_daily$lat <- latlon$lat[point]
   biocro_results_daily$lon <- latlon$lon[point]
   biocro_results <- rbind(biocro_results, biocro_results_daily)
-  write.csv(biocro_results, "biocro_regional_darpa_files/all_biocro_results.csv")
+  write.csv(biocro_results, "regional_runs_inputs/all_biocro_results.csv")
 }
 ```
 
@@ -158,5 +158,5 @@ biomass_animation <- ggplot() +
 
 animate(biomass_animation, fps = 100)
 anim_save("biomass_animation_champaign.gif", animation = biomass_animation, 
-          path = "biocro_regional_darpa_files/", fps = 100)
+          path = "regional_runs_inputs/", fps = 100)
 ```

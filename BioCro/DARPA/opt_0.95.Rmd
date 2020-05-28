@@ -12,20 +12,20 @@ Optimizing biomass coefficients so that biomass estimates from BioCro as closely
 First read in all the necessary input data: 
 
 * BioCro config file
-* weather file created for biomass partitioning in [biocro_biomass_darpa.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/biocro_biomass_darpa.md)
-* biomass file from Setaria experiments in [biocro_biomass_darpa.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/biocro_biomass_darpa.md)
+* weather file created for biomass partitioning in [partitioned_biomass_data.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/partitioned_biomass_data.md)
+* biomass file from Setaria experiments in [partitioned_biomass_data.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/partitioned_biomass_data.md)
 
 ```{r, message=FALSE}
 library(dplyr)
 
 rundir <- getwd()
 
-OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv")
-colnames(OpBioGro_weather) <- c("year", "doy", "hour", "Solar", "Temp", "RH", "WS", "precip")
-readr::write_csv(OpBioGro_weather, path = file.path(rundir, 'SA-median.2019.csv'))
-WetDat <- OpBioGro_weather
+opt_weather <- read.csv("opt_inputs/opt_weather.csv")
+colnames(opt_weather) <- c("year", "doy", "hour", "Solar", "Temp", "RH", "WS", "precip")
+readr::write_csv(opt_weather, path = file.path(rundir, 'SA-median.2019.csv'))
+WetDat <- opt_weather
 
-config <- PEcAn.BIOCRO::read.biocro.config(file.path(rundir, "biocro_opt_darpa_files/config.xml"))
+config <- PEcAn.BIOCRO::read.biocro.config(file.path(rundir, "opt_inputs/config.xml"))
 
 lat <- as.numeric(config$location$latitude)
 lon <- as.numeric(config$location$longitude)
@@ -39,11 +39,11 @@ l2n <- function(x) lapply(x, as.numeric)
 day1 <- 1
 dayn <- 50
 
-OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv") %>% 
+opt_biomass <- read.csv("opt_inputs/opt_biomass.csv") %>% 
   select(-LAI)
 ```
 
-We want biomass estimates from `BioGro` (i.e., ttt) to be as close to the actual biomass values as possible (i.e., OpBioGro_biomass). Will be optimizing over the parameters, which are the biomass coefficients. 
+We want biomass estimates from `BioGro` (i.e., ttt) to be as close to the actual biomass values as possible (i.e., opt_biomass). Will be optimizing over the parameters, which are the biomass coefficients. 
 
 First create objective function `opfn`, and include parameter values to test if this function by itself works. 
 ```{r, message=FALSE}
@@ -109,9 +109,9 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
                    Rhizome = t$Rhizome,
                    Grain = t$Grain)
   ttt <- tt %>% 
-    filter(round(tt$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
+    filter(round(tt$ThermalT) %in% round(opt_biomass$ThermalT))
   bio_ests <- select(ttt, -ThermalT)
-  bio_meas <- select(OpBioGro_biomass, -ThermalT)
+  bio_meas <- select(opt_biomass, -ThermalT)
   diff <- abs(bio_ests - bio_meas)
   
   # bio_meas_sum <- bio_meas %>% 
@@ -217,10 +217,10 @@ results_test2 <- data.frame(ThermalT = results_test$ThermalT,
                  Rhizome = results_test$Rhizome,
                  Grain = results_test$Grain)
 results_test3 <- results_test2 %>% 
-  filter(round(results_test2$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
-diff <- sum(abs(results_test3 - OpBioGro_biomass))
+  filter(round(results_test2$ThermalT) %in% round(opt_biomass$ThermalT))
+diff <- sum(abs(results_test3 - opt_biomass))
 
-biomass_meas_plot <- OpBioGro_biomass %>% 
+biomass_meas_plot <- opt_biomass %>% 
   tidyr::pivot_longer(Stem:Grain) %>% 
   mutate(data = "measurements")
 biomass_ests_plot <- results_test2 %>% 

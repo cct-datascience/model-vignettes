@@ -60,8 +60,7 @@ library(PEcAn.all)
 
     ## The following objects are masked from 'package:PEcAn.utils':
     ## 
-    ##     get.ensemble.samples, read.ensemble.output,
-    ##     write.ensemble.configs
+    ##     get.ensemble.samples, read.ensemble.output, write.ensemble.configs
 
     ## Loading required package: PEcAn.data.atmosphere
 
@@ -98,7 +97,7 @@ library(PEcAn.all)
     ## ##
     ## ## Markov Chain Monte Carlo Package (MCMCpack)
 
-    ## ## Copyright (C) 2003-2019 Andrew D. Martin, Kevin M. Quinn, and Jong Hee Park
+    ## ## Copyright (C) 2003-2020 Andrew D. Martin, Kevin M. Quinn, and Jong Hee Park
 
     ## ##
     ## ## Support provided by the U.S. National Science Foundation
@@ -158,7 +157,7 @@ used for PEcAn. This one was generated from a run on the Sentinel
 project data.
 
 ``` r
-config <- read.biocro.config("biocro_regional_darpa_files/config.xml")
+config <- read.biocro.config("regional_runs_inputs/config.xml")
 ```
 
 A weather data file, such as that read in below, is required to run
@@ -177,9 +176,9 @@ data are from [the harmonized world soil
 database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/).
 
 ``` r
-metfile <- "biocro_regional_darpa_files/champaign.nc"
+metfile <- "regional_runs_inputs/champaign.nc"
 met_champaign <- nc_open(metfile)
-soil_nc <- nc_open("biocro_regional_darpa_files/hwsd.nc")
+soil_nc <- nc_open("regional_runs_inputs/hwsd.nc")
 ```
 
 ## Convert weather data
@@ -204,14 +203,7 @@ start_date <- as.Date(time_origin2) + time_vec[1]
 end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1
 
 # Convert met from Pecan to BioCro format for all locations
-dir.create("biocro_regional_darpa_files/biocro_met_by_location/")
-```
-
-    ## Warning in dir.create("biocro_regional_darpa_files/
-    ## biocro_met_by_location/"): 'biocro_regional_darpa_files/
-    ## biocro_met_by_location' already exists
-
-``` r
+dir.create("regional_runs_inputs/biocro_met_by_location/")
 met_nc <- ncdf4::nc_open(metfile)
 point <- 1
 biocro_met_locations <- c()
@@ -227,7 +219,7 @@ for(point in 1:nrow(latlon)){
     mutate(latitude = latlon$lat[point], 
            longitude = latlon$lon[point])
   biocro_met_locations <- rbind(biocro_met_locations, biocro_met_location)
-  biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
                             latlon$lat[point], "-", latlon$lon[point], ".2010.csv")
   write.csv(biocro_met, biocro_met_path, row.names = FALSE)
 }
@@ -260,7 +252,7 @@ ggplot(biocro_met_plot_year, aes(x = datetime, y = weather_value, color = latitu
   facet_wrap(~weather_var, scales = "free_y")
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](regional_runs_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ``` r
 biocro_met_plot_day <- biocro_met_plot %>% 
@@ -273,39 +265,32 @@ ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitud
   facet_wrap(~weather_var, scales = "free_y")
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+![](regional_runs_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
 ## Run BioCro on each location
 
 The BioCro model is then run on weather and soil data for each of the
 locations, using *Setaria* input data. This produces hourly, daily, and
 yearly estimates for biomass, transpiration, etc. for the time range we
-specified in the config file. We are using only the daily
-    values.
+specified in the config file. We are using only the daily values.
 
 ``` r
-dir.create("biocro_regional_darpa_files/results_by_location/")
-```
-
-    ## Warning in dir.create("biocro_regional_darpa_files/results_by_location/"):
-    ## 'biocro_regional_darpa_files/results_by_location' already exists
-
-``` r
+dir.create("regional_runs_inputs/results_by_location/")
 biocro_results <- c()
 for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
                             latlon$lat[point], "-", latlon$lon[point])
   biocro_results_all <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
                                soil.nc = soil_nc,
                                config = config)
   biocro_results_daily <- biocro_results_all$daily
-  write.csv(biocro_results_daily, paste0("biocro_regional_darpa_files/results_by_location/daily-", 
+  write.csv(biocro_results_daily, paste0("regional_runs_inputs/results_by_location/daily-", 
                                          latlon$lat[point], "-", latlon$lon[point], ".csv"))
   biocro_results_daily$lat <- latlon$lat[point]
   biocro_results_daily$lon <- latlon$lon[point]
   biocro_results <- rbind(biocro_results, biocro_results_daily)
-  write.csv(biocro_results, "biocro_regional_darpa_files/all_biocro_results.csv")
+  write.csv(biocro_results, "regional_runs_inputs/all_biocro_results.csv")
 }
 ```
 
@@ -364,7 +349,7 @@ ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = 
   theme(legend.position = "none")
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](regional_runs_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ``` r
 background_map <- map_data("state") %>% 
@@ -383,9 +368,9 @@ biomass_animation <- ggplot() +
 animate(biomass_animation, fps = 100)
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.gif)<!-- -->
+![](regional_runs_files/figure-gfm/unnamed-chunk-7-1.gif)<!-- -->
 
 ``` r
 anim_save("biomass_animation_champaign.gif", animation = biomass_animation, 
-          path = "biocro_regional_darpa_files/", fps = 100)
+          path = "regional_runs_inputs/", fps = 100)
 ```
