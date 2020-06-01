@@ -8,32 +8,19 @@ urlcolor: blue
 ### Switching between BioCro versions locally
 
 Needs to be run using BioCro version 1.0. Check your BioCro version: 
+
 ```{r, message=FALSE}
 library(BioCro)
-sessionInfo()
+if(!packageVersion(pkg = 'BioCro') >= 1.0){
+  warning("need to use BioCro v1.0 or greater")
+} else {
+  #devtools::install_github('ebimodeling/biocro-dev')
+  devtools::install_github('ebimodeling/biocro@new-framework')  
+}
+
 ```
 
-Download repos for [BioCro 0.95](https://github.com/ebimodeling/biocro) and [BioCro 1.0](https://github.com/ebimodeling/biocro/tree/new-framework), and place unzipped folders into this repo in `BioCro/DARPA`. Use the code below to switch between these two versions when needs. 
-
-BioCro 0.95: 
-```{r, eval=FALSE}
-install.packages('biocro_0.95/biocro-master', repos = NULL, type = 'SOURCE')
-```
-
-BioCro 1.0: 
-```{r, message=FALSE}
-install.packages('biocro_1.00/biocro-new-framework', repos = NULL, type = 'SOURCE')
-```
-
-Check version: 
-```{r, message=FALSE}
-library(BioCro)
-sessionInfo()
-```
-
-### Running new version on set parameters
-
-#### Read in data
+### Read in data
 
 These two dataframes include hourly weather data for a year that match the conditions the *Setaria* plants were grown in, and measured biomass values for plants at six harvest dates. The former will be used to run the model and the latter to tune the model parameters. 
 ```{r}
@@ -43,7 +30,7 @@ OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>%
 OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
 ```
 
-#### Set up parameters
+### Set up parameters
 
 The following code uses BioCro 1.0. 
 
@@ -221,43 +208,9 @@ setaria_modules <- list(canopy_module_name='c4_canopy',
                        stomata_water_stress_module_name='stomata_water_stress_linear')
 ```
 
-#### Run model 
+### Run model 
 
-Use these three inputs, along with the weather data, to generate biomass values for **Setaria**. 
-
-```{r}
-biomass_set_params <- Gro(setaria_initial_state, 
-                          setaria_parameters,
-                          get_growing_season_climate(OpBioGro_weather), 
-                          setaria_modules)
-```
-
-#### Plot results with data
-
-We are plotting the estimated biomass values from BioCro with the measured values that were used to estimate the parameters, in order to compare them. The biomass estimates from the model do not track the measured values very well. 
-
-```{r, message=FALSE}
-library(ggplot2)
-plot_biomass <- function(biomass_estimates){
-  est_plot <- biomass_estimates %>% 
-    select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
-    tidyr::pivot_longer(Stem:Grain) %>% 
-    rename(ThermalT = TTc)
-  data_plot <- OpBioGro_biomass %>% 
-    select(-LAI) %>% 
-    tidyr::pivot_longer(Stem:Grain)
-  biomass_plot <- ggplot() +
-    geom_point(data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
-    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) + 
-    lims(x = c(0, 1800), y = c(0, 2)) +
-    labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") + 
-    theme_classic() +
-    theme(legend.position = "none") +
-    facet_wrap(~name)
-  print(biomass_plot)
-}
-plot_set_params <- plot_biomass(biomass_set_params)
-```
+Use these three inputs, along with the weather data, to generate biomass values for **Setaria** using BioCro function `Gro`. 
 
 ### Optimizing `Gro` for *Setaria* parameters
 
@@ -265,7 +218,7 @@ This optimizes the biomass coefficients so that BioCro biomass estimates better 
 
 The optimization returns these values for biomass growth by plant part and stage where the difference between measured and estimated biomass values is minimized. We optimized across all six stages simultaneously. 
 
-#### Set up and test objective function
+### Set up and test objective function
 
 First the objective function `opfn` is created, which has its only argument as the parameters to be optimized over, called `k_params`. 
 
@@ -313,7 +266,7 @@ for(i in 1:length(k_params_ex)){
 opfn(k_params_ex)
 ```
 
-#### Run optimization and plot
+### Run optimization and plot
 
 The objective function is run through optimization with `DEoptim`, with upper and lower bounds for the parameters set to 0 and 1. The `itermax` value is set low enough for this to complete in a few minutes, though the difference is increasingly minimized with more iterations. 
 ```{r}
@@ -321,7 +274,7 @@ library(DEoptim)
 opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), control = DEoptim.control(itermax = 2))
 ```
 
-The resulting optimized parameters are put through the model again, and the resulting biomass estimates are plotted agaist the measured values. 
+The resulting optimized parameters are put through the model again. 
 ```{r}
 optimal_k_params <- as.list(opt_results$optim$bestmem)
 names(optimal_k_params) <- names(setaria_parameters[k_params_index])
@@ -345,12 +298,29 @@ biomass_opt_parms <- Gro(setaria_initial_state,
                          optimal_params,
                          get_growing_season_climate(OpBioGro_weather),
                          setaria_modules)
-
-plot_opt_params <- plot_biomass(biomass_opt_parms)
 ```
 
-The optimization has improved the fit compared to the previously used parameter values. See results from set parameters on the left and optimized parameters results on the right. 
+The resulting biomass estimates are plotted agaist the measured values. 
 ```{r}
-library(cowplot)
-plot_grid(plot_set_params, plot_opt_params)
+library(ggplot2)
+plot_biomass <- function(biomass_estimates){
+  est_plot <- biomass_estimates %>% 
+    select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
+    tidyr::pivot_longer(Stem:Grain) %>% 
+    rename(ThermalT = TTc)
+  data_plot <- OpBioGro_biomass %>% 
+    select(-LAI) %>% 
+    tidyr::pivot_longer(Stem:Grain)
+  biomass_plot <- ggplot() +
+    geom_point(data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
+    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) + 
+    lims(x = c(0, 1800), y = c(0, 2)) +
+    labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") + 
+    theme_classic() +
+    theme(legend.position = "none") +
+    facet_wrap(~name)
+  print(biomass_plot)
+}
+
+plot_biomass(biomass_opt_parms)
 ```
