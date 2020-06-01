@@ -54,6 +54,7 @@ Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six d
 library(udunits2)
 area_cm2 <- 64
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
+
 biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
   mutate(panicle.DW.mg.byarea = ud.convert(panicle.DW.mg., "mg", "Mg") / area_ha, 
          stemDW.mg.byarea = ud.convert(stemDW.mg., "mg", "Mg") / area_ha, 
@@ -96,7 +97,12 @@ ggplot(s, aes(date, value, color = name)) +
 Calculated median for each plant part and harvest date and added how many days each plant was grown before harvested to the biomass dataframe. Then calculated thermal times for weather data using `BioGro`, using only the thermal times for the days of harvest. 
 ```{r, message=FALSE}
 library(BioCro)
-
+if(packageVersion(pkg = 'BioCro') >= 1.0){
+  warning("need to use BioCro v0.9x")
+} else {
+  #devtools::install_github('ebimodeling/biocro-dev')
+  devtools::install_github('ebimodeling/biocro')  
+}
 biomass_data_single <- biomass_data_all %>% 
   select(biomas_harvested, Stem = stemDW.mg.byarea, Leaf = leaf.DW.mg.byarea, Root = roots.DW.mg.byarea, Grain = panicle.DW.mg.byarea) %>% 
   group_by(biomas_harvested) %>% 
