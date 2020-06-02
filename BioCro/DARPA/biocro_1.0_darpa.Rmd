@@ -271,7 +271,7 @@ k_params_ex <- setaria_parameters[k_params_index]
 for(i in 1:length(k_params_ex)){
   k_params_ex[[i]] <- 0.2
 }
-
+opfn(k_params_ex)
 ```
 
 ### Run optimization and plot
