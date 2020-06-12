@@ -7,6 +7,8 @@ urlcolor: blue
 
 For these experiments, **Setaria** were grown under two experimental treatments. The control plants were at 31$^\circ$C during the day and 22$^\circ$C at night, while high night time temp treatment was 31$^\circ$C at all times. 
 
+Biomass for these two treatments are estimated using BioCro version 0.95. 
+
 # Section 1: BioCro Run for Control
 
 1. Access RStudio in a browser by navigating to [welsch.cyverse.org:8787/](welsch.cyverse.org:8787/). Log in using your username and password. 
@@ -56,7 +58,7 @@ For these experiments, **Setaria** were grown under two experimental treatments.
   <model>
     <type>BIOCRO</type>
     <binary>/home/kristinariemer/pecan/models/biocro/inst/biocro.Rscript</binary>
-    <revision>1.0</revision>
+    <revision>0.95</revision>
   </model>
 
   <run>
