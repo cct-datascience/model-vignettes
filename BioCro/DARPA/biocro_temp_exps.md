@@ -457,6 +457,7 @@ control_biomass <- read.csv("biocro_temp_exps_files1/control_biomass.csv") %>%
          total_biomass_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg + roots_DW_mg, 
          total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha) %>% 
   filter(!is.na(total_biomass_Mgha))
+write.csv(control_biomass, "biocro_temp_exps_files1/control_biomass_meas.csv")
 
 # Clean up biomass estimates
 load('~/biocro_temp_exps_results1/out/SA-median/biocro_output.RData')
@@ -487,7 +488,7 @@ ggplot(data = daily_biomass) +
   geom_line(aes(day, y = mean)) +
   geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd), alpha = 0.1) +
   geom_ribbon(aes(day, ymin = lcl, ymax = ucl), alpha = 0.1) +
-  geom_point(data = control_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
+  #geom_point(data = control_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
   theme_classic()
@@ -1395,17 +1396,20 @@ library(data.table)
 library(tidyr)
 library(ggplot2)
 
-# # Clean up biomass data
-# area_cm2 <- 103
-# area_ha <- ud.convert(area_cm2, "cm2", "ha")
-# control_biomass <- read.csv("biocro_temp_exps_files1/control_biomass.csv") %>% 
-#   filter(genotype == "ME034V-1", temperature...C..day.night == "31/22", 
-#          sample_for == "biomass") %>% 
-#   mutate(days_grown = as.integer(as.Date(as.character(biomass.harvested), format = "%m/%d/%Y") - 
-#                                    as.integer(as.Date(as.character(treatment.started), format = "%m/%d/%Y"))), 
-#          total_biomass_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg + roots_DW_mg, 
-#          total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha) %>% 
-#   filter(!is.na(total_biomass_Mgha))
+# Clean up biomass data
+# should this be filtered by light?
+area_cm2 <- 103
+area_ha <- ud.convert(area_cm2, "cm2", "ha")
+highnight_biomass <- read.csv("biocro_temp_exps_files3/highnight_biomass.csv") %>% 
+  filter(genotype == "ME034V-1", temperature...C..day.night == 31, 
+         treatment == "control", sample_for == "biomass") %>% 
+  mutate(days_grown = as.integer(as.Date(as.character(biomas.harvested), format = "%m/%d/%Y") - 
+                                   as.integer(as.Date(as.character(temperature_treatment_started), 
+                                                      format = "%m/%d/%Y"))), 
+         total_biomass_mg = panicles.DW..mg. + stemDW.mg. + leaf.DW.mg. + roots.DW..mg., 
+         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha) %>% 
+  filter(!is.na(total_biomass_Mgha))
+write.csv(highnight_biomass, "biocro_temp_exps_files3/highnight_biomass_meas.csv")
 
 # Clean up biomass estimates
 load('~/biocro_temp_exps_results3/out/SA-median/biocro_output.RData')
@@ -1436,7 +1440,7 @@ ggplot(data = daily_biomass) +
   geom_line(aes(day, y = mean)) +
   geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd), alpha = 0.1) +
   geom_ribbon(aes(day, ymin = lcl, ymax = ucl), alpha = 0.1) +
-  #geom_point(data = control_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
+  geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
   theme_classic()
@@ -1453,19 +1457,17 @@ library(udunits2)
 library(dplyr)
 library(ggplot2)
 
-# Clean up biomass data
-area_cm2 <- 103
-area_ha <- ud.convert(area_cm2, "cm2", "ha")
-control_biomass <- read.csv("biocro_temp_exps_files1/control_biomass.csv") %>% 
-  filter(genotype == "ME034V-1", temperature...C..day.night == "31/22", 
-         sample_for == "biomass") %>% 
-  mutate(days_grown = as.integer(as.Date(as.character(biomass.harvested), format = "%m/%d/%Y") - 
-                                   as.integer(as.Date(as.character(treatment.started), format = "%m/%d/%Y"))), 
-         total_biomass_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg + roots_DW_mg, 
-         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha) %>% 
-  filter(!is.na(total_biomass_Mgha))
+# Read in and combine biomass measurements data
+biomass_meas_control <- read.csv("biocro_temp_exps_files1/control_biomass_meas.csv") %>% 
+  mutate(txt = "control") %>% 
+  select(days_grown, total_biomass_Mgha, txt)
+biomass_meas_highnight <- read.csv("biocro_temp_exps_files3/highnight_biomass_meas.csv") %>% 
+  mutate(txt = "highnight") %>% 
+  select(days_grown, total_biomass_Mgha, txt)
 
-# Read in and combine biomass data
+biomass_meas <- bind_rows(biomass_meas_control, biomass_meas_highnight)
+
+# Read in and combine biomass estimates data
 biomass_ests1 <- read.csv("biocro_temp_exps_files1/biomass_ests1.csv") %>% 
   mutate(run = 1)
 biomass_ests2 <- read.csv("biocro_temp_exps_files2/biomass_ests2.csv") %>% 
@@ -1482,6 +1484,7 @@ sd_scale <- 5
 
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
+  scale_color_manual(values=c("red", "black", "blue")) +
   xlim(x = c(0, 60)) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
@@ -1490,7 +1493,7 @@ ggplot(data = biomass_ests) +
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
   geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd, fill = run), alpha = 0.1) +
-  #geom_ribbon(aes(day, ymin = lcl, ymax = ucl, fill = run), alpha = 0.1) +
+  scale_color_manual(values=c("red", "black", "blue", "red", "black", "blue")) +
   xlim(x = c(0, 60)) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
@@ -1498,9 +1501,8 @@ ggplot(data = biomass_ests) +
 
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
-  geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd, fill = run), alpha = 0.5) +
-  geom_ribbon(aes(day, ymin = lcl, ymax = ucl, fill = run), alpha = 0.1) +
-  geom_point(data = control_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
+  geom_point(data = biomass_meas, aes(x = days_grown, y = total_biomass_Mgha, color = txt)) +
+  scale_color_manual(values=c("red", "black", "blue", "red", "blue")) +
   xlim(x = c(0, 60)) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
