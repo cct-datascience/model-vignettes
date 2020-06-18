@@ -11,13 +11,13 @@ Assemble weather dataframe:
 
 ``` r
 OpBioGro_weather <- data.frame(year = rep(2019, 8760), 
-                               doy = rep(1:365, each = 24), 
-                               hour = rep(seq(0, 23), 365), 
-                               solarR = rep(c(0, 936), times = 365, each = 12),
-                               DailyTemp.C = rep(31, times = 365 * 24), 
-                               RH = rep(55.5 / 100,  times = 365 * 24), 
-                               WindSpeed = rep(0, times = 365 * 24), 
-                               precip = rep(c(0.000462963, rep(0, 23)), 365))
+                                      doy = rep(1:365, each = 24), 
+                                      hour = rep(seq(0, 23), 365), 
+                                      solarR = rep(c(rep(0, each = 8), rep(936, each = 12), rep(0, each = 4)), times = 365),
+                                      Temp = rep(31, times = 365 * 24), 
+                                      RH = rep(55.5 / 100,  times = 365 * 24), 
+                                      WS = rep(0, times = 365 * 24), 
+                                      precip = rep(c(0.000462963, rep(0, 23)), 365))
 
 write.csv(OpBioGro_weather, "biocro_opt_darpa_files/OpBioGro_weather.csv", row.names = FALSE)
 ```
