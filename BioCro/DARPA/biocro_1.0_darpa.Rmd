@@ -234,7 +234,7 @@ The function is tested with example parameters, which are all set to 0.2.
 k_params_index <- c(53:55, 58:60, 63:65, 68:70, 73:75, 78:80, 82)
 nonk_params <- setaria_parameters[-k_params_index]
 
-opfn <- function(params = k_params){
+opfn <- function(k_params){
   k_params_names   <- names(setaria_parameters[k_params_index])
   length(k_params) <- length(k_params_names)
   k_params_vec     <- unlist(k_params)
