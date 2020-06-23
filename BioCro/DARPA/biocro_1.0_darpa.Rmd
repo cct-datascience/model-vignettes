@@ -15,7 +15,7 @@ if(!packageVersion(pkg = 'BioCro') <= 1.0){
   warning("need to use BioCro v1.0 or greater")
 } else {
   #devtools::install_github('ebimodeling/biocro-dev')
-  #devtools::install_github('ebimodeling/biocro@new-framework')  
+  devtools::install_github('ebimodeling/biocro@new-framework')  
 }
 
 ```
