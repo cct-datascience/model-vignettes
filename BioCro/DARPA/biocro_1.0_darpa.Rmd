@@ -216,7 +216,6 @@ Create the modules, which are currently developed for *Sorghum*.
 
 ### Run model 
 
-Use these three inputs, `setaria_initial_state`, `setaria_parameters` and `setaria_modules` along with the weather data, to generate biomass values for **Setaria** using BioCro function `Gro`. 
 
 ### Optimizing `Gro` for *Setaria* parameters
 
