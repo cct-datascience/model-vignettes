@@ -11,7 +11,7 @@ Needs to be run using BioCro version 1.0. Check your BioCro version:
 
 ```{r, message=FALSE}
 library(BioCro)
-if(!packageVersion(pkg = 'BioCro') >= 1.0){
+if(!packageVersion(pkg = 'BioCro') <= 1.0){
   warning("need to use BioCro v1.0 or greater")
 } else {
   devtools::install_github('ebimodeling/biocro-dev')
