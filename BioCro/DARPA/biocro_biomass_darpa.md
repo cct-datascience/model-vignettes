@@ -70,6 +70,7 @@ plants.
 library(udunits2)
 area_cm2 <- 64
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
+
 biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
   mutate(panicle.DW.mg.byarea = ud.convert(panicle.DW.mg., "mg", "Mg") / area_ha, 
          stemDW.mg.byarea = ud.convert(stemDW.mg., "mg", "Mg") / area_ha, 
