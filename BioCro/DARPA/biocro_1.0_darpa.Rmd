@@ -297,7 +297,6 @@ opt_results <- DEoptim(
                                 'k_params_index', 
                                 'k_params', 'nonk_params', 
                                 'setaria_modules', 
-                                'all_params', 
                                 'OpBioGro_weather',
                                 'setaria_initial_state',
                                 'OpBioGro_biomass'))
