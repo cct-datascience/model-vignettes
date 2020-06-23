@@ -214,7 +214,6 @@ Create the modules, which are currently developed for *Sorghum*.
   stomata_water_stress_module_name = 'stomata_water_stress_linear')
 ```
 
-### Run model 
 
 
 ### Optimizing `Gro` for *Setaria* parameters
