@@ -377,7 +377,7 @@ ggplot(data = daily_bio) +
   theme_classic()
 ```
 
-<img src="biocro_biomass_welsch_setaria.png" width="400px" /><img src="biocro_biomass_ts_welsch_setaria.png" width="400px" />
+<img src="pecan_runs_images/1.png" width="400px" /><img src="pecan_runs_images/2.png" width="400px" />
 
 # Section 2: BioCro Run for Multiple *Setaria* Cultivars
 
@@ -954,4 +954,4 @@ p <- ggplot(data = modeled_yield ) +
 p
 ```
 
-<img src="biocro_params_welsch_setaria_2cults.png" width="400px" /><img src="biocro_savd_welsch_setaria_2cults.png" width="400px" /><img src="biocro_biomass_welsch_setaria_2cults.png" width="400px" /><img src="biocro_biomass_ts_welsch_setaria_2cults.png" width="400px" />
+<img src="pecan_runs_images/3.png" width="400px" /><img src="pecan_runs_images/4.png" width="400px" /><img src="pecan_runs_images/5.png" width="400px" /><img src="pecan_runs_images/6.png" width="400px" />

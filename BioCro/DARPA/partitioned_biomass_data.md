@@ -1,4 +1,4 @@
-How to Do Biomass Partitioning on DARPA Data Using BioCro Model
+How to Generate Weather and Biomass Data for Coefficient Optimization
 ================
 Kristina Riemer, University of Arizona
 
@@ -10,7 +10,7 @@ For biomass partitioning using
 Assemble weather dataframe:
 
 ``` r
-OpBioGro_weather <- data.frame(year = rep(2019, 8760), 
+opt_weather <- data.frame(year = rep(2019, 8760), 
                                       doy = rep(1:365, each = 24), 
                                       hour = rep(seq(0, 23), 365), 
                                       solarR = rep(c(rep(0, each = 8), rep(936, each = 12), rep(0, each = 4)), times = 365),
@@ -19,37 +19,46 @@ OpBioGro_weather <- data.frame(year = rep(2019, 8760),
                                       WS = rep(0, times = 365 * 24), 
                                       precip = rep(c(0.000462963, rep(0, 23)), 365))
 
-write.csv(OpBioGro_weather, "biocro_opt_darpa_files/OpBioGro_weather.csv", row.names = FALSE)
+write.csv(opt_weather, "opt_inputs/opt_weather.csv", row.names = FALSE)
 ```
 
 Visualize these data:
 
 ``` r
 library(dplyr)
+```
+
+    ## Warning: package 'dplyr' was built under R version 3.6.2
+
+``` r
 library(ggplot2)
 library(lubridate)
+```
 
-OpBioGro_weather_plot <- OpBioGro_weather %>% 
+    ## Warning: package 'lubridate' was built under R version 3.6.2
+
+``` r
+opt_weather_plot <- opt_weather %>% 
   mutate(date = seq(as.POSIXct("2019-01-01 00:00:00"), 
                     as.POSIXct("2019-12-31 23:00:00"), 
                     by = "hour")) %>% 
   dplyr::select(solarR:date) %>% 
   tidyr::pivot_longer(cols = solarR:precip)
 
-ggplot(OpBioGro_weather_plot, aes(date, value)) +
+ggplot(opt_weather_plot, aes(date, value)) +
   geom_line(size = 0.1) + 
   facet_wrap(~name, ncol = 1, scales = 'free_y')
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+![](partitioned_biomass_data_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
 ``` r
-ggplot(OpBioGro_weather_plot %>% filter(month(date) ==1 & day(date) < 3), aes(date, value)) +
+ggplot(opt_weather_plot %>% filter(month(date) ==1 & day(date) < 3), aes(date, value)) +
     geom_line() + 
     facet_wrap(~name, ncol = 1, scales = 'free_y')
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
+![](partitioned_biomass_data_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
 ### Biomass data
 
@@ -102,7 +111,7 @@ ggplot(s, aes(date, value, color = name)) +
   facet_wrap(~name)
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](partitioned_biomass_data_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
 ``` r
 ggplot(s2, aes(date, value_mean, color = name)) +
@@ -112,7 +121,7 @@ ggplot(s2, aes(date, value_mean, color = name)) +
   facet_wrap(~name)
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-4-2.png)<!-- -->
+![](partitioned_biomass_data_files/figure-gfm/unnamed-chunk-4-2.png)<!-- -->
 
 ``` r
 ggplot(s, aes(date, value, color = name)) +
@@ -120,23 +129,43 @@ ggplot(s, aes(date, value, color = name)) +
   geom_point(shape = 4)
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-4-3.png)<!-- -->
+![](partitioned_biomass_data_files/figure-gfm/unnamed-chunk-4-3.png)<!-- -->
 
 Calculated median for each plant part and harvest date and added how
 many days each plant was grown before harvested to the biomass
 dataframe. Then calculated thermal times for weather data using
-`BioGro`, using only the thermal times for the days of harvest.
+`BioGro`, using only the thermal times for the days of harvest. Note
+that this uses BioCro version 0.95.
 
 ``` r
 library(BioCro)
+if(packageVersion(pkg = 'BioCro') >= 1.0){
+  warning("need to use BioCro v0.9x")
+} else {
+  #devtools::install_github('ebimodeling/biocro-dev')
+  devtools::install_github('ebimodeling/biocro')  
+}
+```
 
+    ##      checking for file ‘/private/var/folders/pf/rjm3plcx14q6hb9xvfqc5ht80000gp/T/Rtmp6NDGxG/remotes582a904bc3b/ebimodeling-biocro-5c5d0a1/DESCRIPTION’ ...  ✓  checking for file ‘/private/var/folders/pf/rjm3plcx14q6hb9xvfqc5ht80000gp/T/Rtmp6NDGxG/remotes582a904bc3b/ebimodeling-biocro-5c5d0a1/DESCRIPTION’
+    ##   ─  preparing ‘BioCro’:
+    ##      checking DESCRIPTION meta-information ...  ✓  checking DESCRIPTION meta-information
+    ##   ─  cleaning src
+    ##   ─  checking for LF line-endings in source and make files and shell scripts
+    ##   ─  checking for empty or unneeded directories
+    ##   ─  looking to see if a ‘data/datalist’ file should be added
+    ##   ─  building ‘BioCro_0.95.tar.gz’
+    ##      
+    ## 
+
+``` r
 biomass_data_single <- biomass_data_all %>% 
   select(biomas_harvested, Stem = stemDW.mg.byarea, Leaf = leaf.DW.mg.byarea, Root = roots.DW.mg.byarea, Grain = panicle.DW.mg.byarea) %>% 
   group_by(biomas_harvested) %>% 
   summarise_at(vars(Stem:Grain), median) %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomas_harvested), format = "%m/%d/%Y") - as.Date(as.character(biomass_data_all$seeds_in_germination[1]), format = "%m/%d/%Y")))
 
-weather_only_run <- BioGro(OpBioGro_weather, day1 = 1, dayn = 365)
+weather_only_run <- BioGro(opt_weather, day1 = 1, dayn = 365)
 ```
 
     ## [1] 6
@@ -158,7 +187,7 @@ time.
 ``` r
 SLA_mg <- 80 / 1000000
 
-OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "days_grown") %>% 
+opt_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "days_grown") %>% 
   mutate(Rhizome = rep(0, nrow(biomass_data_single)), 
          LAI = SLA_mg * Leaf) %>%
   select(ThermalT, Stem, Leaf, Root, Rhizome, Grain, LAI) %>% 
@@ -166,32 +195,32 @@ OpBioGro_biomass <- left_join(biomass_data_single, weather_only_run_df, by = "da
   data.frame() %>% 
   slice(-6)
 
-OpBioGro_biomass1 <- OpBioGro_biomass %>% 
+opt_biomass1 <- opt_biomass %>% 
   slice(1:4) %>% 
   mutate(Stem = Stem + Grain, 
          Grain = rep(0, nrow(.)))
-OpBioGro_biomass2 <- OpBioGro_biomass %>% 
+opt_biomass2 <- opt_biomass %>% 
   slice(5) %>% 
-  mutate(Stem = Stem + OpBioGro_biomass$Grain[4], 
-         Grain = Grain - OpBioGro_biomass$Grain[4])
+  mutate(Stem = Stem + opt_biomass$Grain[4], 
+         Grain = Grain - opt_biomass$Grain[4])
 
-OpBioGro_biomass_comb <- bind_rows(OpBioGro_biomass1, OpBioGro_biomass2)
+opt_biomass_comb <- bind_rows(opt_biomass1, opt_biomass2)
 
-write.csv(OpBioGro_biomass_comb, "biocro_opt_darpa_files/OpBioGro_biomass.csv", row.names = FALSE)
+write.csv(opt_biomass_comb, "opt_inputs/opt_biomass.csv", row.names = FALSE)
 
-OpBioGro_biomass_plot <- OpBioGro_biomass_comb %>% 
+opt_biomass_plot <- opt_biomass_comb %>% 
   tidyr::pivot_longer(Stem:LAI)
-ggplot(OpBioGro_biomass_plot %>% filter(name != "LAI"), aes(x = ThermalT, y = value, color = name)) +
+ggplot(opt_biomass_plot %>% filter(name != "LAI"), aes(x = ThermalT, y = value, color = name)) +
   geom_line() +
   ylab("Dry Weight (mg)")
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](partitioned_biomass_data_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 ``` r
-ggplot(OpBioGro_biomass_plot %>% filter(name == "LAI"), aes(x = ThermalT, y = value)) +
+ggplot(opt_biomass_plot %>% filter(name == "LAI"), aes(x = ThermalT, y = value)) +
   geom_line() +
   ylab("Leaf Area Index (m2 leaf/m2 ground)")
 ```
 
-![](biocro_biomass_darpa_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
+![](partitioned_biomass_data_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->

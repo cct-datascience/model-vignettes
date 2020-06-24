@@ -42,10 +42,6 @@ vignettes/*.pdf
 # pkgdown site
 docs/
 
-# config and data files
-*.xml
-*.nc
-*.csv
 
 # Mac data
 *.DS_Store

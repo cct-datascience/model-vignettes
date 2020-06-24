@@ -20,7 +20,7 @@ as an .xlsx.
 ``` r
 library(readxl)
 
-data_path <- "biocro_biomass_clean_darpa_files/Darpa_setaria_chambers_experiments.xlsx"
+data_path <- "explore_biomass_data_files/Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
 
 biomass_sheets <- c(11, 9, 7, 5, 3, 2, 1)
@@ -54,6 +54,8 @@ plants each, was harvested on a different date.
 ``` r
 library(dplyr)
 ```
+
+    ## Warning: package 'dplyr' was built under R version 3.6.2
 
     ## 
     ## Attaching package: 'dplyr'
@@ -91,7 +93,7 @@ ggplot(exp1_sowing1_plot, aes(days_grown, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night, light_intensity.umol.m2.s.))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
 ``` r
 exp1_sowing2 <- exp1 %>% 
@@ -106,7 +108,7 @@ ggplot(exp1_sowing2_plot, aes(days_grown, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night, light_intensity.umol.m2.s.))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
 **Usable for BioCro optimization?**
 
@@ -142,7 +144,7 @@ ggplot(exp2_plot, aes(days_grown, value, color = name)) +
 
     ## Warning: Removed 3 rows containing missing values (geom_point).
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
 It looks like a decrease in biomass during the last time point is
 unusual, it only occurs for 31\* panicle and stem.
@@ -152,7 +154,11 @@ exp2_plot_mean <- exp2_plot %>%
   filter(genotype == "ME034V-1") %>% 
   group_by(temperature_..C., name, days_grown) %>% 
   summarize(value_mean = mean(value))
+```
 
+    ## `summarise()` regrouping output by 'temperature_..C.', 'name' (override with `.groups` argument)
+
+``` r
 ggplot(filter(exp2_plot, genotype == "ME034V-1"), aes(days_grown, value, color = name)) +
   geom_point(shape = 1) +
   geom_point(data = exp2_plot_mean, aes(x = days_grown, y = value_mean), color = "black") +
@@ -163,7 +169,7 @@ ggplot(filter(exp2_plot, genotype == "ME034V-1"), aes(days_grown, value, color =
     
     ## Warning: Removed 1 rows containing missing values (geom_point).
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
 **Usable for BioCro optimization?**
 
@@ -195,7 +201,7 @@ ggplot(exp3_plot, aes(date, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ``` r
 ggplot(exp3_plot, aes(date, value, color = name)) +
@@ -203,7 +209,7 @@ ggplot(exp3_plot, aes(date, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night, light_intensity.umol.m2.s., treatment))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
 **Usable for BioCro optimization?**
 
@@ -237,7 +243,7 @@ ggplot(exp4_plot, aes(days_grown, value, color = name)) +
   facet_wrap(vars(genotype, temperature_..C._day.night))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 Could these data be combined with the second experiment?
 
@@ -246,14 +252,18 @@ exp4_plot_mean <- exp4_plot %>%
   filter(genotype == "ME034-V1") %>% 
   group_by(temperature_..C._day.night, name, days_grown) %>% 
   summarize(value_mean = mean(value))
+```
 
+    ## `summarise()` regrouping output by 'temperature_..C._day.night', 'name' (override with `.groups` argument)
+
+``` r
 ggplot(filter(exp4_plot, genotype == "ME034-V1"), aes(days_grown, value, color = name)) +
   geom_point(shape = 1) +
     geom_point(data = exp4_plot_mean, aes(x = days_grown, y = value_mean), color = "black") +
   facet_wrap(vars(temperature_..C._day.night, name), scales = "free_y")
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ``` r
 exp2_comb <- exp2_plot %>% 
@@ -271,7 +281,7 @@ ggplot(exp24_plot, aes(days_grown, value, color = genotype)) +
 
     ## Warning: Removed 1 rows containing missing values (geom_point).
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
 
 **Usable for BioCro optimization?**
 
@@ -303,7 +313,7 @@ ggplot(exp5_plot, aes(date, value, color = name)) +
   facet_wrap(vars(genotype, temperature_..C._day.night))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 **Usable for BioCro optimization?**
 
@@ -338,7 +348,7 @@ ggplot(exp6_plot, aes(date, value, color = name)) +
   facet_wrap(vars(genotype))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ``` r
 ggplot(exp6_plot, aes(date, value, color = name)) +
@@ -346,7 +356,7 @@ ggplot(exp6_plot, aes(date, value, color = name)) +
   facet_wrap(vars(genotype, temperature__.C, light_intensity))
 ```
 
-![](biocro_biomass_clean_darpa_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
 
 **Usable for BioCro optimization?**
 
