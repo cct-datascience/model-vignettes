@@ -17,11 +17,14 @@ Biomass for these two treatments are estimated using BioCro version
 
 2.  Create a new folder called `biocro_temp_exps_files1`.
 
-3.  Create new XML called `pecan.biocro.darpa.temp.exps1.xml`
+3.  Create new PEcAn Settings file called
+    `pecan.biocro.darpa.temp.exps1.xml`. To learn more about the pecan
+    settings file, see the [PEcAn
+    Documentation](https://pecanproject.github.io/pecan-documentation/master/pecanXML.html#)
 
 <!-- end list -->
 
-``` r
+``` xml
 <pecan>
   <outdir>biocro_temp_exps_results1</outdir>
 
@@ -64,7 +67,7 @@ Biomass for these two treatments are estimated using BioCro version
 
   <model>
     <type>BIOCRO</type>
-    <binary>/home/kristinariemer/pecan/models/biocro/inst/biocro.Rscript</binary>
+    <binary>~/pecan/models/biocro/inst/biocro.Rscript</binary>
     <revision>0.95</revision>
   </model>
 
@@ -75,7 +78,7 @@ Biomass for these two treatments are estimated using BioCro version
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/kristinariemer/biocro_temp_exps_files1/danforth-control-chamber</path>
+        <path>~/biocro_temp_exps_files1/danforth-control-chamber</path>
       </met>
     </inputs>
       <start.date>2019/01/01</start.date>
@@ -89,11 +92,12 @@ Biomass for these two treatments are estimated using BioCro version
 
 4.  Create Setaria constants file `setaria.constants.xml`. This has
     biomass coefficients and starting biomass values. The same will be
-    used for all runs.
+    used for all runs. These parameters are defined in the
+    `BioCro::BioGro` function documentation.
 
 <!-- end list -->
 
-``` r
+``` xml
 <constants>
   <type>
     <photosynthesis>C4</photosynthesis>
@@ -294,7 +298,7 @@ write.csv(trait, "biocro_temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv")
 load("biocro_temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
 file.remove("biocro_temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
 trait.data$Vcmax <- trait.data$Vcmax[4:15,]
-save(trait.data, file = "/home/kristinariemer/biocro_temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
+save(trait.data, file = "~/biocro_temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
 
 # Run the PEcAn meta.analysis
 if(!is.null(settings$meta.analysis)) {
@@ -410,7 +414,7 @@ controlchamber_weather <- data.frame(year = rep(2019, 8760),
                                       WS = rep(0, times = 365 * 24), 
                                       precip = rep(c(0.000462963, rep(0, 23)), 365))
 
-write.csv(controlchamber_weather, "biocro_temp_exps_files1/danforth-control-chamber.2019.csv", 
+write.csv(controlchamber_weather, "~/biocro_temp_exps_files1/danforth-control-chamber.2019.csv", 
           row.names = FALSE)
 ```
 
@@ -548,7 +552,7 @@ ggplot(data = daily_biomass) +
 
   <model>
     <type>BIOCRO</type>
-    <binary>/home/kristinariemer/pecan/models/biocro/inst/biocro.Rscript</binary>
+    <binary>~/pecan/models/biocro/inst/biocro.Rscript</binary>
     <revision>0.95</revision>
   </model>
 
@@ -559,7 +563,7 @@ ggplot(data = daily_biomass) +
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/kristinariemer/biocro_temp_exps_files2/danforth-highnight-chamber</path>
+        <path>~/biocro_temp_exps_files2/danforth-highnight-chamber</path>
       </met>
     </inputs>
       <start.date>2019/01/01</start.date>
@@ -778,7 +782,7 @@ write.csv(trait, "biocro_temp_exps_results2/pft/SetariaWT_ME034/trait.data.csv")
 load("biocro_temp_exps_results2/pft/SetariaWT_ME034/trait.data.Rdata")
 file.remove("biocro_temp_exps_results2/pft/SetariaWT_ME034/trait.data.Rdata")
 trait.data$Vcmax <- trait.data$Vcmax[4:15,]
-save(trait.data, file = "/home/kristinariemer/biocro_temp_exps_results2/pft/SetariaWT_ME034/trait.data.Rdata")
+save(trait.data, file = "~/biocro_temp_exps_results2/pft/SetariaWT_ME034/trait.data.Rdata")
 
 # Run the PEcAn meta.analysis
 if(!is.null(settings$meta.analysis)) {
@@ -1011,7 +1015,7 @@ ggplot(data = daily_biomass) +
 
   <model>
     <type>BIOCRO</type>
-    <binary>/home/kristinariemer/pecan/models/biocro/inst/biocro.Rscript</binary>
+    <binary>~/pecan/models/biocro/inst/biocro.Rscript</binary>
     <revision>0.95</revision>
   </model>
 
@@ -1022,7 +1026,7 @@ ggplot(data = daily_biomass) +
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/kristinariemer/biocro_temp_exps_files3/danforth-highnight-chamber</path>
+        <path>~/biocro_temp_exps_files3/danforth-highnight-chamber</path>
       </met>
     </inputs>
       <start.date>2019/01/01</start.date>
@@ -1241,7 +1245,7 @@ write.csv(trait, "biocro_temp_exps_results3/pft/SetariaWT_ME034/trait.data.csv")
 load("biocro_temp_exps_results3/pft/SetariaWT_ME034/trait.data.Rdata")
 file.remove("biocro_temp_exps_results3/pft/SetariaWT_ME034/trait.data.Rdata")
 trait.data$Vcmax <- trait.data$Vcmax[4:15,]
-save(trait.data, file = "/home/kristinariemer/biocro_temp_exps_results3/pft/SetariaWT_ME034/trait.data.Rdata")
+save(trait.data, file = "~/biocro_temp_exps_results3/pft/SetariaWT_ME034/trait.data.Rdata")
 
 # Run the PEcAn meta.analysis
 if(!is.null(settings$meta.analysis)) {
@@ -1258,7 +1262,7 @@ for(trait_name in names(trait.mcmc)){
     trait.mcmc[[trait_name]][[chain]][,"beta.o"] <- trait.mcmc[[trait_name]][[chain]][,"beta.o"] + trait.mcmc[[trait_name]][[chain]][,"beta.trt[2]"]
   }
 }
-save(trait.mcmc, file = "/home/kristinariemer/biocro_temp_exps_results3/pft/SetariaWT_ME034/trait.mcmc.Rdata")
+save(trait.mcmc, file = "~/biocro_temp_exps_results3/pft/SetariaWT_ME034/trait.mcmc.Rdata")
 rm(trait.mcmc)
 
 # Write model specific configs

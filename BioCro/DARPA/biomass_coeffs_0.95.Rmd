@@ -1,5 +1,5 @@
 ---
-title: "How to Optimze Biomass Estimation for DARPA Data Using BioCro Model"
+title: "Getting Setaria Biomass Coefficients from BioCro v0.95"
 author: "Kristina Riemer, University of Arizona"
 output: github_document
 urlcolor: blue

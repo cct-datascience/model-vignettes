@@ -1,5 +1,5 @@
 ---
-title: "Using BioCro 1.0 on Setaria Data"
+title: "Getting Setaria Biomass Coefficients from BioCro v1.0"
 author: "Author: Kristina Riemer"
 output: github_document
 urlcolor: blue
@@ -30,9 +30,9 @@ The second dataframe is some biomass measurements that will be used to calibrate
 
 ```{r}
 library(dplyr)
-OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>% 
-  rename(solar = solarR, temp = DailyTemp.C, rh = RH, windspeed = WindSpeed)
-OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
+opt_weather <- read.csv("opt_inputs/opt_weather.csv") %>% 
+  rename(solar = solarR, temp = Temp, rh = RH, windspeed = WS)
+opt_biomass <- read.csv("opt_inputs/opt_biomass.csv")
 ```
 
 ### Set up parameters
@@ -214,8 +214,6 @@ Create the modules, which are currently developed for *Sorghum*.
   stomata_water_stress_module_name = 'stomata_water_stress_linear')
 ```
 
-
-
 ### Optimizing `Gro` for *Setaria* parameters
 
 This next step fits the BioCro biomass coefficients to the observed time series of biomass in different pools (stem, leaf, root, grain). Once we have fit these parameters, we can add them to the `setaria_parameters` and use them in future simulations. Parameters that are optimized are the leaf, stem, root, and grain coefficients (e.g., `kStem1`). Since setaria doesn't have a rhizome, these parameters are fixed at zero. 
@@ -251,15 +249,15 @@ opfn <- function(k_params){
   names(all_params)[88:106] <- k_params_names
   t <- Gro(setaria_initial_state,
            all_params,
-           get_growing_season_climate(OpBioGro_weather),
+           get_growing_season_climate(opt_weather),
            setaria_modules)
   tt <- t %>%
     select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>%
     rename(ThermalT = TTc)
   ttt <- tt %>%
-    filter(round(tt$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
+    filter(round(tt$ThermalT) %in% round(opt_biomass$ThermalT))
   bio_ests <- select(ttt, -ThermalT)
-  bio_meas <- select(OpBioGro_biomass, -ThermalT, -LAI)
+  bio_meas <- select(opt_biomass, -ThermalT, -LAI)
   diff <- abs(log10(bio_ests + 1) - log10(bio_meas + 1))
   return(sum(diff))
 }
@@ -295,9 +293,9 @@ opt_results <- DEoptim(
                                 'k_params_index', 
                                 'k_params', 'nonk_params', 
                                 'setaria_modules', 
-                                'OpBioGro_weather',
+                                'opt_weather',
                                 'setaria_initial_state',
-                                'OpBioGro_biomass'))
+                                'opt_biomass'))
 )
 
 # opt_results <- optim(
@@ -339,7 +337,7 @@ optimal_params <- c(nonk_params, optimal_k_params)
 
 biomass_opt_parms <- Gro(setaria_initial_state, 
                          optimal_params,
-                         get_growing_season_climate(OpBioGro_weather),
+                         get_growing_season_climate(opt_weather),
                          setaria_modules)
 
 ```
@@ -352,7 +350,7 @@ plot_biomass <- function(biomass_estimates){
     select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
     tidyr::pivot_longer(Stem:Grain) %>% 
     rename(ThermalT = TTc)
-  data_plot <- OpBioGro_biomass %>% 
+  data_plot <- opt_biomass %>% 
     select(-LAI) %>% 
     tidyr::pivot_longer(Stem:Grain)
   biomass_plot <- ggplot() +
