@@ -8,13 +8,13 @@ Assemble weather dataframe:
 
 ``` r
 opt_weather <- data.frame(year = rep(2019, 8760), 
-                               doy = rep(1:365, each = 24), 
-                               hour = rep(seq(0, 23), 365), 
-                               solarR = rep(c(0, 936), times = 365, each = 12),
-                               DailyTemp.C = rep(31, times = 365 * 24), 
-                               RH = rep(55.5 / 100,  times = 365 * 24), 
-                               WindSpeed = rep(0, times = 365 * 24), 
-                               precip = rep(c(0.000462963, rep(0, 23)), 365))
+                                      doy = rep(1:365, each = 24), 
+                                      hour = rep(seq(0, 23), 365), 
+                                      solarR = rep(c(rep(0, each = 8), rep(936, each = 12), rep(0, each = 4)), times = 365),
+                                      Temp = rep(31, times = 365 * 24), 
+                                      RH = rep(55.5 / 100,  times = 365 * 24), 
+                                      WS = rep(0, times = 365 * 24), 
+                                      precip = rep(c(0.000462963, rep(0, 23)), 365))
 
 write.csv(opt_weather, "opt_inputs/opt_weather.csv", row.names = FALSE)
 ```
@@ -23,9 +23,18 @@ Visualize these data:
 
 ``` r
 library(dplyr)
+```
+
+    ## Warning: package 'dplyr' was built under R version 3.6.2
+
+``` r
 library(ggplot2)
 library(lubridate)
+```
 
+    ## Warning: package 'lubridate' was built under R version 3.6.2
+
+``` r
 opt_weather_plot <- opt_weather %>% 
   mutate(date = seq(as.POSIXct("2019-01-01 00:00:00"), 
                     as.POSIXct("2019-12-31 23:00:00"), 
