@@ -16,7 +16,7 @@ Data downloaded from [Google Sheet](https://docs.google.com/spreadsheets/d/134qz
 ```{r}
 library(readxl)
 
-data_path <- "biocro_biomass_clean_darpa_files/Darpa_setaria_chambers_experiments.xlsx"
+data_path <- "explore_biomass_data_files/Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
 
 biomass_sheets <- c(11, 9, 7, 5, 3, 2, 1)

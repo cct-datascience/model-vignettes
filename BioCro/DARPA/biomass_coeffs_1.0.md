@@ -1,4 +1,4 @@
-Using BioCro 1.0 on Setaria Data
+Getting Setaria Biomass Coefficients from BioCro v1.0
 ================
 Author: Kristina Riemer
 
@@ -8,92 +8,31 @@ Needs to be run using BioCro version 1.0. Check your BioCro version:
 
 ``` r
 library(BioCro)
-sessionInfo()
+if(!packageVersion(pkg = 'BioCro') <= 1.0){
+  warning("need to use BioCro v1.0 or greater")
+} else {
+  #devtools::install_github('ebimodeling/biocro-dev')
+  devtools::install_github('ebimodeling/biocro@new-framework')  
+}
 ```
-
-    ## R version 3.6.1 (2019-07-05)
-    ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
-    ## Running under: macOS Catalina 10.15.4
-    ## 
-    ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRlapack.dylib
-    ## 
-    ## locale:
-    ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-    ## 
-    ## attached base packages:
-    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
-    ## 
-    ## other attached packages:
-    ## [1] BioCro_1.00
-    ## 
-    ## loaded via a namespace (and not attached):
-    ##  [1] compiler_3.6.1  magrittr_1.5    tools_3.6.1     htmltools_0.4.0
-    ##  [5] yaml_2.2.1      Rcpp_1.0.4      stringi_1.4.6   rmarkdown_2.1  
-    ##  [9] grid_3.6.1      knitr_1.28      stringr_1.4.0   xfun_0.12      
-    ## [13] digest_0.6.25   rlang_0.4.5     lattice_0.20-38 evaluate_0.14
-
-Download repos for [BioCro 0.95](https://github.com/ebimodeling/biocro)
-and
-[BioCro 1.0](https://github.com/ebimodeling/biocro/tree/new-framework),
-and place unzipped folders into this repo in `BioCro/DARPA`. Use the
-code below to switch between these two versions when needs.
-
-BioCro
-0.95:
-
-``` r
-install.packages('biocro_0.95/biocro-master', repos = NULL, type = 'SOURCE')
-```
-
-BioCro
-1.0:
-
-``` r
-install.packages('biocro_1.00/biocro-new-framework', repos = NULL, type = 'SOURCE')
-```
-
-Check version:
-
-``` r
-library(BioCro)
-sessionInfo()
-```
-
-    ## R version 3.6.1 (2019-07-05)
-    ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
-    ## Running under: macOS Catalina 10.15.4
-    ## 
-    ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRlapack.dylib
-    ## 
-    ## locale:
-    ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-    ## 
-    ## attached base packages:
-    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
-    ## 
-    ## other attached packages:
-    ## [1] BioCro_1.00
-    ## 
-    ## loaded via a namespace (and not attached):
-    ##  [1] compiler_3.6.1  magrittr_1.5    tools_3.6.1     htmltools_0.4.0
-    ##  [5] yaml_2.2.1      Rcpp_1.0.4      stringi_1.4.6   rmarkdown_2.1  
-    ##  [9] grid_3.6.1      knitr_1.28      stringr_1.4.0   xfun_0.12      
-    ## [13] digest_0.6.25   rlang_0.4.5     lattice_0.20-38 evaluate_0.14
 
 ### Read in data
 
 These two dataframes include hourly weather data for a year that match
 the conditions the *Setaria* plants were grown in, and measured biomass
-values for plants at six harvest dates. The former will be used to run
-the model and the latter to tune the model parameters.
+values for plants at six harvest dates.
+
+The first dataframe is weather data simulated based on growth chamber
+settings (this was created in the file `biocro_biomass_darpa.Rmd`).
+
+The second dataframe is some biomass measurements that will be used to
+calibrate the BioCro biomass partitioning parameters.
 
 ``` r
 library(dplyr)
 ```
+
+    ## Warning: package 'dplyr' was built under R version 3.6.2
 
     ## 
     ## Attaching package: 'dplyr'
@@ -107,9 +46,9 @@ library(dplyr)
     ##     intersect, setdiff, setequal, union
 
 ``` r
-OpBioGro_weather <- read.csv("biocro_opt_darpa_files/OpBioGro_weather.csv") %>% 
-  rename(solar = solarR, temp = DailyTemp.C, rh = RH, windspeed = WindSpeed)
-OpBioGro_biomass <- read.csv("biocro_opt_darpa_files/OpBioGro_biomass.csv")
+opt_weather <- read.csv("opt_inputs/opt_weather.csv") %>% 
+  rename(solar = solarR, temp = Temp, rh = RH, windspeed = WS)
+opt_biomass <- read.csv("opt_inputs/opt_biomass.csv")
 ```
 
 ### Set up parameters
@@ -286,25 +225,23 @@ setaria_parameters <- with(list(), {
 Create the modules, which are currently developed for *Sorghum*.
 
 ``` r
-setaria_modules <- list(canopy_module_name='c4_canopy',
-                       soil_module_name='one_layer_soil_profile',
-                       growth_module_name='partitioning_growth',
-                       senescence_module_name='thermal_time_senescence',
-                       leaf_water_stress_module_name='leaf_water_stress_exponential',
-                       stomata_water_stress_module_name='stomata_water_stress_linear')
+ setaria_modules <- list(
+  canopy_module_name               = 'c4_canopy',
+  soil_module_name                 = 'one_layer_soil_profile',
+  growth_module_name               = 'partitioning_growth',
+  senescence_module_name           = 'thermal_time_senescence',
+  leaf_water_stress_module_name    = 'leaf_water_stress_exponential',
+  stomata_water_stress_module_name = 'stomata_water_stress_linear')
 ```
-
-### Run model
-
-Use these three inputs, along with the weather data, to generate biomass
-values for **Setaria** using BioCro function `Gro`.
 
 ### Optimizing `Gro` for *Setaria* parameters
 
-This optimizes the biomass coefficients so that BioCro biomass estimates
-better match the measured values. Parameters that are optimized are the
-leaf, stem, root, and grain coefficients (e.g., `kStem1`), not including
-the value for the sixth rhizome stage (`kRhizome6`), which must be zero.
+This next step fits the BioCro biomass coefficients to the observed time
+series of biomass in different pools (stem, leaf, root, grain). Once we
+have fit these parameters, we can add them to the `setaria_parameters`
+and use them in future simulations. Parameters that are optimized are
+the leaf, stem, root, and grain coefficients (e.g., `kStem1`). Since
+setaria doesn’t have a rhizome, these parameters are fixed at zero.
 
 The optimization returns these values for biomass growth by plant part
 and stage where the difference between measured and estimated biomass
@@ -323,45 +260,46 @@ k_params_index <- c(53:55, 58:60, 63:65, 68:70, 73:75, 78:80, 82)
 nonk_params <- setaria_parameters[-k_params_index]
 
 opfn <- function(k_params){
-  k_params_names <- names(setaria_parameters[k_params_index])
+  k_params_names   <- names(setaria_parameters[k_params_index])
   length(k_params) <- length(k_params_names)
-  k_params_vec <- unlist(k_params)
-  k_params[1:3] <- as.list(k_params_vec[1:3]/sum(k_params_vec[1:3]))
-  k_params_vec <- unlist(k_params)
-  k_params[4:6] <- as.list(k_params_vec[4:6]/sum(k_params_vec[4:6]))
-  k_params_vec <- unlist(k_params)
-  k_params[7:9] <- as.list(k_params_vec[7:9]/sum(k_params_vec[7:9]))
-  k_params_vec <- unlist(k_params)
-  k_params[10:12] <- as.list(k_params_vec[10:12]/sum(k_params_vec[10:12]))
-  k_params_vec <- unlist(k_params)
-  k_params[13:15] <- as.list(k_params_vec[13:15]/sum(k_params_vec[13:15]))
-  k_params_vec <- unlist(k_params)
-  k_params[16:19] <- as.list(k_params_vec[16:19]/sum(k_params_vec[16:19]))
-  all_params <- c(nonk_params, k_params)
+  k_params_vec     <- unlist(k_params)
+  k_params[1:3]    <- as.list(k_params_vec[1:3]/sum(k_params_vec[1:3]))
+  k_params_vec     <- unlist(k_params)
+  k_params[4:6]    <- as.list(k_params_vec[4:6]/sum(k_params_vec[4:6]))
+  k_params_vec     <- unlist(k_params)
+  k_params[7:9]    <- as.list(k_params_vec[7:9]/sum(k_params_vec[7:9]))
+  k_params_vec     <- unlist(k_params)
+  k_params[10:12]  <- as.list(k_params_vec[10:12]/sum(k_params_vec[10:12]))
+  k_params_vec     <- unlist(k_params)
+  k_params[13:15]  <- as.list(k_params_vec[13:15]/sum(k_params_vec[13:15]))
+  k_params_vec     <- unlist(k_params)
+  k_params[16:19]  <- as.list(k_params_vec[16:19]/sum(k_params_vec[16:19]))
+  all_params       <- c(nonk_params, k_params)
   names(all_params)[88:106] <- k_params_names
   t <- Gro(setaria_initial_state,
            all_params,
-           get_growing_season_climate(OpBioGro_weather),
+           get_growing_season_climate(opt_weather),
            setaria_modules)
   tt <- t %>%
     select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>%
     rename(ThermalT = TTc)
   ttt <- tt %>%
-    filter(round(tt$ThermalT) %in% round(OpBioGro_biomass$ThermalT))
+    filter(round(tt$ThermalT) %in% round(opt_biomass$ThermalT))
   bio_ests <- select(ttt, -ThermalT)
-  bio_meas <- select(OpBioGro_biomass, -ThermalT, -LAI)
-  diff <- abs(bio_ests - bio_meas)
+  bio_meas <- select(opt_biomass, -ThermalT, -LAI)
+  diff <- abs(log10(bio_ests + 1) - log10(bio_meas + 1))
   return(sum(diff))
 }
 
 k_params_ex <- setaria_parameters[k_params_index]
+
 for(i in 1:length(k_params_ex)){
   k_params_ex[[i]] <- 0.2
 }
 opfn(k_params_ex)
 ```
 
-    ## [1] 5.511087
+    ## [1] 1.747332
 
 ### Run optimization and plot
 
@@ -371,6 +309,12 @@ value is set low enough for this to complete in a few minutes, though
 the difference is increasingly minimized with more iterations.
 
 ``` r
+k_params <- setaria_parameters[k_params_index]
+lower <- unlist(k_params)-0.2
+lower[lower < 0] <- 0
+upper <- unlist(k_params) + 0.2
+upper[upper > 1] <- 1
+
 library(DEoptim)
 ```
 
@@ -382,16 +326,56 @@ library(DEoptim)
     ## Authors: D. Ardia, K. Mullen, B. Peterson and J. Ulrich
 
 ``` r
-opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), control = DEoptim.control(itermax = 2))
+opt_results <- DEoptim(
+  fn = opfn, 
+  lower = lower, 
+  upper = upper,
+  DEoptim.control(NP = 190, itermax = 10,
+                  parallelType = 1, 
+                  packages = list("BioCro", "dplyr"),
+                  parVar = list('setaria_parameters', 
+                                'k_params_index', 
+                                'k_params', 'nonk_params', 
+                                'setaria_modules', 
+                                'opt_weather',
+                                'setaria_initial_state',
+                                'opt_biomass'))
+)
 ```
 
-    ## Iteration: 1 bestvalit: 5.213012 bestmemit:    0.035186    0.236113    0.191350    0.143494    0.809243    0.049690    0.394099    0.535299    0.073443    0.046050    0.749915    0.265888    0.639519    0.350709    0.494354    0.962520    0.702855    0.123164    0.761511
-    ## Iteration: 2 bestvalit: 5.178262 bestmemit:    0.060361    0.832525    0.208351    0.363691    0.767208    0.206144    0.218434    0.718856    0.150816    0.603654    0.986502    0.841803    0.677864    0.543521    0.179073    0.993378    0.542835    0.414788    0.610184
+    ## Iteration: 1 bestvalit: 1.689205 bestmemit:    0.150643    0.523970    0.204324    0.088958    0.460599    0.221801    0.360658    0.686577    0.053780    0.272915    0.307412    0.043086    0.712996    0.324814    0.039848    0.743331    0.057842    0.236603    0.173390
+    ## Iteration: 2 bestvalit: 1.686493 bestmemit:    0.150643    0.523970    0.204324    0.088958    0.460599    0.221801    0.360658    0.686577    0.053780    0.272915    0.307412    0.043086    0.712996    0.324814    0.039848    0.743331    0.102312    0.165408    0.060505
+    ## Iteration: 3 bestvalit: 1.684966 bestmemit:    0.150643    0.523970    0.204324    0.088958    0.460599    0.221801    0.360658    0.686577    0.053780    0.272915    0.307412    0.043086    0.712996    0.324814    0.039848    0.743331    0.102312    0.165408    0.003602
+    ## Iteration: 4 bestvalit: 1.684966 bestmemit:    0.150643    0.523970    0.204324    0.088958    0.460599    0.221801    0.360658    0.686577    0.053780    0.272915    0.307412    0.043086    0.712996    0.324814    0.039848    0.743331    0.102312    0.165408    0.003602
+    ## Iteration: 5 bestvalit: 1.684966 bestmemit:    0.150643    0.523970    0.204324    0.088958    0.460599    0.221801    0.360658    0.686577    0.053780    0.272915    0.307412    0.043086    0.712996    0.324814    0.039848    0.743331    0.102312    0.165408    0.003602
+    ## Iteration: 6 bestvalit: 1.684966 bestmemit:    0.150643    0.523970    0.204324    0.088958    0.460599    0.221801    0.360658    0.686577    0.053780    0.272915    0.307412    0.043086    0.712996    0.324814    0.039848    0.743331    0.102312    0.165408    0.003602
+    ## Iteration: 7 bestvalit: 1.684567 bestmemit:    0.164788    0.443315    0.143422    0.099120    0.531591    0.158812    0.250428    0.628079    0.089173    0.259254    0.405627    0.136453    0.555480    0.237853    0.256492    0.608383    0.147146    0.295421    0.274273
+    ## Iteration: 8 bestvalit: 1.684567 bestmemit:    0.164788    0.443315    0.143422    0.099120    0.531591    0.158812    0.250428    0.628079    0.089173    0.259254    0.405627    0.136453    0.555480    0.237853    0.256492    0.608383    0.147146    0.295421    0.274273
+    ## Iteration: 9 bestvalit: 1.684567 bestmemit:    0.164788    0.443315    0.143422    0.099120    0.531591    0.158812    0.250428    0.628079    0.089173    0.259254    0.405627    0.136453    0.555480    0.237853    0.256492    0.608383    0.147146    0.295421    0.274273
+    ## Iteration: 10 bestvalit: 1.678714 bestmemit:    0.150643    0.523970    0.204324    0.088958    0.460599    0.221801    0.360658    0.686577    0.053780    0.272915    0.518671    0.043086    0.712996    0.324814    0.039848    0.743331    0.102312    0.165408    0.003602
+
+``` r
+# opt_results <- optim(
+#   par = setaria_parameters[k_params_index],
+#   fn = opfn, 
+#   lower = lower, 
+#   upper = upper,
+#   method = 'L-BFGS-B',
+#   control = list(
+#     trace = 6,
+#     REPORT = 1
+#   )
+# )
+```
 
 The resulting optimized parameters are put through the model again.
 
 ``` r
 optimal_k_params <- as.list(opt_results$optim$bestmem)
+
+# if using base optim
+#optimal_k_params <- as.list(opt_results$par)
+
 names(optimal_k_params) <- names(setaria_parameters[k_params_index])
 
 opt_vec <- unlist(optimal_k_params)
@@ -411,7 +395,7 @@ optimal_params <- c(nonk_params, optimal_k_params)
 
 biomass_opt_parms <- Gro(setaria_initial_state, 
                          optimal_params,
-                         get_growing_season_climate(OpBioGro_weather),
+                         get_growing_season_climate(opt_weather),
                          setaria_modules)
 ```
 
@@ -424,7 +408,7 @@ plot_biomass <- function(biomass_estimates){
     select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
     tidyr::pivot_longer(Stem:Grain) %>% 
     rename(ThermalT = TTc)
-  data_plot <- OpBioGro_biomass %>% 
+  data_plot <- opt_biomass %>% 
     select(-LAI) %>% 
     tidyr::pivot_longer(Stem:Grain)
   biomass_plot <- ggplot() +
@@ -441,6 +425,6 @@ plot_biomass <- function(biomass_estimates){
 plot_biomass(biomass_opt_parms)
 ```
 
-    ## Warning: Removed 21950 rows containing missing values (geom_path).
+    ## Warning: Removed 21950 row(s) containing missing values (geom_path).
 
-![](biocro_1.0_darpa_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](biomass_coeffs_1.0_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->

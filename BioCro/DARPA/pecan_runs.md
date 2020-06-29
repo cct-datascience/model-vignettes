@@ -1,23 +1,43 @@
----
-title: "How to Run the BioCro Model Using PEcAn for DARPA Data"
-author: "Kristina Riemer, University of Arizona"
-output: github_document
-urlcolor: blue
----
+How to Run the BioCro Model Using PEcAn for DARPA Data
+================
+Kristina Riemer, University of Arizona
 
-This vignette shows how to run the BioCro model using DARPA data for the species *Setaria viridis* on the University of Arizona's server Welsch. The first section details how to run the model for wild type *Setaria* using only data for specific leaf area, and produces plots of biomass results. The second is for running the model on two cultivars of *Setaria*, A10 and ME034, including cultivar-specific data for most priors. 
+This vignette shows how to run the BioCro model using DARPA data for the
+species *Setaria viridis* on the University of Arizona’s server Welsch.
+The first section details how to run the model for wild type *Setaria*
+using only data for specific leaf area, and produces plots of biomass
+results. The second is for running the model on two cultivars of
+*Setaria*, A10 and ME034, including cultivar-specific data for most
+priors.
 
 # Section 1: BioCro Run for *Setaria* PFT
 
-1. Access RStudio in a browser by navigating to [welsch.cyverse.org:8787/](welsch.cyverse.org:8787/). Log in using your username and password, which can be requested [here](). 
+1.  Access RStudio in a browser by navigating to
+    <welsch.cyverse.org:8787/>. Log in using your username and password,
+    which can be requested [here]().
 
-2. Create a new folder that will hold the necessary files for the run in your home directory by going to the Terminal tab and typing in `mkdir biocro_darpa_files`. This new folder should appear in your file structure under the Files tab. 
+2.  Create a new folder that will hold the necessary files for the run
+    in your home directory by going to the Terminal tab and typing in
+    `mkdir biocro_darpa_files`. This new folder should appear in your
+    file structure under the Files tab.
 
-3. The first needed file is an XML that contains the configuration information required to get the data and run the model. This example run is for the Setaria wild type PFT for a site at the Donald Danforth Center in St. Louis, MO using weather data from the entire year of 2004. This runs a meta-analysis on specific leaf area (SLA), sensitivity analysis and variance decomposition on eight parameters, and 200 ensemble runs for total biomass. 
+3.  The first needed file is an XML that contains the configuration
+    information required to get the data and run the model. This example
+    run is for the Setaria wild type PFT for a site at the Donald
+    Danforth Center in St. Louis, MO using weather data from the entire
+    year of 2004. This runs a meta-analysis on specific leaf area (SLA),
+    sensitivity analysis and variance decomposition on eight parameters,
+    and 200 ensemble runs for total biomass.
+    
+    Create the file by clicking the new file button with the green plus
+    sign in the upper left hand corner and selecting text file. Copy and
+    paste the content below into this file, click the save button, and
+    save this file as `pecan.biocro.darpa.xml` in the
+    `biocro_darpa_files` folder.
 
-    Create the file by clicking the new file button with the green plus sign in the upper left hand corner and selecting text file. Copy and paste the content below into this file, click the save button, and save this file as `pecan.biocro.darpa.xml` in the `biocro_darpa_files` folder. 
+<!-- end list -->
 
-```{r, eval=FALSE}
+``` r
 <pecan>
   <outdir>biocro_darpa_results</outdir>
 
@@ -80,9 +100,15 @@ This vignette shows how to run the BioCro model using DARPA data for the species
 </pecan>
 ```
 
-4. The second file that needs to be created is an R script that runs through all of PEcAn's functions to run the model and produce the output. Create this file by clicking on the new file button and selecting R script. Copy and paste the below text into the new script and save in the `biocro_darpa_files` folder as `workflow.R`. 
+4.  The second file that needs to be created is an R script that runs
+    through all of PEcAn’s functions to run the model and produce the
+    output. Create this file by clicking on the new file button and
+    selecting R script. Copy and paste the below text into the new
+    script and save in the `biocro_darpa_files` folder as `workflow.R`.
 
-```{r, eval=FALSE, size="small"}
+<!-- end list -->
+
+``` r
 #!/usr/bin/env Rscript
 #-------------------------------------------------------------------------------
 # Copyright (c) 2012 University of Illinois, NCSA.
@@ -265,24 +291,40 @@ if (PEcAn.utils::status.check("FINISHED") == 0) {
 
 db.print.connections()
 print("---------- PEcAn Workflow Complete ----------")
-
 ```
 
-5. We will then run the newly created XML file through the R script. Then in the Terminal run `biocro_darpa_files/workflow.R --settings biocro_darpa_files/pecan.biocro.darpa.xml`. 
-
-    If this returns an error that says `Permission denied`, first run `chmod u+x biocro_darpa_files/workflow.R` in the terminal to get sufficient permissions to the newly created workflow.R file. Then reattempt running the workflow. If the error occurs again, run `chmod u+x biocro_darpa_files/pecan.biocro.darpa.xml`. 
+5.  We will then run the newly created XML file through the R script.
+    Then in the Terminal run `biocro_darpa_files/workflow.R --settings
+    biocro_darpa_files/pecan.biocro.darpa.xml`.
     
-    This will take a few minutes to finish. The last line in the console should appear as follows. 
+    If this returns an error that says `Permission denied`, first run
+    `chmod u+x biocro_darpa_files/workflow.R` in the terminal to get
+    sufficient permissions to the newly created workflow.R file. Then
+    reattempt running the workflow. If the error occurs again, run
+    `chmod u+x biocro_darpa_files/pecan.biocro.darpa.xml`.
+    
+    This will take a few minutes to finish. The last line in the console
+    should appear as follows.
 
-```{r, eval=FALSE}
+<!-- end list -->
+
+``` r
 [1] "---------- PEcAn Workflow Complete ----------"
 ```
 
-6. The results for these files will appear in a new folder called `biocro_darpa_results`. 
+6.  The results for these files will appear in a new folder called
+    `biocro_darpa_results`.
+    
+    To test if this works, you can plot the results from the ensemble
+    runs for biomass. The following code will produce a plot of the time
+    series throughout a year of biomass, of the median, 25th quantile,
+    and 75th quantile for each time step. Create a new R script, copy
+    and paste this code into the script, and run it to produce the
+    figure.
 
-    To test if this works, you can plot the results from the ensemble runs for biomass. The following code will produce a plot of the time series throughout a year of biomass, of the median, 25th quantile, and 75th quantile for each time step. Create a new R script, copy and paste this code into the script, and run it to produce the figure. 
+<!-- end list -->
 
-```{r, eval=FALSE}
+``` r
 # Ensemble Plots
 library(ggplot2)
 library(data.table)
@@ -335,23 +377,33 @@ ggplot(data = daily_bio) +
   theme_classic()
 ```
 
-```{r, echo=FALSE, out.width="400px"}
-knitr::include_graphics("biocro_biomass_welsch_setaria.png")
-knitr::include_graphics("biocro_biomass_ts_welsch_setaria.png")
-```
+<img src="pecan_runs_images/1.png" width="400px" /><img src="pecan_runs_images/2.png" width="400px" />
 
 # Section 2: BioCro Run for Multiple *Setaria* Cultivars
 
-1. Access RStudio in a browser by navigating to [welsch.cyverse.org:8787/](welsch.cyverse.org:8787/). Log in using your username and password. 
+1.  Access RStudio in a browser by navigating to
+    <welsch.cyverse.org:8787/>. Log in using your username and password.
 
-2. Create two new folders, one for each cultivar, called `biocro_darpa_a10_files` and `biocro_darpa_me034_files`. 
+2.  Create two new folders, one for each cultivar, called
+    `biocro_darpa_a10_files` and `biocro_darpa_me034_files`.
 
-3. Create two new XML files, one for each cultivar, that contain configuration information rquired to get the data and run the model for both. The first is for the Setaria A10 cultivar, while the second is for ME034 cultivar. This uses weather data for all of 2004 at the Donald Danforth Center. These both run meta-analyses for stomatal slope, SLA, leaf dark respiration, and Vcmax for both cultivars and additionally cuticular conductance for A10. Sensitivity and variance decomposition analyses are completed on eight parameters, and 200 ensemble runs for total biomass. 
-
-    Call these files `pecan.biocro.darpa.a10.xml` and `pecan.biocro.darpa.me034.xml`, respectively, and place in their appropriate folders. 
+3.  Create two new XML files, one for each cultivar, that contain
+    configuration information rquired to get the data and run the model
+    for both. The first is for the Setaria A10 cultivar, while the
+    second is for ME034 cultivar. This uses weather data for all of 2004
+    at the Donald Danforth Center. These both run meta-analyses for
+    stomatal slope, SLA, leaf dark respiration, and Vcmax for both
+    cultivars and additionally cuticular conductance for A10.
+    Sensitivity and variance decomposition analyses are completed on
+    eight parameters, and 200 ensemble runs for total biomass.
+    
+    Call these files `pecan.biocro.darpa.a10.xml` and
+    `pecan.biocro.darpa.me034.xml`, respectively, and place in their
+    appropriate folders.
 
 **A10 XML**
-```{r, eval=FALSE}
+
+``` r
 <pecan>
   <outdir>biocro_darpa_a10_results</outdir>
 
@@ -415,7 +467,8 @@ knitr::include_graphics("biocro_biomass_ts_welsch_setaria.png")
 ```
 
 **ME034 XML**
-```{r, eval=FALSE}
+
+``` r
 <pecan>
   <outdir>biocro_darpa_me034_results</outdir>
 
@@ -478,9 +531,14 @@ knitr::include_graphics("biocro_biomass_ts_welsch_setaria.png")
 </pecan>
 ```
 
-4. The second set of files that need to be created are the `workflow.R` for each cultivar. These are the same for both cultivars, so the below can be used to create a `workflow.R` in each of the two cultivars' folders. 
+4.  The second set of files that need to be created are the `workflow.R`
+    for each cultivar. These are the same for both cultivars, so the
+    below can be used to create a `workflow.R` in each of the two
+    cultivars’ folders.
 
-```{r, eval=FALSE}
+<!-- end list -->
+
+``` r
 #!/usr/bin/env Rscript
 #-------------------------------------------------------------------------------
 # Copyright (c) 2012 University of Illinois, NCSA.
@@ -663,17 +721,27 @@ if (PEcAn.utils::status.check("FINISHED") == 0) {
 
 db.print.connections()
 print("---------- PEcAn Workflow Complete ----------")
-
 ```
 
-5. Then for each cultivar, run the new XML file through the workflow script. To do this, run `biocro_darpa_a10_files/workflow.R --settings biocro_darpa_a10_files/pecan.biocro.darpa.a10.xml` in the Terminal, and then run `biocro_darpa_me034_files/workflow.R --settings biocro_darpa_me034_files/pecan.biocro.darpa.me034.xml`. This will take 5-10 minutes to finish for each due to the number of ensemble runs. 
+5.  Then for each cultivar, run the new XML file through the workflow
+    script. To do this, run `biocro_darpa_a10_files/workflow.R
+    --settings biocro_darpa_a10_files/pecan.biocro.darpa.a10.xml` in the
+    Terminal, and then run `biocro_darpa_me034_files/workflow.R
+    --settings biocro_darpa_me034_files/pecan.biocro.darpa.me034.xml`.
+    This will take 5-10 minutes to finish for each due to the number of
+    ensemble runs.
 
-6. The results for the two cultivars will appear in two new folders, called `biocro_darpa_a10_results` and `biocro_darpa_me034_results`. 
+6.  The results for the two cultivars will appear in two new folders,
+    called `biocro_darpa_a10_results` and `biocro_darpa_me034_results`.
+    
+    To test if this works, you can use the following code to plot the
+    parameters from the two cultivars together, the sensitivity and
+    variance decomposition results for each parameter, and the biomass
+    distributions and time series.
 
-    To test if this works, you can use the following code to plot the parameters from the two cultivars together, the sensitivity and variance decomposition results for each parameter, and the biomass distributions and time series. 
+<!-- end list -->
 
-```{r, eval=FALSE}
-
+``` r
 ### Parameters
 library(dplyr)
 library(ggplot2)
@@ -886,9 +954,4 @@ p <- ggplot(data = modeled_yield ) +
 p
 ```
 
-```{r, echo=FALSE, out.width="400px"}
-knitr::include_graphics("biocro_params_welsch_setaria_2cults.png")
-knitr::include_graphics("biocro_savd_welsch_setaria_2cults.png")
-knitr::include_graphics("biocro_biomass_welsch_setaria_2cults.png")
-knitr::include_graphics("biocro_biomass_ts_welsch_setaria_2cults.png")
-```
+<img src="pecan_runs_images/3.png" width="400px" /><img src="pecan_runs_images/4.png" width="400px" /><img src="pecan_runs_images/5.png" width="400px" /><img src="pecan_runs_images/6.png" width="400px" />
