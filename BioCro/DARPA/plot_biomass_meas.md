@@ -4,26 +4,26 @@ Kristina Riemer, University of Arizona
 
 ### Overall summary
 
-We can definitely use one experiment’s data (the second one), which we
-have already started to do. We might be able to use experiments 4 and 5,
-but they only have two harvest dates (do we need six harvest dates?).
-Some experiments (1, 3, 6) have only one harvest date for each unique
-treatment. And the last experiment definitely cannot be used currently
-because there’s no dry biomass measurements.
+We can definitely use one experiment's data (the second one), which we have already started to do. We might be able to use experiments 4 and 5, but they only have two harvest dates (do we need six harvest dates?). Some experiments (1, 3, 6) have only one harvest date for each unique treatment. And the last experiment definitely cannot be used currently because there's no dry biomass measurements.
 
 ### Download data
 
-Data downloaded from [Google
-Sheet](https://docs.google.com/spreadsheets/d/134qzz1mcfKyGSS4vMOh0CONUECUuMiDyp6D_pzGjfi0/edit#gid=1249864874)
-as an .xlsx.
+These data are in [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data).
 
 ``` r
 library(readxl)
 
-data_path <- "explore_biomass_data_files/Darpa_setaria_chambers_experiments.xlsx"
+getwd()
+```
+
+    ## [1] "/home/kristinariemer/model-vignettes/BioCro/DARPA"
+
+``` r
+data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+
 sheets_names <- excel_sheets(data_path)
 
-biomass_sheets <- c(11, 9, 7, 5, 3, 2, 1)
+biomass_sheets <- c(13, 12, 10, 8, 6, 5, 4, 3)
 for(sheet in biomass_sheets){
   exp_name <- paste0("exp", substr(sheets_names[sheet], 0, 1))
   assign(exp_name, read_excel(data_path, sheet = sheets_names[sheet]))
@@ -38,24 +38,15 @@ for(sheet in biomass_sheets){
 
 ### First experiment
 
-Plots for first experiment. Plot by treatment started date (2), genotype
-(1), temperature (3), light intensity (3), separate plots by sowing date
-(2). Skipping conversion to mass by area. Removing yield for now.
+Plots for first experiment. Plot by treatment started date (2), genotype (1), temperature (3), light intensity (3), separate plots by sowing date (2). Skipping conversion to mass by area. Removing yield for now.
 
 Why do some rows have no biomass or yield measurements?
 
-Each row has a unique plantID. There’s only one genotype (ME034) of
-Setaria viridis. There are three temperature treatments, with each
-temperature treatment split into three light intensities. Seems to have
-been two replicates of this experiment, with different sowing dates and
-treatment started dates. Each temperature/lighting combo, which had four
-plants each, was harvested on a different date.
+Each row has a unique plantID. There's only one genotype (ME034) of Setaria viridis. There are three temperature treatments, with each temperature treatment split into three light intensities. Seems to have been two replicates of this experiment, with different sowing dates and treatment started dates. Each temperature/lighting combo, which had four plants each, was harvested on a different date.
 
 ``` r
 library(dplyr)
 ```
-
-    ## Warning: package 'dplyr' was built under R version 3.6.2
 
     ## 
     ## Attaching package: 'dplyr'
@@ -93,7 +84,7 @@ ggplot(exp1_sowing1_plot, aes(days_grown, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night, light_intensity.umol.m2.s.))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-2-1.png)
 
 ``` r
 exp1_sowing2 <- exp1 %>% 
@@ -108,21 +99,17 @@ ggplot(exp1_sowing2_plot, aes(days_grown, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night, light_intensity.umol.m2.s.))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-2-2.png)
 
 **Usable for BioCro optimization?**
 
-I don’t think we can use these data for the biomass validation because
-the data from different dates had different experimental treatments.
+I don't think we can use these data for the biomass validation because the data from different dates had different experimental treatments.
 
 ### Second experiment
 
-Also have unique plantIDs (per plant?). These seem to have had images
-taken of them.
+Also have unique plantIDs (per plant?). These seem to have had images taken of them.
 
-3 genotypes of Setaria viridis, at 3 temperatures. No treatment started
-replicates and no lighting treatments. Also no yield measurements. Bunch
-of missing measurements for plant parts.
+3 genotypes of Setaria viridis, at 3 temperatures. No treatment started replicates and no lighting treatments. Also no yield measurements. Bunch of missing measurements for plant parts.
 
 ``` r
 colnames(exp2) <- stringr::str_replace_all(colnames(exp2), " ", "_")
@@ -144,10 +131,9 @@ ggplot(exp2_plot, aes(days_grown, value, color = name)) +
 
     ## Warning: Removed 3 rows containing missing values (geom_point).
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
-It looks like a decrease in biomass during the last time point is
-unusual, it only occurs for 31\* panicle and stem.
+It looks like a decrease in biomass during the last time point is unusual, it only occurs for 31\* panicle and stem.
 
 ``` r
 exp2_plot_mean <- exp2_plot %>% 
@@ -166,10 +152,10 @@ ggplot(filter(exp2_plot, genotype == "ME034V-1"), aes(days_grown, value, color =
 ```
 
     ## Warning: Removed 1 rows containing missing values (geom_point).
-    
+
     ## Warning: Removed 1 rows containing missing values (geom_point).
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
 **Usable for BioCro optimization?**
 
@@ -177,10 +163,7 @@ We can use these data.
 
 ### Third experiment
 
-two temps, two light intensities? Multiple treatments (GA1, GA2), what
-are these? (last row first column has note about them) Includes yield.
-One sowing/treatment started date, 3 harvest dates (only 2 after
-cleaning).
+two temps, two light intensities? Multiple treatments (GA1, GA2), what are these? (last row first column has note about them) Includes yield. One sowing/treatment started date, 3 harvest dates (only 2 after cleaning).
 
 ``` r
 colnames(exp3) <- stringr::str_replace_all(colnames(exp3), " ", "_")
@@ -201,7 +184,7 @@ ggplot(exp3_plot, aes(date, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 ``` r
 ggplot(exp3_plot, aes(date, value, color = name)) +
@@ -209,18 +192,15 @@ ggplot(exp3_plot, aes(date, value, color = name)) +
   facet_wrap(vars(temperature_..C._day.night, light_intensity.umol.m2.s., treatment))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-5-2.png)
 
 **Usable for BioCro optimization?**
 
-I don’t think we can use these because they’re only harvested on two
-dates, and each date has its own temperature treatment.
+I don't think we can use these because they're only harvested on two dates, and each date has its own temperature treatment.
 
 ### Fourth experiment
 
-3 genotypes (ME034, two les), three temps, one light intensity, same
-sowing and treatment started dates. Only two harvest dates. What does
-panicles bagged mean?
+3 genotypes (ME034, two les), three temps, one light intensity, same sowing and treatment started dates. Only two harvest dates. What does panicles bagged mean?
 
 ``` r
 colnames(exp4) <- stringr::str_replace_all(colnames(exp4), " ", "_")
@@ -243,7 +223,7 @@ ggplot(exp4_plot, aes(days_grown, value, color = name)) +
   facet_wrap(vars(genotype, temperature_..C._day.night))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 Could these data be combined with the second experiment?
 
@@ -263,7 +243,7 @@ ggplot(filter(exp4_plot, genotype == "ME034-V1"), aes(days_grown, value, color =
   facet_wrap(vars(temperature_..C._day.night, name), scales = "free_y")
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
 ``` r
 exp2_comb <- exp2_plot %>% 
@@ -281,19 +261,15 @@ ggplot(exp24_plot, aes(days_grown, value, color = genotype)) +
 
     ## Warning: Removed 1 rows containing missing values (geom_point).
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-7-2.png)
 
 **Usable for BioCro optimization?**
 
-Can we use this if there’s only two time points?
+Can we use this if there's only two time points?
 
 ### Fifth experiment
 
-2 genotypes (A10 & ME034), different day and night temps, one light
-intensity, one sowing and treatment started date, 3 harvest dates. Each
-genotype only has two harvest dates, different temp treatments were
-harvested on two consecutive days, except the high temp treatment only
-had one harvest date.
+2 genotypes (A10 & ME034), different day and night temps, one light intensity, one sowing and treatment started date, 3 harvest dates. Each genotype only has two harvest dates, different temp treatments were harvested on two consecutive days, except the high temp treatment only had one harvest date.
 
 ``` r
 colnames(exp5) <- stringr::str_replace_all(colnames(exp5), " ", "_")
@@ -313,20 +289,17 @@ ggplot(exp5_plot, aes(date, value, color = name)) +
   facet_wrap(vars(genotype, temperature_..C._day.night))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
 **Usable for BioCro optimization?**
 
-Can we use this if there’s only two time points?
+Can we use this if there's only two time points?
 
 ### Sixth experiment
 
-Two genotypes (what is “Svslrd”?), one temperature, two light
-intensities, one sowing and transplant date, two harvest dates.
+Two genotypes (what is "Svslrd"?), one temperature, two light intensities, one sowing and transplant date, two harvest dates.
 
-What’s the Eveland lab harvest? What’s the data at the bottom under
-**Chambers Map** label for? Removed these and the last value, which is
-labeled “dead” in all the biomass measurements columns.
+What's the Eveland lab harvest? What's the data at the bottom under **Chambers Map** label for? Removed these and the last value, which is labeled "dead" in all the biomass measurements columns.
 
 ``` r
 colnames(exp6) <- stringr::str_replace_all(colnames(exp6), " ", "_")
@@ -348,7 +321,7 @@ ggplot(exp6_plot, aes(date, value, color = name)) +
   facet_wrap(vars(genotype))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
 ``` r
 ggplot(exp6_plot, aes(date, value, color = name)) +
@@ -356,7 +329,7 @@ ggplot(exp6_plot, aes(date, value, color = name)) +
   facet_wrap(vars(genotype, temperature__.C, light_intensity))
 ```
 
-![](plot_biomass_meas_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
+![](plot_biomass_meas_files/figure-markdown_github/unnamed-chunk-9-2.png)
 
 **Usable for BioCro optimization?**
 
@@ -364,9 +337,7 @@ Each genotype only has one harvest date.
 
 ### Seventh experiment
 
-A bunch of genotypes, mostly numbers? Two temps, one light intensity,
-one sowing date but two transplanting dates, x harvest dates (need to
-fix), no dry weights.
+A bunch of genotypes, mostly numbers? Two temps, one light intensity, one sowing date but two transplanting dates, x harvest dates (need to fix), no dry weights.
 
 ``` r
 colnames(exp7) <- stringr::str_replace_all(colnames(exp7), " ", "_")

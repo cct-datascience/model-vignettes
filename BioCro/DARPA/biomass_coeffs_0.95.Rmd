@@ -22,8 +22,6 @@ rundir <- getwd()
 
 opt_weather <- read.csv("opt_inputs/opt_weather.csv")
 colnames(opt_weather) <- c("year", "doy", "hour", "Solar", "Temp", "RH", "WS", "precip")
-readr::write_csv(opt_weather, path = file.path(rundir, 'SA-median.2019.csv'))
-WetDat <- opt_weather
 
 config <- PEcAn.BIOCRO::read.biocro.config(file.path(rundir, "opt_inputs/config.xml"))
 
@@ -89,7 +87,7 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
                            kGrain6 = optimizingParms[19])
   
   t <- BioCro::BioGro(
-    WetDat = WetDat,
+    WetDat = opt_weather,
     day1 = day1,
     dayn = dayn,
     iRhizome = 0.001, 
@@ -197,7 +195,7 @@ optimalParms <- phenoParms(tp1 = thermaltimevals[1],
                                  kGrain6 = parms_results[19])
 
 results_test <- BioCro::BioGro(
-    WetDat = WetDat,
+    WetDat = opt_weather,
     day1 = day1,
     dayn = dayn,
     iRhizome = 0.001, 

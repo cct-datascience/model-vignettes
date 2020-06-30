@@ -35,6 +35,7 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+*_files/
 
 # R Environment Variables
 .Renviron
@@ -45,3 +46,4 @@ docs/
 
 # Mac data
 *.DS_Store
+.Rproj.user
