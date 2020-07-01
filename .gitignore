@@ -43,7 +43,11 @@ vignettes/*.pdf
 # pkgdown site
 docs/
 
-
 # Mac data
 *.DS_Store
 .Rproj.user
+
+# Output files
+*.csv
+*.RData
+*_results/
