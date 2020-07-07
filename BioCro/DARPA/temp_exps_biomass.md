@@ -52,8 +52,37 @@ This also pulls in and cleans up the biomass data estimated from BioCro, then pl
 # Libraries
 library(readxl)
 library(udunits2)
+```
+
+    ## udunits system database read
+
+``` r
 library(dplyr)
+```
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
+``` r
 library(data.table)
+```
+
+    ## 
+    ## Attaching package: 'data.table'
+
+    ## The following objects are masked from 'package:dplyr':
+    ## 
+    ##     between, first, last
+
+``` r
 library(tidyr)
 library(ggplot2)
 
@@ -110,6 +139,8 @@ ggplot(data = daily_biomass) +
   ylab("Total Biomass Mg/ha") +
   theme_classic()
 ```
+
+![](temp_exps_biomass_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
 Section 2: BioCro Run for Control Parameters & High Night Temperature Weather
 =============================================================================
@@ -180,6 +211,8 @@ ggplot(data = daily_biomass) +
   ylab("Total Biomass Mg/ha") +
   theme_classic()
 ```
+
+![](temp_exps_biomass_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
 Section 3: BioCro Run for High Night Temperature Parameters & Weather
 =====================================================================
@@ -275,6 +308,8 @@ ggplot(data = daily_biomass) +
   theme_classic()
 ```
 
+![](temp_exps_biomass_files/figure-markdown_github/unnamed-chunk-12-1.png)
+
 Section 4: Plot Three Runs
 ==========================
 
@@ -300,8 +335,7 @@ biomass_ests3 <- read.csv("temp_exps_inputs3/biomass_ests3.csv") %>%
   mutate(run = 3)
 
 biomass_ests <- bind_rows(biomass_ests1, biomass_ests2, biomass_ests3) %>% 
-  mutate(run = as.factor(run)) #%>%
-  #udunits convert from Mg/ha to g/cm2 for all data columns
+  mutate(run = as.factor(run))
 
 # Plot measured biomass against biomass estimates
 sd_scale <- 5
@@ -313,7 +347,13 @@ ggplot(data = biomass_ests) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
   theme_classic()
+```
 
+    ## Warning: Removed 912 rows containing missing values (geom_path).
+
+![](temp_exps_biomass_files/figure-markdown_github/unnamed-chunk-13-1.png)
+
+``` r
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
   geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd, fill = run), alpha = 0.1) +
@@ -322,13 +362,89 @@ ggplot(data = biomass_ests) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
   theme_classic()
+```
 
+    ## Warning: Removed 912 rows containing missing values (geom_path).
+
+![](temp_exps_biomass_files/figure-markdown_github/unnamed-chunk-13-2.png)
+
+``` r
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
   geom_point(data = biomass_meas, aes(x = days_grown, y = total_biomass_Mgha, color = txt)) +
-  #scale_color_manual(values=c("red", "black", "blue", "red", "blue")) +
-  #xlim(x = c(0, 60)) +
+  scale_color_manual(values=c("red", "black", "blue", "red", "blue")) +
+  xlim(x = c(0, 60)) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
   theme_classic()
 ```
+
+    ## Warning: Removed 912 rows containing missing values (geom_path).
+
+![](temp_exps_biomass_files/figure-markdown_github/unnamed-chunk-13-3.png)
+
+Figure for comparing sensitivity analysis and variance decomposition results for all three runs.
+
+``` r
+sa_dfs <- data.frame()
+for(run in 1:3){
+  load(paste0("temp_exps_results/temp_exps_results", run, "/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata"))
+  sa_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+  sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), 
+                             data.frame(sa_df1))
+  sa_df3 <- sa_df2 %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)), 
+         
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances), 
+           run = run)
+  rm(sensitivity.results)
+  sa_dfs <- bind_rows(sa_dfs, sa_df3)
+}
+sa_dfs$run <- as.factor(sa_dfs$run)
+
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+
+cv <- ggplot(data = sa_dfs) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, color = run), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+
+el <- ggplot(data = sa_dfs) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, color = run), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+vd <- ggplot(data = sa_dfs) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd, color = run), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (SD Units)") +
+  geom_hline(aes(yintercept = 0), size = 0.1)
+
+gridExtra::grid.arrange(cv, el, vd, ncol = 3)
+```
+
+    ## Warning: position_dodge requires non-overlapping x intervals
+
+    ## Warning: position_dodge requires non-overlapping x intervals
+
+    ## Warning: position_dodge requires non-overlapping x intervals
+
+![](temp_exps_biomass_files/figure-markdown_github/unnamed-chunk-14-1.png)
