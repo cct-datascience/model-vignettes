@@ -27,14 +27,22 @@ source("temp_exps_inputs1/generate_control_weather.R")
 Then run the model for the treatment control. 
 
 ```{bash}
-temp_exps_inputs1/workflow.R --settings temp_exps_inputs1/temp.exps1.xml
+if [ ! -f temp_exps_results/temp_exps_results1/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then
+  temp_exps_inputs1/workflow.R --settings temp_exps_inputs1/temp.exps1.xml
+else
+  echo "run 1 done"
+fi
 ```
 ```{r}
-dir.create("temp_exps_results")
-file.copy("temp_exps_results1/", "temp_exps_results/", recursive = TRUE)
-unlink("temp_exps_results1/", recursive = TRUE)
-file.copy("~/temp_exps_results1/dbfiles/", "temp_exps_results/temp_exps_results1/", recursive = TRUE)
-unlink("~/temp_exps_results1/", recursive = TRUE)
+if(!file.exists("temp_exps_results/temp_exps_results1/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
+  dir.create("temp_exps_results")
+  file.copy("temp_exps_results1/", "temp_exps_results/", recursive = TRUE)
+  unlink("temp_exps_results1/", recursive = TRUE)
+  file.copy("~/temp_exps_results1/dbfiles/", "temp_exps_results/temp_exps_results1/", recursive = TRUE)
+  unlink("~/temp_exps_results1/", recursive = TRUE)
+}
+
 ```
 
 Plot results against measured biomass. Control data are downloaded from [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data) and should be in `model-vignettes-data` in your home directory. The following code cleans up that biomass data, calculating number of days between treatment starting and biomass harvest, and converts biomass units from milligrams to megagrams per hectare (each plant grown in pot with 103 cm2 area). 
@@ -117,13 +125,20 @@ source("temp_exps_inputs2/generate_highnight_weather.R")
 Then run the model for this experimental setup. 
 
 ```{bash}
-temp_exps_inputs2/workflow.R --settings temp_exps_inputs2/temp.exps2.xml
+if [ ! -f temp_exps_results/temp_exps_results2/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then
+  temp_exps_inputs2/workflow.R --settings temp_exps_inputs2/temp.exps2.xml
+else
+  echo "run 2 done"
+fi
 ```
 ```{r}
-file.copy("temp_exps_results2/", "temp_exps_results/", recursive = TRUE)
-unlink("temp_exps_results2/", recursive = TRUE)
-file.copy("~/temp_exps_results2/dbfiles/", "temp_exps_results/temp_exps_results2/", recursive = TRUE)
-unlink("~/temp_exps_results2/", recursive = TRUE)
+if(!file.exists("temp_exps_results/temp_exps_results2/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
+  file.copy("temp_exps_results2/", "temp_exps_results/", recursive = TRUE)
+  unlink("temp_exps_results2/", recursive = TRUE)
+  file.copy("~/temp_exps_results2/dbfiles/", "temp_exps_results/temp_exps_results2/", recursive = TRUE)
+  unlink("~/temp_exps_results2/", recursive = TRUE)
+}
 ```
 
 Plot biomass results. This pulls in and cleans up the biomass data estimated from BioCro, then plots the data. 
@@ -176,13 +191,20 @@ source("temp_exps_inputs3/generate_highnight_weather.R")
 Then run the model for the high night temperature treatment. 
 
 ```{bash}
-temp_exps_inputs3/workflow.R --settings temp_exps_inputs3/temp.exps3.xml
+if [ ! -f temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then
+  temp_exps_inputs3/workflow.R --settings temp_exps_inputs3/temp.exps3.xml
+else
+  echo "run 3 done"
+fi
 ```
 ```{r}
-file.copy("temp_exps_results3/", "temp_exps_results/", recursive = TRUE)
-unlink("temp_exps_results3/", recursive = TRUE)
-file.copy("~/temp_exps_results3/dbfiles/", "temp_exps_results/temp_exps_results3/", recursive = TRUE)
-unlink("~/temp_exps_results3/", recursive = TRUE)
+if(!file.exists("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
+  file.copy("temp_exps_results3/", "temp_exps_results/", recursive = TRUE)
+  unlink("temp_exps_results3/", recursive = TRUE)
+  file.copy("~/temp_exps_results3/dbfiles/", "temp_exps_results/temp_exps_results3/", recursive = TRUE)
+  unlink("~/temp_exps_results3/", recursive = TRUE)
+}
 ```
 
 Plot biomass results. Create a script called `plot_results3.R`, which will contain following code. This pulls in and cleans up the biomass data estimated from BioCro, then plots the data. 
