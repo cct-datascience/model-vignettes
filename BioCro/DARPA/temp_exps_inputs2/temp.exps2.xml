@@ -1,5 +1,5 @@
 <pecan>
-  <outdir>temp_exps_results2</outdir>
+  <outdir>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_results2</outdir>
 
   <database>
     <bety>
@@ -10,14 +10,15 @@
       <dbname>bety</dbname>
       <write>FALSE</write>
     </bety>
-    <dbfiles>temp_exps_results2/dbfiles</dbfiles>
+    <dbfiles>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_results2/dbfiles</dbfiles>
   </database>
 
   <pfts>
     <pft>
       <name>SetariaWT_ME034</name>
+      <outdir>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_results2/pft/SetariaWT_ME034</outdir>
       <constants>
-        <file>temp_exps_inputs2/setaria.constants.xml</file>
+        <file>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_inputs2/setaria.constants.xml</file>
       </constants>
     </pft>
   </pfts>
@@ -51,7 +52,7 @@
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>~/model-vignettes/BioCro/DARPA/temp_exps_inputs2/danforth-highnight-chamber</path>
+        <path>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_inputs2/danforth-highnight-chamber</path>
       </met>
     </inputs>
       <start.date>2019/01/01</start.date>

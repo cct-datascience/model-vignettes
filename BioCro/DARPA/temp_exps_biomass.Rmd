@@ -39,8 +39,6 @@ if(!file.exists("temp_exps_results/temp_exps_results1/sensitivity.results.NOENSE
   dir.create("temp_exps_results")
   file.copy("temp_exps_results1/", "temp_exps_results/", recursive = TRUE)
   unlink("temp_exps_results1/", recursive = TRUE)
-  file.copy("~/temp_exps_results1/dbfiles/", "temp_exps_results/temp_exps_results1/", recursive = TRUE)
-  unlink("~/temp_exps_results1/", recursive = TRUE)
 }
 
 ```
@@ -136,8 +134,6 @@ fi
 if(!file.exists("temp_exps_results/temp_exps_results2/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
   file.copy("temp_exps_results2/", "temp_exps_results/", recursive = TRUE)
   unlink("temp_exps_results2/", recursive = TRUE)
-  file.copy("~/temp_exps_results2/dbfiles/", "temp_exps_results/temp_exps_results2/", recursive = TRUE)
-  unlink("~/temp_exps_results2/", recursive = TRUE)
 }
 ```
 
@@ -202,8 +198,6 @@ fi
 if(!file.exists("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
   file.copy("temp_exps_results3/", "temp_exps_results/", recursive = TRUE)
   unlink("temp_exps_results3/", recursive = TRUE)
-  file.copy("~/temp_exps_results3/dbfiles/", "temp_exps_results/temp_exps_results3/", recursive = TRUE)
-  unlink("~/temp_exps_results3/", recursive = TRUE)
 }
 ```
 
