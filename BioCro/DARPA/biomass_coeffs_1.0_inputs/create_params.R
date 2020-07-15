@@ -64,15 +64,15 @@ setaria_parameters <- with(list(), {
   tbase 0
   
   # photoParms
-  vmax1 29.7409235442261
+  vmax1 17.3833333333333
   alpha1 0.04
   kparm 0.7
   theta 0.83
   beta 0.93
-  Rd 1.33025819997024
+  Rd 0.973833333333333
   Catm 400
   b0 0.0138148692577794
-  b1 5.7057446269736
+  b1 3.11333333333333
   water_stress_approach 1
   upperT 37.5
   lowerT 3

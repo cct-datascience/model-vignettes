@@ -38,9 +38,11 @@ opt_biomass <- read.csv("opt_inputs/opt_biomass.csv")
 The following code uses BioCro 1.0. 
 
 Set up the parameters for *Setaria* using these two lists, `setaria_initial_state` and `setaria_parameters`. This uses parameter values from optimizing the older version of BioCro. 
-```{r, message=FALSE}
-load("biomass_coeffs_1.0_inputs/setaria_initial_state.Rmd")
-load("biomass_coeffs_1.0_inputs/setaria_parameters.Rmd")
+```{r}
+getwd()
+source("biomass_coeffs_1.0_inputs/create_params.R")
+load("biomass_coeffs_1.0_inputs/setaria_initial_state.RData")
+load("biomass_coeffs_1.0_inputs/setaria_parameters.RData")
 ```
 
 Create the modules, which are currently developed for *Sorghum*. 
