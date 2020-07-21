@@ -27,7 +27,7 @@ setaria_initial_state <- with(list(), {
   values
 })
 
-save(setaria_initial_state, file = "BioCro/DARPA/biomass_coeffs_1.0_inputs/setaria_initial_state.RData")
+save(setaria_initial_state, file = "biomass_coeffs_1.0_inputs/setaria_initial_state.RData")
 
 setaria_parameters <- with(list(), {
   datalines =
@@ -42,8 +42,9 @@ setaria_parameters <- with(list(), {
   soil_transmission 0.01
   specific_heat 1010
   stefan_boltzman 5.67e-8
-  iSp 1.7
+  iSp 2056.976
   Sp_thermal_time_decay 0
+  #Sp 2056.976
   
   # canopyControl
   nlayers 10
@@ -64,15 +65,15 @@ setaria_parameters <- with(list(), {
   tbase 0
   
   # photoParms
-  vmax1 17.3833333333333
+  vmax1 29.7409235442261
   alpha1 0.04
   kparm 0.7
   theta 0.83
   beta 0.93
-  Rd 0.973833333333333
+  Rd 1.33025819997024
   Catm 400
   b0 0.0138148692577794
-  b1 3.11333333333333
+  b1 5.7057446269736
   water_stress_approach 1
   upperT 37.5
   lowerT 3
@@ -161,4 +162,4 @@ setaria_parameters <- with(list(), {
   values
 })
 
-save(setaria_parameters, file = "BioCro/DARPA/biomass_coeffs_1.0_inputs/setaria_parameters.RData")
+save(setaria_parameters, file = "biomass_coeffs_1.0_inputs/setaria_parameters.RData")
