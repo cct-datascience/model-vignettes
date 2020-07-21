@@ -1,41 +1,24 @@
-How to Optimze Biomass Estimation for DARPA Data Using BioCro Model
+Getting Setaria Biomass Coefficients from BioCro v0.95
 ================
 Kristina Riemer, University of Arizona
 
 ### Walkthrough for optimizing using `DEoptim`
 
-Optimizing biomass coefficients so that biomass estimates from BioCro as
-closely as possible match the measured biomass values. Parameters of
-interest are phenoParms, with thermal times and rhizome coefficients
-being fixed and leaf, stem, root, and grain coefficients being optimized
-across. This returns values of biomass for each stage and plant part,
-but the value being minimized is the difference between measured biomass
-values and biomass estimated by BioCro. It seems like we can optimized
-across all stages at once within our objective function.
+Optimizing biomass coefficients so that biomass estimates from BioCro as closely as possible match the measured biomass values. Parameters of interest are phenoParms, with thermal times and rhizome coefficients being fixed and leaf, stem, root, and grain coefficients being optimized across. This returns values of biomass for each stage and plant part, but the value being minimized is the difference between measured biomass values and biomass estimated by BioCro. It seems like we can optimized across all stages at once within our objective function.
 
 First read in all the necessary input data:
 
-  - BioCro config file
-  - weather file created for biomass partitioning in
-    [partitioned\_biomass\_data.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/partitioned_biomass_data.md)
-  - biomass file from Setaria experiments in
-    [partitioned\_biomass\_data.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/partitioned_biomass_data.md)
-
-<!-- end list -->
+-   BioCro config file
+-   weather file created for biomass partitioning in [partitioned\_biomass\_data.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/partitioned_biomass_data.md)
+-   biomass file from Setaria experiments in [partitioned\_biomass\_data.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/partitioned_biomass_data.md)
 
 ``` r
 library(dplyr)
-```
 
-    ## Warning: package 'dplyr' was built under R version 3.6.2
-
-``` r
 rundir <- getwd()
 
 opt_weather <- read.csv("opt_inputs/opt_weather.csv")
 colnames(opt_weather) <- c("year", "doy", "hour", "Solar", "Temp", "RH", "WS", "precip")
-readr::write_csv(opt_weather, path = file.path(rundir, 'SA-median.2019.csv'))
-WetDat <- opt_weather
 
 config <- PEcAn.BIOCRO::read.biocro.config(file.path(rundir, "opt_inputs/config.xml"))
 
@@ -55,12 +38,9 @@ opt_biomass <- read.csv("opt_inputs/opt_biomass.csv") %>%
   select(-LAI)
 ```
 
-We want biomass estimates from `BioGro` (i.e., ttt) to be as close to
-the actual biomass values as possible (i.e., opt\_biomass). Will be
-optimizing over the parameters, which are the biomass coefficients.
+We want biomass estimates from `BioGro` (i.e., ttt) to be as close to the actual biomass values as possible (i.e., opt\_biomass). Will be optimizing over the parameters, which are the biomass coefficients.
 
-First create objective function `opfn`, and include parameter values to
-test if this function by itself works.
+First create objective function `opfn`, and include parameter values to test if this function by itself works.
 
 ``` r
 library(BioCro)
@@ -105,7 +85,7 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
                            kGrain6 = optimizingParms[19])
   
   t <- BioCro::BioGro(
-    WetDat = WetDat,
+    WetDat = opt_weather,
     day1 = day1,
     dayn = dayn,
     iRhizome = 0.001, 
@@ -161,11 +141,7 @@ opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
 
     ## [1] 4.960294
 
-Run objective function through optimization with `DEoptim`, setting the
-upper and lower bounds for the varying parameters to 0 and 1 and
-providing values for the non-varying parameters thermal time and rhizome
-coefficients. Reducing itermax reduces time to run `DEoptim`, but the
-resulting best value doesn’t change much.
+Run objective function through optimization with `DEoptim`, setting the upper and lower bounds for the varying parameters to 0 and 1 and providing values for the non-varying parameters thermal time and rhizome coefficients. Reducing itermax reduces time to run `DEoptim`, but the resulting best value doesn't change much.
 
 ``` r
 library(DEoptim)
@@ -178,9 +154,7 @@ rhizomevals <- rep(0, 6)
 opt_results <- DEoptim(fn = opfn, lower = c(rep(0, 2), rep(0.6, 4), 0.3, 0.1, rep(0, 11)), upper = c(rep(1, 8), rep(0.1, 4), rep(1, 7)), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 20))
 ```
 
-Test that the resulting parameter values produce the same biomass
-estimates. `parms_results` are the actual parameters that we would use
-because they’ve been adjusted for the sum to 1 constraint.
+Test that the resulting parameter values produce the same biomass estimates. `parms_results` are the actual parameters that we would use because they've been adjusted for the sum to 1 constraint.
 
 ``` r
 library(ggplot2)
@@ -225,7 +199,7 @@ optimalParms <- phenoParms(tp1 = thermaltimevals[1],
                                  kGrain6 = parms_results[19])
 
 results_test <- BioCro::BioGro(
-    WetDat = WetDat,
+    WetDat = opt_weather,
     day1 = day1,
     dayn = dayn,
     iRhizome = 0.001, 
@@ -269,4 +243,4 @@ ggplot() +
   facet_wrap(~name)
 ```
 
-![](biomass_coeffs_0.95_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](biomass_coeffs_0.95_files/figure-markdown_github/unnamed-chunk-4-1.png)

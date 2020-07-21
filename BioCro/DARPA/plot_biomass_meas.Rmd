@@ -11,15 +11,18 @@ We can definitely use one experiment's data (the second one), which we have alre
 
 ### Download data
 
-Data downloaded from [Google Sheet](https://docs.google.com/spreadsheets/d/134qzz1mcfKyGSS4vMOh0CONUECUuMiDyp6D_pzGjfi0/edit#gid=1249864874) as an .xlsx. 
+These data are in [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data).
 
 ```{r}
 library(readxl)
 
-data_path <- "explore_biomass_data_files/Darpa_setaria_chambers_experiments.xlsx"
+getwd()
+
+data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+
 sheets_names <- excel_sheets(data_path)
 
-biomass_sheets <- c(11, 9, 7, 5, 3, 2, 1)
+biomass_sheets <- c(13, 12, 10, 8, 6, 5, 4, 3)
 for(sheet in biomass_sheets){
   exp_name <- paste0("exp", substr(sheets_names[sheet], 0, 1))
   assign(exp_name, read_excel(data_path, sheet = sheets_names[sheet]))

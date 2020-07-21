@@ -33,29 +33,28 @@ opt_weather_plot <- opt_weather %>%
   mutate(date = seq(as.POSIXct("2019-01-01 00:00:00"), 
                     as.POSIXct("2019-12-31 23:00:00"), 
                     by = "hour")) %>% 
-  dplyr::select(solarR:date) %>% 
+  dplyr::select(solarR:date) %>%
   tidyr::pivot_longer(cols = solarR:precip)
 
 ggplot(opt_weather_plot, aes(date, value)) +
-  geom_line(size = 0.1) + 
+  geom_line(size = 0.1) +
   facet_wrap(~name, ncol = 1, scales = 'free_y')
 
 ggplot(opt_weather_plot %>% filter(month(date) ==1 & day(date) < 3), aes(date, value)) +
-    geom_line() + 
+    geom_line() +
     facet_wrap(~name, ncol = 1, scales = 'free_y')
 ```
 
 ### Biomass data
 
-[These data](https://docs.google.com/spreadsheets/d/1Nc2g-gPEb-rUW9R4QLDqAZvRRYk1whWAJlb8kLEQZ5c/edit#gid=0) are in the project's Google Drive. They have been downloaded and saved as `biomass_setaria_me034_gehan.csv`. 
-
-Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31*C) and taking the median of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.  
+These data are in [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data). Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31*C) and taking the median of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.  
 ```{r, message=FALSE}
 library(udunits2)
 area_cm2 <- 64
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
+getwd()
 
-biomass_data_all <- read.csv("biomass_setaria_me034_gehan.csv") %>% 
+biomass_data_all <- read.csv("../../../model-vignettes-data/2019-01-me034-mutant-biomass.csv") %>% 
   mutate(panicle.DW.mg.byarea = ud.convert(panicle.DW.mg., "mg", "Mg") / area_ha, 
          stemDW.mg.byarea = ud.convert(stemDW.mg., "mg", "Mg") / area_ha, 
          leaf.DW.mg.byarea = ud.convert(leaf.DW.mg., "mg", "Mg") / area_ha, 
