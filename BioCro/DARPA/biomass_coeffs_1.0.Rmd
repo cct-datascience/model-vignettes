@@ -14,7 +14,7 @@ library(BioCro)
 if(!packageVersion(pkg = 'BioCro') <= 1.0){
   warning("need to use BioCro v1.0 or greater")
 } else {
-  devtools::install_github('ebimodeling/biocro@new-framework')  
+  install.packages('biocro_versions/biocro-dev-master/', repos=NULL, type='SOURCE') 
 }
 ```
 
@@ -39,8 +39,7 @@ The following code uses BioCro 1.0.
 
 Set up the parameters for *Setaria* using these two lists, `setaria_initial_state` and `setaria_parameters`. This uses parameter values from optimizing the older version of BioCro. 
 ```{r}
-getwd()
-source("biomass_coeffs_1.0_inputs/create_params.R")
+source(file = "biomass_coeffs_1.0_inputs/create_params.R")
 load("biomass_coeffs_1.0_inputs/setaria_initial_state.RData")
 load("biomass_coeffs_1.0_inputs/setaria_parameters.RData")
 ```
