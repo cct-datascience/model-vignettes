@@ -27,7 +27,9 @@ setaria_initial_state <- with(list(), {
   values
 })
 
-save(setaria_initial_state, file = "biomass_coeffs_1.0_inputs/setaria_initial_state.RData")
+write.csv(setaria_initial_state, 
+          file = "biomass_coeffs_1.0_inputs/setaria_initial_state.csv", 
+          row.names = FALSE)
 
 setaria_parameters <- with(list(), {
   datalines =
@@ -164,4 +166,6 @@ setaria_parameters <- with(list(), {
   values
 })
 
-save(setaria_parameters, file = "biomass_coeffs_1.0_inputs/setaria_parameters.RData")
+write.csv(setaria_parameters, 
+          file = "biomass_coeffs_1.0_inputs/setaria_parameters.csv", 
+          row.names = FALSE)
