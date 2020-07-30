@@ -27,21 +27,27 @@ source("temp_exps_inputs1/generate_control_weather.R")
 Then run the model for the treatment control. 
 
 ```{bash}
-temp_exps_inputs1/workflow.R --settings temp_exps_inputs1/temp.exps1.xml
+if [ ! -f temp_exps_results/temp_exps_results1/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then
+  temp_exps_inputs1/workflow.R --settings temp_exps_inputs1/temp.exps1.xml
+else
+  echo "run 1 done"
+fi
 ```
 ```{r}
-dir.create("temp_exps_results")
-file.copy("temp_exps_results1/", "temp_exps_results/", recursive = TRUE)
-unlink("temp_exps_results1/", recursive = TRUE)
-file.copy("~/temp_exps_results1/dbfiles/", "temp_exps_results/temp_exps_results1/", recursive = TRUE)
-unlink("~/temp_exps_results1/", recursive = TRUE)
+if(!file.exists("temp_exps_results/temp_exps_results1/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
+  dir.create("temp_exps_results")
+  file.copy("temp_exps_results1/", "temp_exps_results/", recursive = TRUE)
+  unlink("temp_exps_results1/", recursive = TRUE)
+}
+
 ```
 
 Plot results against measured biomass. Control data are downloaded from [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data) and should be in `model-vignettes-data` in your home directory. The following code cleans up that biomass data, calculating number of days between treatment starting and biomass harvest, and converts biomass units from milligrams to megagrams per hectare (each plant grown in pot with 103 cm2 area). 
 
 This also pulls in and cleans up the biomass data estimated from BioCro, then plots biomass measurements against this. 
 
-```{r, eval=FALSE}
+```{r}
 # Libraries
 library(readxl)
 library(udunits2)
@@ -117,18 +123,23 @@ source("temp_exps_inputs2/generate_highnight_weather.R")
 Then run the model for this experimental setup. 
 
 ```{bash}
-temp_exps_inputs2/workflow.R --settings temp_exps_inputs2/temp.exps2.xml
+if [ ! -f temp_exps_results/temp_exps_results2/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then
+  temp_exps_inputs2/workflow.R --settings temp_exps_inputs2/temp.exps2.xml
+else
+  echo "run 2 done"
+fi
 ```
 ```{r}
-file.copy("temp_exps_results2/", "temp_exps_results/", recursive = TRUE)
-unlink("temp_exps_results2/", recursive = TRUE)
-file.copy("~/temp_exps_results2/dbfiles/", "temp_exps_results/temp_exps_results2/", recursive = TRUE)
-unlink("~/temp_exps_results2/", recursive = TRUE)
+if(!file.exists("temp_exps_results/temp_exps_results2/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
+  file.copy("temp_exps_results2/", "temp_exps_results/", recursive = TRUE)
+  unlink("temp_exps_results2/", recursive = TRUE)
+}
 ```
 
 Plot biomass results. This pulls in and cleans up the biomass data estimated from BioCro, then plots the data. 
 
-```{r, eval=FALSE}
+```{r}
 # Clean up biomass estimates
 load('temp_exps_results/temp_exps_results2/out/SA-median/biocro_output.RData')
 timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
@@ -176,18 +187,23 @@ source("temp_exps_inputs3/generate_highnight_weather.R")
 Then run the model for the high night temperature treatment. 
 
 ```{bash}
-temp_exps_inputs3/workflow.R --settings temp_exps_inputs3/temp.exps3.xml
+if [ ! -f temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then
+  temp_exps_inputs3/workflow.R --settings temp_exps_inputs3/temp.exps3.xml
+else
+  echo "run 3 done"
+fi
 ```
 ```{r}
-file.copy("temp_exps_results3/", "temp_exps_results/", recursive = TRUE)
-unlink("temp_exps_results3/", recursive = TRUE)
-file.copy("~/temp_exps_results3/dbfiles/", "temp_exps_results/temp_exps_results3/", recursive = TRUE)
-unlink("~/temp_exps_results3/", recursive = TRUE)
+if(!file.exists("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")){
+  file.copy("temp_exps_results3/", "temp_exps_results/", recursive = TRUE)
+  unlink("temp_exps_results3/", recursive = TRUE)
+}
 ```
 
 Plot biomass results. Create a script called `plot_results3.R`, which will contain following code. This pulls in and cleans up the biomass data estimated from BioCro, then plots the data. 
 
-```{r, eval=FALSE}
+```{r}
 # Clean up biomass data
 data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
@@ -250,7 +266,7 @@ ggplot(data = daily_biomass) +
 
 Code to plot the biomass estimates from the first two runs together, along with the control data. 
 
-```{r, eval=FALSE}
+```{r}
 # Read in and combine biomass measurements data
 biomass_meas_control <- read.csv("temp_exps_inputs1/control_biomass_meas.csv") %>% 
   mutate(txt = "control") %>% 
@@ -270,8 +286,7 @@ biomass_ests3 <- read.csv("temp_exps_inputs3/biomass_ests3.csv") %>%
   mutate(run = 3)
 
 biomass_ests <- bind_rows(biomass_ests1, biomass_ests2, biomass_ests3) %>% 
-  mutate(run = as.factor(run)) #%>%
-  #udunits convert from Mg/ha to g/cm2 for all data columns
+  mutate(run = as.factor(run))
 
 # Plot measured biomass against biomass estimates
 sd_scale <- 5
@@ -296,11 +311,67 @@ ggplot(data = biomass_ests) +
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
   geom_point(data = biomass_meas, aes(x = days_grown, y = total_biomass_Mgha, color = txt)) +
-  #scale_color_manual(values=c("red", "black", "blue", "red", "blue")) +
-  #xlim(x = c(0, 60)) +
+  scale_color_manual(values=c("red", "black", "blue", "red", "blue")) +
+  xlim(x = c(0, 60)) +
   xlab("Day of Year") + 
   ylab("Total Biomass Mg/ha") +
   theme_classic()
 ```
 
+Figure for comparing sensitivity analysis and variance decomposition results for all three runs. 
 
+```{r}
+sa_dfs <- data.frame()
+for(run in 1:3){
+  load(paste0("temp_exps_results/temp_exps_results", run, "/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata"))
+  sa_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+  sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), 
+                             data.frame(sa_df1))
+  sa_df3 <- sa_df2 %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)), 
+         
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances), 
+           run = run)
+  rm(sensitivity.results)
+  sa_dfs <- bind_rows(sa_dfs, sa_df3)
+}
+sa_dfs$run <- as.factor(sa_dfs$run)
+
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+
+cv <- ggplot(data = sa_dfs) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, color = run), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+
+el <- ggplot(data = sa_dfs) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, color = run), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+vd <- ggplot(data = sa_dfs) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd, color = run), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (SD Units)") +
+  geom_hline(aes(yintercept = 0), size = 0.1)
+
+gridExtra::grid.arrange(cv, el, vd, ncol = 3)
+```

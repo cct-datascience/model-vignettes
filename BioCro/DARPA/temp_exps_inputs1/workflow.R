@@ -84,7 +84,6 @@ if (PEcAn.utils::status.check("TRAIT") == 0){
 }
 
 library(dplyr)
-print(getwd())
 trait <- read.csv("temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv") %>%
   filter(mean < 25)
 write.csv(trait, "temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv")
