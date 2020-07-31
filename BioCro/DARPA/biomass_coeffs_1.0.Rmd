@@ -7,14 +7,15 @@ urlcolor: blue
 
 ### Switching between BioCro versions locally
 
-Needs to be run using BioCro version 1.0. Check your BioCro version: 
+Needs to be run using BioCro version 1.0. This checks your BioCro version and automatically downloads the biocro-dev repository from the correct commit. You'll need to generate [a personal access token](https://github.com/settings/tokens) and save it in .Renviron for this to work. 
 
 ```{r, message=FALSE}
 library(BioCro)
-if(!packageVersion(pkg = 'BioCro') <= 1.0){
+if(packageVersion(pkg = 'BioCro') <= 1.0){
   warning("need to use BioCro v1.0 or greater")
-} else {
-  install.packages('biocro_versions/biocro-dev-master/', repos=NULL, type='SOURCE') 
+  devtools::install_github("ebimodeling/biocro-dev", 
+                           ref = "362e9b65944882e896c4285cbd03c035040b9171", 
+                           auth_token = devtools::github_pat(quiet = TRUE))
 }
 ```
 
