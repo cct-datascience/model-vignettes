@@ -7,14 +7,15 @@ urlcolor: blue
 
 ### Switching between BioCro versions locally
 
-Needs to be run using BioCro version 1.0. Check your BioCro version: 
+Needs to be run using BioCro version 1.0. This checks your BioCro version and automatically downloads the biocro-dev repository from the correct commit. You'll need to generate [a personal access token](https://github.com/settings/tokens) and save it in .Renviron for this to work. 
 
 ```{r, message=FALSE}
 library(BioCro)
-if(!packageVersion(pkg = 'BioCro') <= 1.0){
+if(packageVersion(pkg = 'BioCro') <= 1.0){
   warning("need to use BioCro v1.0 or greater")
-} else {
-  devtools::install_github('ebimodeling/biocro@new-framework')  
+  devtools::install_github("ebimodeling/biocro-dev", 
+                           ref = "362e9b65944882e896c4285cbd03c035040b9171", 
+                           auth_token = devtools::github_pat(quiet = TRUE))
 }
 ```
 
@@ -38,9 +39,10 @@ opt_biomass <- read.csv("opt_inputs/opt_biomass.csv")
 The following code uses BioCro 1.0. 
 
 Set up the parameters for *Setaria* using these two lists, `setaria_initial_state` and `setaria_parameters`. This uses parameter values from optimizing the older version of BioCro. 
-```{r, message=FALSE}
-load("biomass_coeffs_1.0_inputs/setaria_initial_state.Rmd")
-load("biomass_coeffs_1.0_inputs/setaria_parameters.Rmd")
+```{r}
+source(file = "biomass_coeffs_1.0_inputs/create_params.R")
+setaria_initial_state <- as.list(read.csv("biomass_coeffs_1.0_inputs/setaria_initial_state.csv"))
+setaria_parameters <- as.list(read.csv("biomass_coeffs_1.0_inputs/setaria_parameters.csv"))
 ```
 
 Create the modules, which are currently developed for *Sorghum*. 
@@ -67,7 +69,7 @@ First the objective function `opfn` is created, which has its only argument as t
 The function is tested with example parameters, which are all set to 0.2. 
 
 ```{r}
-k_params_index <- c(53:55, 58:60, 63:65, 68:70, 73:75, 78:80, 82)
+k_params_index <- c(56:58, 61:63, 66:68, 71:73, 76:78, 81:83, 85)
 nonk_params <- setaria_parameters[-k_params_index]
 
 opfn <- function(k_params){
@@ -86,11 +88,11 @@ opfn <- function(k_params){
   k_params_vec     <- unlist(k_params)
   k_params[16:19]  <- as.list(k_params_vec[16:19]/sum(k_params_vec[16:19]))
   all_params       <- c(nonk_params, k_params)
-  names(all_params)[88:106] <- k_params_names
-  t <- Gro(setaria_initial_state,
-           all_params,
-           get_growing_season_climate(opt_weather),
-           setaria_modules)
+  names(all_params)[91:109] <- k_params_names
+  t <- Gro(initial_values = setaria_initial_state,
+           parameters = all_params,
+           varying_parameters = get_growing_season_climate(opt_weather),
+           modules = setaria_modules)
   tt <- t %>%
     select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>%
     rename(ThermalT = TTc)
@@ -159,10 +161,10 @@ optimal_k_params[16:19] <- as.list(opt_vec[16:19]/sum(opt_vec[16:19]))
 
 optimal_params <- c(nonk_params, optimal_k_params)
 
-biomass_opt_parms <- Gro(setaria_initial_state, 
-                         optimal_params,
-                         get_growing_season_climate(opt_weather),
-                         setaria_modules)
+biomass_opt_parms <- Gro(initial_values = setaria_initial_state, 
+                         parameters = optimal_params,
+                         varying_parameters = get_growing_season_climate(opt_weather),
+                         modules = setaria_modules)
 
 ```
 
@@ -172,19 +174,19 @@ library(ggplot2)
 plot_biomass <- function(biomass_estimates){
   est_plot <- biomass_estimates %>% 
     select(TTc, Stem, Leaf, Root, Rhizome, Grain) %>% 
-    tidyr::pivot_longer(Stem:Grain) %>% 
+    tidyr::gather(plant_part, biomass, Stem:Grain) %>% 
     rename(ThermalT = TTc)
   data_plot <- opt_biomass %>% 
     select(-LAI) %>% 
-    tidyr::pivot_longer(Stem:Grain)
+     tidyr::gather(plant_part, biomass, Stem:Grain)
   biomass_plot <- ggplot() +
-    geom_point(data_plot, mapping = aes(x = ThermalT, y = value, color = name)) +
-    geom_line(est_plot, mapping = aes(x = ThermalT, y = value, color = name)) + 
+    geom_point(data_plot, mapping = aes(x = ThermalT, y = biomass, color = plant_part)) +
+    geom_line(est_plot, mapping = aes(x = ThermalT, y = biomass, color = plant_part)) + 
     lims(x = c(0, 1800), y = c(0, 2)) +
     labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") + 
     theme_classic() +
     theme(legend.position = "none") +
-    facet_wrap(~name)
+    facet_wrap(~plant_part)
   print(biomass_plot)
 }
 
