@@ -1,12 +1,6 @@
-Prepare Physiological Parameter Data for Upload to BETYdb
+Prepare Parameter Data for Upload to BETYdb
 ================
 Kristina Riemer, University of Arizona
-
-Read in parameters data from [model-vignettes-data repository](https://github.com/az-digitalag/model-vignettes-data), which should be cloned into the same folder as model-vignettes repo.
-
-``` r
-all_parameters <- read.csv("../../../model-vignettes-data/parameters_data.csv")
-```
 
 Necessary R libraries.
 
@@ -39,6 +33,19 @@ library(lubridate)
 
 ``` r
 library(tidyr)
+library(readxl)
+library(udunits2)
+```
+
+    ## udunits system database read
+
+Physiological parameters Vmax, Rd, and stomatal slope
+-----------------------------------------------------
+
+Read in parameters data from [model-vignettes-data repository](https://github.com/az-digitalag/model-vignettes-data), which should be cloned into the same folder as model-vignettes repo.
+
+``` r
+all_parameters <- read.csv("../../../model-vignettes-data/parameters_data.csv")
 ```
 
 Clean up data to have the final columns:
@@ -94,3 +101,50 @@ Upload that new parameter data file using the [Bulk Upload](http://welsch.cyvers
 -   species: Setaria viridis
 -   access\_level: Internal & Collaborators
 -   cultivar: ME-034
+
+Specific leaf area
+------------------
+
+These SLA values are only for the high night temperature treatment. Read in, clean up, and combine leaf biomass measurements with corresponding leaf area measurements.
+
+``` r
+data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+sheets_names <- excel_sheets(data_path)
+
+leaf_biomass <- read_excel(data_path, sheets_names[10]) %>% 
+  rename(temperature = 6, 
+         leaf_dry_biomass_mg = 19) %>% 
+  filter(temperature == 31, 
+         `light_intensity(umol/m2/s)` == 250,
+         !is.na(leaf_dry_biomass_mg), 
+         treatment == "control")
+
+leaf_area <- read_excel(data_path, sheets_names[2]) %>% 
+  rename(leaf_area_cm2 = 8) %>% 
+  filter(treatment == "control")
+```
+
+    ## New names:
+    ## * `` -> `..9`
+    ## * `` -> `..10`
+    ## * `` -> `..11`
+    ## * `` -> `..12`
+    ## * `` -> `..13`
+
+``` r
+leaf_sla <- left_join(leaf_biomass, leaf_area, by = "plantID") %>% 
+  #select(leaf_dry_biomass_mg, leaf_area_cm2) %>% 
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
+         dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
+         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         sla = area_m2 / dry_biomass_kg) 
+#%>% 
+#  mutate(local_datetime = )
+```
+
+Clean up data to have the final columns:
+
+1.  `date`: convert date into machine readable format
+2.  `treatment`: specifies record's treatment using BETYdb treatment names
+3.  `SLA`: measured values of specific leaf area
+4.  `leafT`: leaf temperature, which is required by BETYdb
