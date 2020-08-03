@@ -53,15 +53,18 @@ Clean up data to have the final columns:
 upload_parameters <- all_parameters %>% 
   mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/edit#gid=967233489")) %>% 
   filter(genotype == "ME034", 
-         TR %in% c("control", "night"), 
+         TR %in% c("low night temp low light", 
+                   "high night temp low light", 
+                   "low night temp high light"), 
          trait %in% c("vmax", "Rd", "g1M", "g1BB")) %>% 
   mutate(value = ifelse(!is.na(New_Value), New_Value, Value), 
          se = ifelse(!is.na(New_Value), SE.1, SE)) %>% 
   mutate(date = ymd(paste0(str_sub(File, -4, -1), 
                            "-", match(str_sub(File, 1, 3), month.abb), 
                            "-", str_sub(File, -6, -5))), 
-         treatment = case_when(TR == "control" ~ "regular night temperature", 
-                               TR == "night" ~ "high night temperature")) %>% 
+         treatment = case_when(TR == "low night temp low light" ~ "regular night temperature", 
+                               TR == "high night temp low light" ~ "high night temperature", 
+                               TR == "low night temp high light" ~ "high light")) %>% 
   select(-File, -genotype, -TR, -rep, -method, -Value, -SE, -New_Value, -SE.1, -SD) %>% 
   spread(trait, value) %>% 
   rename(local_datetime = date, 
