@@ -29,21 +29,29 @@ Clean up data to have the final columns:
 upload_parameters <- all_parameters %>% 
   mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/edit#gid=967233489")) %>% 
   filter(genotype == "ME034", 
+         TR %in% c("control", "night"), 
          trait %in% c("vmax", "Rd", "g1M", "g1BB")) %>% 
-         mutate(date = ymd(paste0(str_sub(File, -4, -1), 
+  mutate(value = ifelse(!is.na(New_Value), New_Value, Value), 
+         se = ifelse(!is.na(New_Value), SE.1, SE)) %>% 
+  mutate(date = ymd(paste0(str_sub(File, -4, -1), 
                            "-", match(str_sub(File, 1, 3), month.abb), 
                            "-", str_sub(File, -6, -5))), 
          treatment = case_when(TR == "control" ~ "regular night temperature", 
                                TR == "night" ~ "high night temperature")) %>% 
-  select(-method, -File, -TR, -rep, -genotype) %>% 
-  spread(trait, Value) %>% 
-  rename(Vcmax = vmax, leaf_respiration_rate_m2 = Rd, stomatal_slope.g1 = g1M, 
-         stomatal_slope.BB = g1BB) %>% 
-  mutate(leafT = 25) %>% 
+  select(-File, -genotype, -TR, -rep, -method, -Value, -SE, -New_Value, -SE.1, -SD) %>% 
+  spread(trait, value) %>% 
+  rename(local_datetime = date, 
+         Vcmax = vmax, 
+         leaf_respiration_rate_m2 = Rd, 
+         stomatal_slope.g1 = g1M, 
+         stomatal_slope.BB = g1BB, 
+         SE = se) %>% 
+  mutate(leafT = 25, 
+         n = 9999) %>% 
   replace(is.na(.), "")
 ```
 
-Save cleaned parameter as a .csv file. 
+Save cleaned parameter as a .csv file in `upload_params_data` folder in `model-vignettes/BioCro/DARPA`. 
 ```{r}
 if(!dir.exists("upload_params_data/")){
   dir.create("upload_params_data")
