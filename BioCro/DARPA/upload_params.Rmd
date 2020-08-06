@@ -25,7 +25,7 @@ all_parameters <- read.csv("../../../model-vignettes-data/parameters_data.csv")
 Clean up data to have the final columns: 
 
 1. `notes`: records which row in the Google Sheet the record came from
-2. `date`: convert date into machine readable format
+2. `local_datetime`: convert date into machine readable format
 3. `treatment`: specifies record's treatment using BETYdb treatment names
 4. `Vcmax`, `leaf_respiration_rate_m2`, `stomatal_slope.g1`, `stomatal_slope.BB`: measured values of physiological parameters specified
 5. `leafT`: leaf temperature, which is required by BETYdb
@@ -76,7 +76,13 @@ Upload that new parameter data file using the [Bulk Upload](http://welsch.cyvers
 
 ## Specific leaf area
 
-These SLA values are only for the high night temperature treatment. Read in, clean up, and combine leaf biomass measurements with corresponding leaf area measurements. 
+These SLA values are only for the high night temperature treatment from experiment 3rd_Biomass_ME034_GA_Exp. Read in, clean up, and combine leaf biomass measurements with corresponding leaf area measurements. 
+
+These are the final columns:
+
+1. `local_datetime`: convert date into machine readable format
+2. `treatment`: specifies record's treatment using BETYdb treatment names
+3. `SLA`: measured values of specific leaf area
 ```{r}
 data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
@@ -93,20 +99,21 @@ leaf_area <- read_excel(data_path, sheets_names[2]) %>%
   rename(leaf_area_cm2 = 8) %>% 
   filter(treatment == "control")
 
-leaf_sla <- left_join(leaf_biomass, leaf_area, by = "plantID") %>% 
-  #select(leaf_dry_biomass_mg, leaf_area_cm2) %>% 
+sla <- left_join(leaf_biomass, leaf_area, by = "plantID") %>% 
   mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
          dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
          area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
-         sla = area_m2 / dry_biomass_kg) 
-#%>% 
-#  mutate(local_datetime = )
+         SLA = area_m2 / dry_biomass_kg) %>% 
+  mutate(local_datetime = as.Date(`biomas harvested`), 
+         treatment = "high night temperature") %>% 
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(n = 9999, 
+         statname = '')
 ```
 
-Clean up data to have the final columns: 
+Save SLA data as a .csv. 
+```{r}
+write.csv(sla, file = "upload_params_data/sla.csv", row.names = FALSE)
+```
 
-1. `date`: convert date into machine readable format
-2. `treatment`: specifies record's treatment using BETYdb treatment names
-3. `SLA`: measured values of specific leaf area
-5. `leafT`: leaf temperature, which is required by BETYdb
-
+Upload values to Welsch BETYdb using the same method as for physiological parameters. 
