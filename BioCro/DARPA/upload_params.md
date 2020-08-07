@@ -117,17 +117,19 @@ These are the final columns:
 data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
 
-leaf_biomass <- read_excel(data_path, sheets_names[10]) %>% 
+leaf_biomass_hightemp <- read_excel(data_path, sheets_names[11]) %>% 
   rename(temperature = 6, 
          leaf_dry_biomass_mg = 19) %>% 
-  filter(temperature == 31, 
-         `light_intensity(umol/m2/s)` == 250,
+  filter(temperature == "31.0", 
+         `light_intensity(umol/m2/s)` == "250.0",
          !is.na(leaf_dry_biomass_mg), 
-         treatment == "control")
+         treatment == "control") %>% 
+  mutate(leaf_dry_biomass_mg == as.numeric(leaf_dry_biomass_mg))
 
-leaf_area <- read_excel(data_path, sheets_names[2]) %>% 
+leaf_area_hightemp <- read_excel(data_path, sheets_names[2]) %>% 
   rename(leaf_area_cm2 = 8) %>% 
-  filter(treatment == "control")
+  filter(experiment == "3rd_Biomass_ME034_GA", 
+         treatment == "control")
 ```
 
     ## New names:
@@ -138,14 +140,54 @@ leaf_area <- read_excel(data_path, sheets_names[2]) %>%
     ## * `` -> `..13`
 
 ``` r
-sla <- left_join(leaf_biomass, leaf_area, by = "plantID") %>% 
+sla_hightemp <- left_join(leaf_biomass_hightemp, leaf_area_hightemp, by = "plantID") %>% 
   mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
          dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
          area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
          SLA = area_m2 / dry_biomass_kg) %>% 
   mutate(local_datetime = as.Date(`biomas harvested`), 
          treatment = "high night temperature") %>% 
-  select(local_datetime, treatment, SLA)
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(statname = '')
+
+leaf_biomass_control <- read_excel(data_path, sheets_names[7]) %>% 
+  rename(temperature = 6, 
+         leaf_dry_biomass_mg = 19, 
+         plantID = 1) %>% 
+  filter(temperature == "31/22", 
+         genotype == "ME034V-1", 
+         !is.na(leaf_dry_biomass_mg))
+```
+
+    ## New names:
+    ## * `` -> `..1`
+
+``` r
+leaf_area_control <- read_excel(data_path, sheets_names[2]) %>% 
+  rename(leaf_area_cm2 = 8) %>% 
+  filter(experiment == "5th_Biomass_A10&ME034_cycling_temp")
+```
+
+    ## New names:
+    ## * `` -> `..9`
+    ## * `` -> `..10`
+    ## * `` -> `..11`
+    ## * `` -> `..12`
+    ## * `` -> `..13`
+
+``` r
+sla_control <- left_join(leaf_biomass_control, leaf_area_control, by = "plantID") %>% 
+  filter(!is.na(leaf_area_cm2)) %>% 
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
+         dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
+         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = area_m2 / dry_biomass_kg) %>% 
+    mutate(local_datetime = as.Date(`biomass harvested`), 
+         treatment = "high light") %>% 
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(statname = '')
+
+sla <- bind_rows(sla_hightemp, sla_control)
 ```
 
 Save SLA data as a .csv.
