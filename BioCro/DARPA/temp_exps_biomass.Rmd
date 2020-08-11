@@ -62,7 +62,7 @@ sheets_names <- excel_sheets(data_path)
 area_cm2 <- 103
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
 
-control_biomass <- read_excel(data_path, sheets_names[6]) %>% 
+control_biomass <- read_excel(data_path, sheets_names[7]) %>% 
   rename(temperature...C..day.night = 6, 
          biomass.harvested = 11, 
          treatment.started = 9) %>% 
@@ -210,7 +210,7 @@ sheets_names <- excel_sheets(data_path)
 area_cm2 <- 103
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
 
-highnight_biomass <- read_excel(data_path, sheets_names[10]) %>% 
+highnight_biomass <- read_excel(data_path, sheets_names[11]) %>% 
       rename(temperature...C..day.night = 6, 
          biomass.harvested = 12, 
          panicles.DW..mg. = 21, 
