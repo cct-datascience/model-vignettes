@@ -212,18 +212,20 @@ area_ha <- ud.convert(area_cm2, "cm2", "ha")
 
 highnight_biomass <- read_excel(data_path, sheets_names[11]) %>% 
       rename(temperature...C..day.night = 6, 
-         biomass.harvested = 12, 
-         panicles.DW..mg. = 21, 
-         stemDW.mg. = 18,
-         leaf.DW.mg. = 19, 
-         roots.DW..mg. = 20) %>% 
-  filter(genotype == "ME034V-1", temperature...C..day.night == 31, 
+             light.intensity = 7, 
+             biomass.harvested = 12, 
+             panicles.DW..mg. = 21, 
+             stemDW.mg. = 18,
+             leaf.DW.mg. = 19, 
+             roots.DW..mg. = 20) %>% 
+  filter(genotype == "ME034V-1", temperature...C..day.night == "31.0", 
+         light.intensity == "250.0", 
          treatment == "control", sample_for == "biomass") %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomass.harvested), format = "%Y-%m-%d") - 
-                                   as.integer(as.Date(as.character(temperature_treatment_started), 
-                                                      format = "%Y-%m-%d"))), 
+                                   as.Date(as.numeric(temperature_treatment_started), origin = "1899-12-30")),
          total_biomass_mg = panicles.DW..mg. + stemDW.mg. + leaf.DW.mg. + roots.DW..mg., 
-         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha) %>% 
+         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
+         total_biomass_gcm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "g/cm2")) %>% 
   filter(!is.na(total_biomass_Mgha))
 write.csv(highnight_biomass, "temp_exps_inputs3/highnight_biomass_meas.csv")
 
@@ -233,6 +235,7 @@ timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
 load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+convert_biomass <- function(x) ud.convert(x, "Mg/ha", "g/cm2")
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X10) %>% 
   group_by(day, hour) %>% 
@@ -246,23 +249,36 @@ daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>%
             median = sum(median), 
             sd = sqrt(sum(sd^2)), 
             lcl = sum(lcl), 
-            ucl = sum(ucl))
+            ucl = sum(ucl)) %>% 
+  mutate_at(vars(mean:ucl), convert_biomass)
 write.csv(daily_biomass, "temp_exps_inputs3/biomass_ests3.csv")
 rm(ensemble.ts)
 
 # Plot measured biomass against biomass estimates
 sd_scale <- 5
 ggplot(data = daily_biomass) + 
-  geom_line(aes(day, y = mean)) +
-  geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd), alpha = 0.1) +
-  geom_ribbon(aes(day, ymin = lcl, ymax = ucl), alpha = 0.1) +
-  #geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
+  geom_line(aes(day, y = mean, color = "navyblue")) +
+  geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd, 
+                  fill = "navyblue"), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl, ymax = ucl, fill = "blue"), alpha = 0.1) +
+  geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_gcm2, 
+                                           color = "black")) +
+  scale_color_identity(name = "", 
+                       breaks = c("navyblue", "black"), 
+                       labels = c("Mean estimates", "Measured biomass"), 
+                       guide = "legend") +
+  scale_fill_identity(name = "", 
+                    breaks = c("navyblue", "blue"), 
+                    labels = c("first CI", "second CI"), 
+                    guide = "legend") +
+  xlim(x = c(0, 50)) +
   xlab("Day of Year") + 
-  ylab("Total Biomass Mg/ha") +
-  theme_classic()
+  ylab("Total Biomass (g/cm2)") +
+  theme_classic() +
+  theme(legend.position = "right")
 ```
 
-# Section 4: Plot Three Runs
+# Section 5: Plot Three Runs
 
 Code to plot the biomass estimates from the first two runs together, along with the control data. 
 
