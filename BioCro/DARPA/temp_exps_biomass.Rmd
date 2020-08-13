@@ -213,6 +213,7 @@ area_ha <- ud.convert(area_cm2, "cm2", "ha")
 highnight_biomass <- read_excel(data_path, sheets_names[11]) %>% 
       rename(temperature...C..day.night = 6, 
              light.intensity = 7, 
+             sowing.date = 8, 
              biomass.harvested = 12, 
              panicles.DW..mg. = 21, 
              stemDW.mg. = 18,
@@ -222,10 +223,10 @@ highnight_biomass <- read_excel(data_path, sheets_names[11]) %>%
          light.intensity == "250.0", 
          treatment == "control", sample_for == "biomass") %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomass.harvested), format = "%Y-%m-%d") - 
-                                   as.Date(as.numeric(temperature_treatment_started), origin = "1899-12-30")),
+                                   as.Date(as.numeric(sowing.date), origin = "1899-12-30")),
          total_biomass_mg = panicles.DW..mg. + stemDW.mg. + leaf.DW.mg. + roots.DW..mg., 
          total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
-         total_biomass_gcm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "g/cm2")) %>% 
+         total_biomass_kgm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "kg/m2")) %>% 
   filter(!is.na(total_biomass_Mgha))
 write.csv(highnight_biomass, "temp_exps_inputs3/highnight_biomass_meas.csv")
 
@@ -235,7 +236,7 @@ timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
 load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
-convert_biomass <- function(x) ud.convert(x, "Mg/ha", "g/cm2")
+convert_biomass <- function(x) ud.convert(x, "Mg/ha", "kg/m2")
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X10) %>% 
   group_by(day, hour) %>% 
@@ -255,27 +256,27 @@ write.csv(daily_biomass, "temp_exps_inputs3/biomass_ests3.csv")
 rm(ensemble.ts)
 
 # Plot measured biomass against biomass estimates
-sd_scale <- 5
 ggplot(data = daily_biomass) + 
   geom_line(aes(day, y = mean, color = "navyblue")) +
-  geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd, 
+  geom_ribbon(aes(day, ymin = mean - 1 * sd, ymax = mean + 1 * sd, 
                   fill = "navyblue"), alpha = 0.1) +
-  geom_ribbon(aes(day, ymin = lcl, ymax = ucl, fill = "blue"), alpha = 0.1) +
-  geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_gcm2, 
+  geom_ribbon(aes(day, ymin = mean - 2 * sd, ymax = mean + 2 * sd, 
+                  fill = "blue"), alpha = 0.1) +
+  geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_kgm2, 
                                            color = "black")) +
   scale_color_identity(name = "", 
                        breaks = c("navyblue", "black"), 
-                       labels = c("Mean estimates", "Measured biomass"), 
+                       labels = c("Modeled", "Measured"), 
                        guide = "legend") +
   scale_fill_identity(name = "", 
                     breaks = c("navyblue", "blue"), 
-                    labels = c("first CI", "second CI"), 
+                    labels = c("Mean +/- 1 standard deviation", "Mean +/- 2 standard deviations"), 
                     guide = "legend") +
   xlim(x = c(0, 50)) +
-  xlab("Day of Year") + 
-  ylab("Total Biomass (g/cm2)") +
+  xlab("Day of Experiment") + 
+  ylab("Total Biomass (kg/m2)") +
   theme_classic() +
-  theme(legend.position = "right")
+  theme(legend.position = "bottom")
 ```
 
 # Section 5: Plot Three Runs
