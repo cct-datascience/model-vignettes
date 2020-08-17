@@ -9,6 +9,27 @@ urlcolor: blue
 
 ### Calculate biomass coefficients
 
+The coefficients are the amount of carbon going to each plant part (root, stem, leaf, rhizome, grain) at each stage. These are determined using biomass data and are input to BioCro. 
+
+#### Create chamber weather data frame
+
+This weather data file approximates the conditions in the chamber, which are recorded in the "Environmental_data_chambers_5th_Biomass" tab of [manual-measurements-Darpa_setaria_chambers_experiments.xlsx](https://github.com/az-digitalag/model-vignettes-data/blob/master/manual-measurements-Darpa_setaria_chambers_experiments.xlsx). 
+```{r}
+if (!file.exists("high_light_inputs/weather.csv")) {
+  weather <- data.frame(year = rep(2019, 8760), 
+                        doy = rep(1:365, each = 24), 
+                        hour = rep(seq(0, 23), 365), 
+                        SolarR = rep(c(rep(0, each = 8), rep(420, each = 12), 
+                                       rep(0, each = 4)), times = 365),
+                        Temp = rep(c(rep(22, each = 8), rep(31, each = 12), 
+                                     rep(22, each = 4)), times = 365),
+                        RH = rep(55.5 / 100,  times = 365 * 24), 
+                        WS = rep(0, times = 365 * 24), 
+                        precip = rep(c(0.000462963, rep(0, 23)), 365))
+  write.csv(weather, "high_light_inputs/weather.csv")
+}
+```
+
 ### Compare BioCro biomass estimates with measurements
 
 ### Plot regional runs of biomass
