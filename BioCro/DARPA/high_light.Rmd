@@ -1,0 +1,15 @@
+---
+title: "Regional Runs for High Light Treatment of Setaria"
+author: "Kristina Riemer, University of Arizona"
+output: html_document
+urlcolor: blue
+---
+
+### Description of treatment and data 
+
+### Calculate biomass coefficients
+
+### Compare BioCro biomass estimates with measurements
+
+### Plot regional runs of biomass
+
