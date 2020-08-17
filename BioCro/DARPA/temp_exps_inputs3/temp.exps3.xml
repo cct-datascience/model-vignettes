@@ -26,6 +26,7 @@
   <ensemble>
     <size>10</size>
     <variable>TotLivBiom</variable>
+    <variable>TVeg</variable>
   </ensemble>
 
   <meta.analysis>
