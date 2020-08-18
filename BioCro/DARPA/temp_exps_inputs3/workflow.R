@@ -11,6 +11,7 @@
 # ----------------------------------------------------------------------
 # Load required libraries
 # ----------------------------------------------------------------------
+ptm <- proc.time()
 library(PEcAn.all)
 library(PEcAn.utils)
 library(RCurl)
@@ -180,3 +181,4 @@ if (PEcAn.utils::status.check("FINISHED") == 0) {
 
 db.print.connections()
 print("---------- PEcAn Workflow Complete ----------")
+proc.time() - ptm

@@ -240,130 +240,88 @@ load('temp_exps_results/temp_exps_results3/out/SA-median/biocro_output.RData')
 timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
-load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
-convert_biomass <- function(x) ud.convert(x, "Mg/ha", "kg/m2")
+load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata") #these data are in kg/m2 carbon
+convert_biomass <- function(x) x / 0.4
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
-  gather(ensemble, biomass, X1:X10) %>% 
-  group_by(day, hour) %>% 
+  gather(ensemble, biomass, X1:X100) %>% 
+  filter(hour == 12) %>% 
+  group_by(day) %>% 
   summarise(mean = mean(biomass, na.rm = TRUE), 
             median = median(biomass, na.rm = TRUE), 
             sd = sd(biomass, na.rm = TRUE), 
-            lcl = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
-            ucl = quantile(biomass, probs = c(0.975), na.rm = TRUE)) %>% 
-  group_by(day) %>% 
-  summarise(mean = sum(mean), 
-            median = sum(median), 
-            sd = sqrt(sum(sd^2)), 
-            lcl = sum(lcl), 
-            ucl = sum(ucl)) %>% 
-  mutate_at(vars(mean:ucl), convert_biomass)
+            lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE)) %>% 
+  mutate_at(vars(mean:ucl_95), convert_biomass)
 write.csv(daily_biomass, "temp_exps_inputs3/biomass_ests3.csv")
 rm(ensemble.ts)
 
 # Plot measured biomass against biomass estimates
-ggplot(data = daily_biomass) + 
-  geom_line(aes(day, y = mean, color = "navyblue")) +
-  geom_ribbon(aes(day, ymin = mean - 1 * sd, ymax = mean + 1 * sd, 
-                  fill = "navyblue"), alpha = 0.1) +
-  geom_ribbon(aes(day, ymin = mean - 2 * sd, ymax = mean + 2 * sd, 
-                  fill = "blue"), alpha = 0.1) +
-  geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_kgm2, 
-                                           color = "black")) +
-  scale_color_identity(name = "", 
-                       breaks = c("navyblue", "black"), 
-                       labels = c("Modeled", "Measured"), 
-                       guide = "legend") +
-  scale_fill_identity(name = "", 
-                    breaks = c("navyblue", "blue"), 
-                    labels = c("Mean +/- 1 standard deviation", "Mean +/- 2 standard deviations"), 
-                    guide = "legend") +
+plot_daily_biomass <- ggplot(data = daily_biomass) + 
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
+  geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_kgm2)) +
   xlim(x = c(0, 50)) +
-  xlab("Day of Experiment") + 
+  xlab("") + 
   ylab("Total Biomass (kg/m2)") +
   theme_classic() +
-  theme(legend.position = "bottom")
+  theme(axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(), 
+        plot.margin=unit(c(1, 1, 0, 1), "cm"))
 ```
 
 Plot transpiration results.
 
 ```{r}
-# Clean up biomass estimates
+# Clean up transpiration estimates
 load('temp_exps_results/temp_exps_results3/out/SA-median/biocro_output.RData')
 timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
 load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TVeg.2019.2019.Rdata")
 convert_transp <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/h")
-hourly_transp <- data.frame(timescale, t(ensemble.ts[["TVeg"]])) %>% 
-  gather(ensemble, transpiration, X1:X10) %>% 
-  group_by(day, hour) %>% 
-  summarise(mean = mean(transpiration, na.rm = TRUE), 
-            sd = sd(transpiration, na.rm = TRUE)) %>%
-  mutate_at(vars(mean:sd), convert_transp) %>% 
-  mutate(date = as.Date(day, origin = "2019-04-11"), 
-         date_hour = lubridate::ymd_h(paste(date, hour)))
-
 daily_transp <- data.frame(timescale, t(ensemble.ts[["TVeg"]])) %>% 
-  gather(ensemble, transpiration, X1:X10) %>% 
+  gather(ensemble, transpiration, X1:X100) %>% 
   group_by(day, hour) %>% 
   summarise(mean = mean(transpiration, na.rm = TRUE), 
             median = median(transpiration, na.rm = TRUE), 
             sd = sd(transpiration, na.rm = TRUE), 
-            lcl = quantile(transpiration, probs = c(0.025), na.rm = TRUE), 
-            ucl = quantile(transpiration, probs = c(0.975), na.rm = TRUE)) %>% 
+            lcl_50 = quantile(transpiration, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(transpiration, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(transpiration, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(transpiration, probs = c(0.975), na.rm = TRUE)) %>% 
   group_by(day) %>% 
   summarise(mean = sum(mean), 
             median = sum(median), 
             sd = sqrt(sum(sd^2)), 
-            lcl = sum(lcl), 
-            ucl = sum(ucl)) %>%
-  mutate_at(vars(mean:ucl), convert_transp)
-#write.csv(daily_transpiration, "temp_exps_inputs3/transpiration_ests3.csv")
+            lcl_50 = sum(lcl_50), 
+            ucl_50 = sum(ucl_50), 
+            lcl_95 = sum(lcl_95), 
+            ucl_95 = sum(ucl_95)) %>%
+  mutate_at(vars(mean:ucl_95), convert_transp)
+write.csv(daily_transp, "temp_exps_inputs3/transpiration_ests3.csv")
 rm(ensemble.ts)
 
 # Plot transpiration estimates
-ggplot(data = hourly_transp) + 
-  geom_line(aes(x = date_hour, y = mean, color = "darkred"))+
-  geom_ribbon(aes(x = date_hour, ymin = mean - 1 * sd, ymax = mean + 1 * sd, 
-                  fill = "darkred"), alpha = 0.1) +
-  geom_ribbon(aes(x = date_hour, ymin = mean - 2 * sd, ymax = mean + 2 * sd, 
-                  fill = "red"), alpha = 0.1) +
-  scale_color_identity(name = "", 
-                       breaks = "darkred", 
-                       labels = "Modeled", 
-                       guide = "legend") +
-  scale_fill_identity(name = "", 
-                    breaks = c("darkred", "red"), 
-                    labels = c("Mean +/- 1 standard deviation", "Mean +/- 2 standard deviations"), 
-                    guide = "legend") +
-  #xlim(x = c("2019-05-06 00:00:00", "2019-05-13 00:00:00")) +
-  scale_x_datetime(limits = lubridate::ymd_hms(c("2019-05-06 00:00:00", "2019-05-10 00:00:00"))) +
-  xlab("Date") + 
-  ylab("Transpiration (kg/m2/h)") +
-  theme_classic() +
-  theme(legend.position = "bottom")
-
-ggplot(data = daily_transp) + 
-  geom_line(aes(day, y = mean, color = "darkred")) +
-  geom_ribbon(aes(day, ymin = mean - 1 * sd, ymax = mean + 1 * sd, 
-                  fill = "darkred"), alpha = 0.1) +
-  geom_ribbon(aes(day, ymin = mean - 2 * sd, ymax = mean + 2 * sd, 
-                  fill = "red"), alpha = 0.1) +
-  scale_color_identity(name = "", 
-                       breaks = "darkred", 
-                       labels = "Modeled", 
-                       guide = "legend") +
-  scale_fill_identity(name = "", 
-                    breaks = c("darkred", "red"), 
-                    labels = c("Mean +/- 1 standard deviation", "Mean +/- 2 standard deviations"), 
-                    guide = "legend") +
+plot_daily_transp <- ggplot(data = daily_transp) + 
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
   xlim(x = c(0, 50)) +
   xlab("Day of Experiment") + 
   ylab("Transpiration (kg/m2/h)") +
-  theme_classic() +
-  theme(legend.position = "bottom")
+  theme_classic() + 
+  scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +
+  theme(plot.margin=unit(c(-0.5, 1, 1, 1), "cm"))
 ```
 
+Plot biomass and transpiration together. 
+
+```{r}
+gridExtra::grid.arrange(plot_daily_biomass, plot_daily_transp, ncol = 1)
+```
 
 Sensitivity analysis and variance decomposition plots for high night temperature results. 
 ```{r}
