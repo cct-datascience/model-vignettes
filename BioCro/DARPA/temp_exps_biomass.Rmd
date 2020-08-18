@@ -244,6 +244,7 @@ load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2
 convert_biomass <- function(x) x / 0.4
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X100) %>% 
+  mutate_at(vars(biomass), convert_biomass) %>% 
   filter(hour == 12) %>% 
   group_by(day) %>% 
   summarise(mean = mean(biomass, na.rm = TRUE), 
@@ -252,8 +253,7 @@ daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>%
             lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
             ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
             lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
-            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE)) %>% 
-  mutate_at(vars(mean:ucl_95), convert_biomass)
+            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
 write.csv(daily_biomass, "temp_exps_inputs3/biomass_ests3.csv")
 rm(ensemble.ts)
 
@@ -284,6 +284,7 @@ load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TVeg.2019.20
 convert_transp <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/h")
 daily_transp <- data.frame(timescale, t(ensemble.ts[["TVeg"]])) %>% 
   gather(ensemble, transpiration, X1:X100) %>% 
+  mutate_at(vars(transpiration), convert_transp) %>% 
   group_by(day, hour) %>% 
   summarise(mean = mean(transpiration, na.rm = TRUE), 
             median = median(transpiration, na.rm = TRUE), 
@@ -299,8 +300,7 @@ daily_transp <- data.frame(timescale, t(ensemble.ts[["TVeg"]])) %>%
             lcl_50 = sum(lcl_50), 
             ucl_50 = sum(ucl_50), 
             lcl_95 = sum(lcl_95), 
-            ucl_95 = sum(ucl_95)) %>%
-  mutate_at(vars(mean:ucl_95), convert_transp)
+            ucl_95 = sum(ucl_95))
 write.csv(daily_transp, "temp_exps_inputs3/transpiration_ests3.csv")
 rm(ensemble.ts)
 
@@ -311,7 +311,7 @@ plot_daily_transp <- ggplot(data = daily_transp) +
   geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
   xlim(x = c(0, 50)) +
   xlab("Day of Experiment") + 
-  ylab("Transpiration (kg/m2/h)") +
+  ylab("Transpiration (kg/m2/day)") +
   theme_classic() + 
   scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +
   theme(plot.margin=unit(c(-0.5, 1, 1, 1), "cm"))
@@ -370,7 +370,7 @@ vd <- ggplot(data = sa_df3) +
   ggtitle("Variance Explained (SD Units)") +
   geom_hline(aes(yintercept = 0), size = 0.1)
 
-gridExtra::grid.arrange(cv, el, vd, ncol = 3)
+cowplot::plot_grid(cv, el, vd, rel_widths = c(2, 1, 1))
 ```
 
 # Section 5: Plot Three Runs
