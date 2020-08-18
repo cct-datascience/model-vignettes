@@ -26,8 +26,62 @@ if (!file.exists("high_light_inputs/weather.csv")) {
                         RH = rep(55.5 / 100,  times = 365 * 24), 
                         WS = rep(0, times = 365 * 24), 
                         precip = rep(c(0.000462963, rep(0, 23)), 365))
-  write.csv(weather, "high_light_inputs/weather.csv")
+  write.csv(weather, "high_light_inputs/weather.csv", row.names = FALSE)
 }
+weather <- read.csv("high_light_inputs/weather.csv")
+```
+
+#### Get biomass data into correct format
+
+Biomass data is isolated to only the desired experimental conditions, converted to the correct units for BioCro, thermal times are calculated, and grain biomass are added to the stem portion. 
+
+```{r}
+library(readxl)
+library(dplyr)
+library(udunits2)
+
+library(BioCro)
+if(packageVersion(pkg = 'BioCro') >= 1.0){
+  warning("need to use BioCro v0.9x")
+} else {
+  devtools::install_github('ebimodeling/biocro')  
+}
+
+if (!file.exists("high_light_inputs/biomass.csv")) {
+  thermal_times <- as.data.frame(unclass(BioGro(weather, day1 = 1, 
+                                                dayn = 365))[1:11]) %>%
+    filter(Hour == 0) %>% 
+    select(DayofYear, ThermalT)
+  
+  biomass_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+  biomass_tabs <- excel_sheets(biomass_path)
+  
+  area_cm2 <- 64
+  area_ha <- ud.convert(area_cm2, "cm2", "ha")
+  convert_biomass <- function(x) ud.convert(x, "mg", "Mg") / area_ha
+  
+  biomass <- read_excel(biomass_path, biomass_tabs[7]) %>% 
+    rename(temp = `temperature (°C) day/night`, 
+           light = `light_intensity(umol/m2/s)`, 
+           sowing_date = `sowing date T°31Cday/22Cnight`, 
+           harvest_date = `biomass harvested`) %>% 
+    filter(genotype == "ME034V-1", 
+           temp == "31/22", 
+           light == 430, 
+           !is.na(roots_DW_mg)) %>% 
+    mutate_at(vars(panicle_DW_mg:roots_DW_mg), convert_biomass) %>% 
+    rename_at(vars(panicle_DW_mg:roots_DW_mg), funs(stringr::str_replace(., "DW_mg", "Mgha"))) %>% 
+    mutate(days_grown = harvest_date - sowing_date) %>% 
+    left_join(., thermal_times, by = c("days_grown" = "DayofYear")) %>% 
+    select(ThermalT, Stem = stem_Mgha, Leaf = leaf_Mgha, Root = roots_Mgha, 
+           Grain = panicle_Mgha) %>% 
+    mutate(Stem = Stem + Grain, 
+           Grain = rep(0, nrow(.)), 
+           Rhizome = rep(0, nrow(.)))
+  write.csv(biomass, "high_light_inputs/biomass.csv", row.names = FALSE)
+}
+
+biomass <- read.csv("high_light_inputs/biomass.csv")
 ```
 
 ### Compare BioCro biomass estimates with measurements
