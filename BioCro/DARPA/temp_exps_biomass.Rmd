@@ -333,7 +333,8 @@ sa_df3 <- sa_df2 %>%
     mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
            units = PEcAn.utils::trait.lookup(trait)$units, 
            coef.vars = coef.vars * 100, 
-           sd = sqrt(variances))
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_biomass)
 rm(sensitivity.results)
 
 fontsize = list(title = 18, axis = 14)
@@ -367,7 +368,7 @@ el <- ggplot(data = sa_df3) +
 vd <- ggplot(data = sa_df3) +
   geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle("Variance Explained (SD Units)") +
+  ggtitle("Variance Explained (kg/m2)") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
   scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
 
@@ -380,11 +381,13 @@ load("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TVeg
 
 sa_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
 sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), data.frame(sa_df1))
+convert_transp_sd <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/d")
 sa_df3 <- sa_df2 %>% 
     mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
            units = PEcAn.utils::trait.lookup(trait)$units, 
            coef.vars = coef.vars * 100, 
-           sd = sqrt(variances))
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_transp_sd)
 rm(sensitivity.results)
 
 fontsize = list(title = 18, axis = 14)
@@ -418,7 +421,7 @@ el <- ggplot(data = sa_df3) +
 vd <- ggplot(data = sa_df3) +
   geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle("Variance Explained (SD Units)") +
+  ggtitle("Variance Explained (kg/m2/d)") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
   scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
 
