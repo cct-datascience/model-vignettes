@@ -323,9 +323,9 @@ Plot biomass and transpiration together.
 gridExtra::grid.arrange(plot_daily_biomass, plot_daily_transp, ncol = 1)
 ```
 
-Sensitivity analysis and variance decomposition plots for high night temperature results. 
+Sensitivity analysis and variance decomposition plots for high night temperature biomass results. 
 ```{r}
-load("temp_exps_results/temp_exps_results1/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+load("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
 
 sa_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
 sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), data.frame(sa_df1))
@@ -368,9 +368,61 @@ vd <- ggplot(data = sa_df3) +
   geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   ggtitle("Variance Explained (SD Units)") +
-  geom_hline(aes(yintercept = 0), size = 0.1)
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
 
-cowplot::plot_grid(cv, el, vd, rel_widths = c(2, 1, 1))
+cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1))
+```
+
+Sensitivity analysis and variance decomposition plots for high night temperature transpiration results. 
+```{r}
+load("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TVeg.2019.2019.Rdata")
+
+sa_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), data.frame(sa_df1))
+sa_df3 <- sa_df2 %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances))
+rm(sensitivity.results)
+
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+
+cv <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+
+el <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+vd <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (SD Units)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
+
+cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1))
 ```
 
 # Section 5: Plot Three Runs
