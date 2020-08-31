@@ -255,13 +255,14 @@ biomass_meas_plot <- biomass %>%
 biomass_ests_plot <- results_test2 %>% 
   tidyr::gather(plant_part, mass, Stem:Grain) %>% 
   mutate(data = "estimates")
-biomass_plot <- bind_rows(biomass_meas_plot, biomass_ests_plot)
+biomass_plot <- bind_rows(biomass_meas_plot, biomass_ests_plot) %>%
+  mutate(mass = ud.convert(mass, "Mg/ha", "kg/m2"))
 
 ggplot() +
-  geom_point(filter(biomass_plot, data == "measurements"), mapping = aes(x = ThermalT, y = mass, color = plant_part)) +
+  #geom_point(filter(biomass_plot, data == "measurements"), mapping = aes(x = ThermalT, y = mass, color = plant_part)) +
   geom_line(filter(biomass_plot, data == "estimates"), mapping = aes(x = ThermalT, y = mass, color = plant_part)) +
   xlim(c(0, 1800)) +
-  labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") +
+  labs(x = "Thermal Time", y = "Biomass (kg/m2)", color = "Plant Part") +
   theme_classic() +
   facet_wrap(~plant_part)
 ```

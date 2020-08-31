@@ -3,7 +3,7 @@
  <run>
   <start.date>2019/01/01</start.date>
   <end.date>2019/12/01</end.date>
-  <met.path>/home/kristinariemer/pecan/models/biocro/tests/testthat/data/US-Bo1</met.path>
+  <met.path>/home/kristinariemer/model-vignettes/BioCro/DARPA/high_light_inputs/weather</met.path>
   <soil.file></soil.file>
  </run>
  <location>
