@@ -161,7 +161,9 @@ upload_cc <- all_parameters %>%
                            "-", str_sub(File, -6, -5))), 
          treatment = case_when(TR == "low night temp low light" ~ "regular night temperature", 
                                TR == "high night temp low light" ~ "high night temperature", 
-                               TR == "low night temp high light" ~ "high light")) %>% 
+                               TR == "low night temp high light" ~ "high light"), 
+         Value = ud.convert(Value, "mol/m2/s", "umol/m2/s"), 
+         SE = ud.convert(SE, "mol/m2/s", "umol/m2/s")) %>% 
   select(-File, -genotype, -TR, -rep, -method, -New_Value, -SE.1, -SD) %>% 
   spread(trait, Value) %>%
   rename(local_datetime = date, 
