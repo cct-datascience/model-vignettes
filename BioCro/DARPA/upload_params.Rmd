@@ -31,7 +31,7 @@ Clean up data to have the final columns:
 5. `leafT`: leaf temperature, which is required by BETYdb
 ```{r}
 upload_parameters <- all_parameters %>% 
-  mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/edit#gid=967233489")) %>% 
+  mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/#gid=967233489")) %>% 
   filter(genotype == "ME034", 
          TR %in% c("low night temp low light", 
                    "high night temp low light", 
@@ -150,7 +150,7 @@ Has most of the same columns as the first set of parameters: `notes`, `local_dat
 
 ```{r}
 upload_cc <- all_parameters %>% 
-  mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/edit#gid=967233489")) %>% 
+  mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/#gid=967233489")) %>% 
   filter(genotype == "ME034", 
          trait == "g0BB", 
          TR %in% c("low night temp low light", 
