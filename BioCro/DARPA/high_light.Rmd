@@ -19,7 +19,7 @@ weather_init <- data.frame(year = rep(2019, 8760),
                                       doy = rep(1:365, each = 24), 
                                       hour = rep(seq(0, 23), 365), 
                                       SolarR = rep(c(rep(0, each = 8), rep(936, each = 12), rep(0, each = 4)), times = 365),
-                                      Temp = rep(31, times = 365 * 24), 
+                                      Temp = rep(c(rep(22, each = 8), rep(31, each = 12), rep(22, each = 4)), times = 365),
                                       RH = rep(55.5 / 100,  times = 365 * 24), 
                                       WS = rep(0, times = 365 * 24), 
                                       precip = rep(c(0.000462963, rep(0, 23)), 365))
@@ -49,8 +49,7 @@ library(ggplot2)
 load('high_light_results/out/SA-median/biocro_output.RData')
 timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
-
-load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+load("high_light_results/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
 convert_biomass <- function(x) x / 0.4
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X100) %>% 
