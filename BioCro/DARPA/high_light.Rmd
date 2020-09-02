@@ -7,6 +7,79 @@ urlcolor: blue
 
 ### Description of treatment and data 
 
+
+### Initial run of BioCro for biomass estimates
+
+This is based off of the working run for the high night temperature low light treatment, which is run 3 in [temp_exps_biomass.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/temp_exps_biomass.Rmd). 
+
+The weather data are created below, currently for the high night temperature condition. 
+
+```{r}
+weather_init <- data.frame(year = rep(2019, 8760), 
+                                      doy = rep(1:365, each = 24), 
+                                      hour = rep(seq(0, 23), 365), 
+                                      SolarR = rep(c(rep(0, each = 8), rep(936, each = 12), rep(0, each = 4)), times = 365),
+                                      Temp = rep(31, times = 365 * 24), 
+                                      RH = rep(55.5 / 100,  times = 365 * 24), 
+                                      WS = rep(0, times = 365 * 24), 
+                                      precip = rep(c(0.000462963, rep(0, 23)), 365))
+
+write.csv(weather_init, "high_light_inputs/weather_init.2019.csv", row.names = FALSE)
+```
+
+Run Pecan workflow script (only if results don't already exist) with pecan and constants xmls for input. 
+
+```{bash}
+if [ ! -f high_light_results/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then 
+  high_light_inputs/workflow_init.R high_light_inputs/config_init.xml
+else
+  echo "high light run done"
+fi
+```
+
+Plot daily biomass estimates from the high light treatment. 
+
+```{r}
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+load('high_light_results/out/SA-median/biocro_output.RData')
+timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
+rm(biocro_result)
+
+load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+convert_biomass <- function(x) x / 0.4
+daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
+  gather(ensemble, biomass, X1:X100) %>% 
+  mutate_at(vars(biomass), convert_biomass) %>% 
+  filter(hour == 12) %>% 
+  group_by(day) %>% 
+  summarise(mean = mean(biomass, na.rm = TRUE), 
+            median = median(biomass, na.rm = TRUE), 
+            sd = sd(biomass, na.rm = TRUE), 
+            lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
+rm(ensemble.ts)
+
+plot_daily_biomass <- ggplot(data = daily_biomass) + 
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
+  xlim(x = c(0, 50)) +
+  xlab("") + 
+  ylab("Total Biomass (kg/m2)") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(), 
+        plot.margin=unit(c(1, 1, 0, 1), "cm"))
+plot_daily_biomass
+```
+
 ### Calculate biomass coefficients
 
 The coefficients are the amount of carbon going to each plant part (root, stem, leaf, rhizome, grain) at each stage. These are determined using biomass data and are input to BioCro. 
@@ -14,7 +87,7 @@ The coefficients are the amount of carbon going to each plant part (root, stem, 
 #### Create chamber weather data frame
 
 This weather data file approximates the conditions in the chamber, which are recorded in the "Environmental_data_chambers_5th_Biomass" tab of [manual-measurements-Darpa_setaria_chambers_experiments.xlsx](https://github.com/az-digitalag/model-vignettes-data/blob/master/manual-measurements-Darpa_setaria_chambers_experiments.xlsx). 
-```{r}
+```{r, eval=FALSE}
 if (!file.exists("high_light_inputs/weather.csv")) {
   weather <- data.frame(year = rep(2019, 8760), 
                         doy = rep(1:365, each = 24), 
@@ -35,7 +108,7 @@ weather <- read.csv("high_light_inputs/weather.csv")
 
 Biomass data is isolated to only the desired experimental conditions, converted to the correct units for BioCro, thermal times are calculated, and grain biomass are added to the stem portion. 
 
-```{r}
+```{r, eval=FALSE}
 library(readxl)
 library(dplyr)
 library(udunits2)
@@ -90,7 +163,7 @@ biomass <- read.csv("high_light_inputs/biomass.csv")
 
 config.xml has mean parameter values from database for high light treatment for SLA, Vcmax, leaf respiration rate, and stomatal slope; set tp values to equal increments up until last two which use thermal times from data
 
-```{r}
+```{r, eval=FALSE}
 library(BioCro)
 
 config <- PEcAn.BIOCRO::read.biocro.config("high_light_inputs/config.xml")
@@ -172,7 +245,7 @@ rhizomeParms_check <- rep(0, 6)
 opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
 ```
 
-```{r}
+```{r, eval=FALSE}
 library(DEoptim)
 
 thermaltimevals <- c(config$pft$phenoParms$tp1, config$pft$phenoParms$tp2, 
@@ -183,7 +256,7 @@ rhizomevals <- rep(0, 6)
 opt_results <- DEoptim(fn = opfn, lower = c(rep(0, 2), rep(0.6, 4), 0.3, 0.1, rep(0, 11)), upper = c(rep(1, 8), rep(0.1, 4), rep(1, 7)), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 5))
 ```
 
-```{r}
+```{r, eval=FALSE}
 library(ggplot2)
 
 parms_results <- as.vector(opt_results$optim$bestmem)
