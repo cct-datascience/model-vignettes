@@ -45,13 +45,15 @@ library(data.table)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(readxl)
+library(udunits2)
 
 load('high_light_results/out/SA-median/biocro_output.RData')
 timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 load("high_light_results/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
 convert_biomass <- function(x) x / 0.4
-daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
+daily_biomass_estimates <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X100) %>% 
   mutate_at(vars(biomass), convert_biomass) %>% 
   filter(hour == 12) %>% 
@@ -65,17 +67,38 @@ daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>%
             ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
 rm(ensemble.ts)
 
-plot_daily_biomass <- ggplot(data = daily_biomass) + 
+biomass_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+biomass_tabs <- excel_sheets(biomass_path)
+area_cm2 <- 64
+area_ha <- ud.convert(area_cm2, "cm2", "ha")
+biomass_measurements <- read_excel(biomass_path, biomass_tabs[7]) %>% 
+      rename(temperature...C..day.night = 6, 
+             light.intensity = 7, 
+             sowing.date = 8, 
+             biomass.harvested = 11, 
+             panicles.DW..mg. = 17, 
+             stemDW.mg. = 18,
+             leaf.DW.mg. = 19, 
+             roots.DW..mg. = 20) %>% 
+  filter(genotype == "ME034V-1", 
+         temperature...C..day.night == "31/22", 
+         light.intensity == 430, 
+         sample_for == "biomass", 
+         !is.na(roots.DW..mg.)) %>% 
+  mutate(days_grown = biomass.harvested - sowing.date, 
+         total_biomass_mg = panicles.DW..mg. + stemDW.mg. + leaf.DW.mg. + roots.DW..mg., 
+         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
+         total_biomass_kgm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "kg/m2"))
+
+plot_daily_biomass <- ggplot(data = daily_biomass_estimates) + 
   geom_line(aes(day, y = median)) +
   geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
   geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
-  xlim(x = c(0, 50)) +
-  xlab("") + 
+  geom_point(data = biomass_measurements, aes(x = days_grown, y = total_biomass_kgm2)) +
+  xlim(x = c(0, 65)) +
+  xlab("Day") + 
   ylab("Total Biomass (kg/m2)") +
-  theme_classic() +
-  theme(axis.text.x = element_blank(), 
-        axis.ticks.x = element_blank(), 
-        plot.margin=unit(c(1, 1, 0, 1), "cm"))
+  theme_classic() 
 plot_daily_biomass
 ```
 
@@ -108,10 +131,6 @@ weather <- read.csv("high_light_inputs/weather.csv")
 Biomass data is isolated to only the desired experimental conditions, converted to the correct units for BioCro, thermal times are calculated, and grain biomass are added to the stem portion. 
 
 ```{r, eval=FALSE}
-library(readxl)
-library(dplyr)
-library(udunits2)
-
 library(BioCro)
 if(packageVersion(pkg = 'BioCro') >= 1.0){
   warning("need to use BioCro v0.9x")
