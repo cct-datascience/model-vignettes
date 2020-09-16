@@ -60,8 +60,7 @@ library(PEcAn.all)
 
     ## The following objects are masked from 'package:PEcAn.utils':
     ## 
-    ##     get.ensemble.samples, read.ensemble.output,
-    ##     write.ensemble.configs
+    ##     get.ensemble.samples, read.ensemble.output, write.ensemble.configs
 
     ## Loading required package: PEcAn.data.atmosphere
 
@@ -98,7 +97,7 @@ library(PEcAn.all)
     ## ##
     ## ## Markov Chain Monte Carlo Package (MCMCpack)
 
-    ## ## Copyright (C) 2003-2019 Andrew D. Martin, Kevin M. Quinn, and Jong Hee Park
+    ## ## Copyright (C) 2003-2020 Andrew D. Martin, Kevin M. Quinn, and Jong Hee Park
 
     ## ##
     ## ## Support provided by the U.S. National Science Foundation
@@ -147,6 +146,31 @@ library(dplyr)
 library(ncdf.tools)
 library(ggplot2)
 library(maps)
+library(speciesgeocodeR)
+```
+
+    ## Loading required package: sp
+
+``` r
+library(rgdal)
+```
+
+    ## rgdal: version: 1.4-4, (SVN revision 833)
+    ##  Geospatial Data Abstraction Library extensions to R successfully loaded
+    ##  Loaded GDAL runtime: GDAL 2.1.3, released 2017/20/01
+    ##  Path to GDAL shared files: /Library/Frameworks/R.framework/Versions/3.6/Resources/library/sf/gdal
+    ##  GDAL binary built with GEOS: FALSE 
+    ##  Loaded PROJ.4 runtime: Rel. 4.9.3, 15 August 2016, [PJ_VERSION: 493]
+    ##  Path to PROJ.4 shared files: /Library/Frameworks/R.framework/Versions/3.6/Resources/library/sf/proj
+    ##  Linking to sp version: 1.3-1
+
+``` r
+library(maptools)
+```
+
+    ## Checking rgeos availability: TRUE
+
+``` r
 library(gganimate)
 ```
 
@@ -177,8 +201,8 @@ data are from [the harmonized world soil
 database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/).
 
 ``` r
-metfile <- "biocro_regional_darpa_files/champaign.nc"
-met_champaign <- nc_open(metfile)
+metfile <- "biocro_regional_darpa_files/chiruss.nc"
+met_chiruss <- nc_open(metfile)
 soil_nc <- nc_open("biocro_regional_darpa_files/hwsd.nc")
 ```
 
@@ -192,26 +216,19 @@ with one row per hour for the time range of the weather dataset
 
 ``` r
 # Get all locations
-lat <- ncvar_get(met_champaign, "latitude")
-lon <- ncvar_get(met_champaign, "longitude")
+lat <- ncvar_get(met_chiruss, "latitude")
+lon <- ncvar_get(met_chiruss, "longitude")
 latlon <- expand.grid(lat = lat, lon = lon)
 
 # Get met conversion inputs that apply across all locations
-time_vec <- ncvar_get(met_champaign, "time")
-time_origin1 <- ncatt_get(met_champaign, "time", "units")
+time_vec <- ncvar_get(met_chiruss, "time")
+time_origin1 <- ncatt_get(met_chiruss, "time", "units")
 time_origin2 <- gsub( ".*(\\d{4}-\\d{2}-\\d{2}).*", "\\1", time_origin1$value)
 start_date <- as.Date(time_origin2) + time_vec[1]
 end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1
 
 # Convert met from Pecan to BioCro format for all locations
 dir.create("biocro_regional_darpa_files/biocro_met_by_location/")
-```
-
-    ## Warning in dir.create("biocro_regional_darpa_files/
-    ## biocro_met_by_location/"): 'biocro_regional_darpa_files/
-    ## biocro_met_by_location' already exists
-
-``` r
 met_nc <- ncdf4::nc_open(metfile)
 point <- 1
 biocro_met_locations <- c()
@@ -258,11 +275,7 @@ biocro_met_plot_year <- biocro_met_plot %>%
 ggplot(biocro_met_plot_year, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
   geom_line() +
   facet_wrap(~weather_var, scales = "free_y")
-```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
-
-``` r
 biocro_met_plot_day <- biocro_met_plot %>% 
   filter(date == as.Date("1979-06-01")) %>% 
   select(datetime, latitudelongitude, solar:precip) %>% 
@@ -273,24 +286,15 @@ ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitud
   facet_wrap(~weather_var, scales = "free_y")
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
-
 ## Run BioCro on each location
 
 The BioCro model is then run on weather and soil data for each of the
 locations, using *Setaria* input data. This produces hourly, daily, and
 yearly estimates for biomass, transpiration, etc. for the time range we
-specified in the config file. We are using only the daily
-    values.
+specified in the config file. We are using only the daily values.
 
 ``` r
 dir.create("biocro_regional_darpa_files/results_by_location/")
-```
-
-    ## Warning in dir.create("biocro_regional_darpa_files/results_by_location/"):
-    ## 'biocro_regional_darpa_files/results_by_location' already exists
-
-``` r
 biocro_results <- c()
 for(point in 1:nrow(latlon)){
   biocro_met_path <- paste0("biocro_regional_darpa_files/biocro_met_by_location/biocromet-", 
@@ -309,51 +313,14 @@ for(point in 1:nrow(latlon)){
 }
 ```
 
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-    ## [1] 6
-
 ## Plot estimated biomass
 
 The results for total biomass (the sum of stem, leaf, grain, rhizome,
-and root biomasses) are then visualized. The code below plots these
-values across the 18 locations on a map of the state of Illinois, and
-then runs through these plots for each day of the year as a .gif.
+and root biomasses) are then
+visualized.
 
 ``` r
+biocro_results <- read.csv("biocro_regional_darpa_files/chiruss_results/all_biocro_results.csv")
 biocro_results <- biocro_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
@@ -364,18 +331,86 @@ ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = 
   theme(legend.position = "none")
 ```
 
+    ## Warning: Removed 364 rows containing missing values (geom_path).
+
 ![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
+This map shows where the locations are in the two countries
+
 ``` r
-background_map <- map_data("state") %>% 
-  filter(region == "illinois")
+overall_map <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia")
+
+ggplot() +
+  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = biocro_results, aes(x = lon, y = lat), fill = "red") +
+  coord_quickmap()
+```
+
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+This map shows the locations closer up with the nearby ecoregions
+plotted in various colors.
+
+``` r
+ecoregions_background <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia") 
+
+ecoregions <- readOGR(file.path("biocro_regional_darpa_files", 
+                                                "WWF_ecoregions", "official", 
+                                                "wwf_terr_ecos.shp"))
+```
+
+    ## OGR data source with driver: ESRI Shapefile 
+    ## Source: "/Users/kristinariemer/Dropbox/Documents/UofA/Projects/Group/model-vignettes/BioCro/DARPA/biocro_regional_darpa_files/WWF_ecoregions/official/wwf_terr_ecos.shp", layer: "wwf_terr_ecos"
+    ## with 14458 features
+    ## It has 21 fields
+
+``` r
+ecoregions@data$id <- rownames(ecoregions@data)
+ecoregions_points <- fortify(ecoregions, region = "id")
+```
+
+    ## Warning in RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid"): Ring Self-
+    ## intersection at or near point -53.266666579999999 2.4331516999999998
+
+    ## SpP is invalid
+
+    ## Warning in rgeos::gUnaryUnion(spgeom = SpP, id = IDs): Invalid objects found;
+    ## consider using set_RGEOS_CheckValidity(2L)
+
+``` r
+ecoregions_df <- plyr::join(ecoregions_points, ecoregions@data, by = "id")
+ecoregions_df_chiruss <- ecoregions_df %>% 
+   filter(lat > 20 & lat < 80,
+          long > 60 & long < 130)
+
+ggplot() +
+  geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, fill = ECO_NAME)) +
+  geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_raster(data = biocro_results, aes(x = lon, y = lat), fill = "red") +
+  coord_cartesian(xlim = c(mean(biocro_results$lon) - 20, mean(biocro_results$lon) + 20), 
+                  ylim = c(min(biocro_results$lat) - 5, max(biocro_results$lat) + 5)) +
+  theme(legend.position = "none")
+```
+
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+The final map plots estimated biomass values for the 160 locations on
+this zoomed in map of east Asia, running through each day’s values.
+
+``` r
+gif_background <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia")
 
 colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 biomass_animation <- ggplot() +
-  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = biocro_results, aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
+    coord_cartesian(xlim = c(mean(biocro_results$lon) - 20, mean(biocro_results$lon) + 20), 
+                  ylim = c(min(biocro_results$lat) - 5, max(biocro_results$lat) + 5)) +
   scale_fill_gradientn(colors = colfunc(10)) +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
@@ -383,9 +418,9 @@ biomass_animation <- ggplot() +
 animate(biomass_animation, fps = 100)
 ```
 
-![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-7-1.gif)<!-- -->
+![](biocro_regional_darpa_files/figure-gfm/unnamed-chunk-10-1.gif)<!-- -->
 
 ``` r
-anim_save("biomass_animation_champaign.gif", animation = biomass_animation, 
+anim_save("biomass_animation_chiruss.gif", animation = biomass_animation, 
           path = "biocro_regional_darpa_files/", fps = 100)
 ```
