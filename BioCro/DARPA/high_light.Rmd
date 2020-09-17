@@ -94,7 +94,7 @@ plot_daily_biomass <- ggplot(data = daily_biomass_estimates) +
   geom_line(aes(day, y = median)) +
   geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
   geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
-  geom_point(data = biomass_measurements, aes(x = days_grown, y = total_biomass_kgm2)) +
+  #geom_point(data = biomass_measurements, aes(x = days_grown, y = total_biomass_kgm2)) +
   xlim(x = c(0, 65)) +
   xlab("") + 
   ylab("Total Biomass (kg/m2)") +
@@ -143,7 +143,6 @@ plot_daily_transp <- ggplot(data = daily_transp) +
   xlab("Day of Experiment") + 
   ylab("Transpiration (kg/m2/day)") +
   theme_classic() + 
-  scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +
   theme(plot.margin=unit(c(-0.5, 1, 1, 1), "cm"))
 ```
 
@@ -151,6 +150,101 @@ Plot biomass and transpiration together.
 
 ```{r}
 gridExtra::grid.arrange(plot_daily_biomass, plot_daily_transp, ncol = 1)
+```
+
+Sensitivity analysis and variance decomposition plots for high light biomass results. 
+
+```{r}
+load("high_light_results/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+sa_df1_biomass <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+sa_df2_biomass <- data.frame(trait = names(sa_df1_biomass$coef.vars), data.frame(sa_df1_biomass))
+sa_df3_biomass <- sa_df2_biomass %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_biomass)
+rm(sensitivity.results)
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+cv_biomass <- ggplot(data = sa_df3_biomass) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+el_biomass <- ggplot(data = sa_df3_biomass) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+vd_biomass <- ggplot(data = sa_df3_biomass) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (kg/m2)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3_biomass$sd, n = 3))
+cowplot::plot_grid(cv_biomass, el_biomass, vd_biomass, nrow = 1, rel_widths = c(2, 1, 1))
+```
+
+Sensitivity analysis and variance decomposition plots for high light transpiration results. 
+
+```{r}
+load("high_light_results/sensitivity.results.NOENSEMBLEID.TVeg.2019.2019.Rdata")
+sa_df1_transp <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+sa_df2_transp <- data.frame(trait = names(sa_df1_transp$coef.vars), data.frame(sa_df1_transp))
+convert_transp_sd <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/d")
+sa_df3_transp <- sa_df2_transp %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_transp_sd)
+rm(sensitivity.results)
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+cv_transp <- ggplot(data = sa_df3_transp) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+el_transp <- ggplot(data = sa_df3_transp) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+vd_transp <- ggplot(data = sa_df3_transp) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (kg/m2/d)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3_transp$sd, n = 3))
+cowplot::plot_grid(cv_transp, el_transp, vd_transp, nrow = 1, rel_widths = c(2, 1, 1))
 ```
 
 ### Calculate biomass coefficients
