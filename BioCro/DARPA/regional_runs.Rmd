@@ -74,7 +74,7 @@ for(point in 1:nrow(latlon)){
            longitude = latlon$lon[point])
   biocro_met_locations <- rbind(biocro_met_locations, biocro_met_location)
   biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
-                            latlon$lat[point], "-", latlon$lon[point], ".2010.csv")
+                            latlon$lat[point], "-", latlon$lon[point], ".2019.csv")
   write.csv(biocro_met, biocro_met_path, row.names = FALSE)
   print(point)
 }

@@ -12,13 +12,13 @@
   <type>
    <photosynthesis>C4</photosynthesis>
    <genus>Setaria</genus>
-   <name>SetariaWT</name>
+   <name>SetariaWT_ME034</name>
   </type>
   <canopyControl>
-   <Sp>4.38464283420171</Sp>
+   <Sp>4.98242010394736</Sp>
    <SpD>0</SpD>
    <nlayers>10</nlayers>
-   <kd>0.469872226054381</kd>
+   <kd>0.466203354319699</kd>
    <chi.l>1</chi.l>
    <mResp>0.02,0.03</mResp>
    <heightFactor>3</heightFactor>
@@ -26,23 +26,23 @@
    <eteq>0</eteq>
   </canopyControl>
   <iPlantControl>
-   <iRhizome>0</iRhizome>
-   <iStem>0.1</iStem>
-   <iLeaf>0.1</iLeaf>
-   <iRoot>0.1</iRoot>
-   <ifrRhizome>0</ifrRhizome>
+   <iRhizome>0.001</iRhizome>
+   <iStem>0.001</iStem>
+   <iLeaf>0.001</iLeaf>
+   <iRoot>0.001</iRoot>
+   <ifrRhizome>0.01</ifrRhizome>
    <ifrStem>0.01</ifrStem>
   </iPlantControl>
   <photoParms>
-   <vmax>26.2870756154165</vmax>
+   <vmax>17.3889789505865</vmax>
    <alpha>0.04</alpha>
    <kparm>0.7</kparm>
    <theta>0.83</theta>
    <beta>0.93</beta>
-   <Rd>1.57743471783096</Rd>
-   <Catm>400</Catm>
-   <b0>0.0275018920965466</b0>
-   <b1>4.49185801992673</b1>
+   <Rd>1.5457742267877</Rd>
+   <Catm>500</Catm>
+   <b0>0.0384651323890691</b0>
+   <b1>3.68612882654268</b1>
    <ws>1</ws>
    <UPPERTEMP>37.5</UPPERTEMP>
    <LOWERTEMP>3</LOWERTEMP>
@@ -76,57 +76,37 @@
    <rsdf>0.44</rsdf>
   </soilControl>
   <phenoParms>
-   <tp1>562</tp1>
-   <tp2>1312</tp2>
-   <tp3>2063</tp3>
-   <tp4>2676</tp4>
-   <tp5>3211</tp5>
-   <tp6>7000</tp6>
-   <kStem1>0.37</kStem1>
-   <kLeaf1>0.33</kLeaf1>
-   <kRoot1>0.3</kRoot1>
-   <kRhizome1>0</kRhizome1>
-   <kStem1>0.37</kStem1>
-   <kLeaf1>0.33</kLeaf1>
-   <kRoot1>0.3</kRoot1>
-   <kRhizome1>0</kRhizome1>
-   <kStem1>0.37</kStem1>
-   <kLeaf1>0.33</kLeaf1>
-   <kRoot1>0.3</kRoot1>
-   <kRhizome1>0</kRhizome1>
-   <kStem1>0.37</kStem1>
-   <kLeaf1>0.33</kLeaf1>
-   <kRoot1>0.3</kRoot1>
-   <kRhizome1>0</kRhizome1>
-   <kStem1>0.37</kStem1>
-   <kLeaf1>0.33</kLeaf1>
-   <kRoot1>0.3</kRoot1>
-   <kRhizome1>0</kRhizome1>
-   <kStem1>0.37</kStem1>
-   <kLeaf1>0.33</kLeaf1>
-   <kRoot1>0.3</kRoot1>
-   <kRhizome1>0</kRhizome1>
-<!--   <kStem2>0.85</kStem2>
-   <kLeaf2>0.14</kLeaf2>
-   <kRoot2>0.01</kRoot2>
-   <kRhizome2>0</kRhizome2>
-   <kStem3>0.63</kStem3>
-   <kLeaf3>0.01</kLeaf3>
-   <kRoot3>0.01</kRoot3>
-   <kRhizome3>0.35</kRhizome3>
-   <kStem4>0.63</kStem4>
-   <kLeaf4>0.01</kLeaf4>
-   <kRoot4>0.01</kRoot4>
-   <kRhizome4>0.35</kRhizome4>
-   <kStem5>0.63</kStem5>
-   <kLeaf5>0.01</kLeaf5>
-   <kRoot5>0.01</kRoot5>
-   <kRhizome5>0.35</kRhizome5>
-   <kStem6>0.63</kStem6>
-   <kLeaf6>0.01</kLeaf6>
-   <kRoot6>0.01</kRoot6>
-   <kRhizome6>0.35</kRhizome6> -->
-   <kGrain6>0</kGrain6>
+   <tp1>150</tp1>
+   <tp2>300</tp2>
+   <tp3>450</tp3>
+   <tp4>600</tp4>
+   <tp5>750</tp5>
+   <tp6>900</tp6>
+   <kStem1>0.07797131</kStem1>
+   <kLeaf1>0.4574688</kLeaf1>
+   <kRoot1>0.4645599</kRoot1>
+   <kRhizome1>0.00000001</kRhizome1>
+   <kStem2>0.3682341</kStem2>
+   <kLeaf2>0.3520679</kLeaf2>
+   <kRoot2>0.279698</kRoot2>
+   <kRhizome2>0.00000001</kRhizome2>
+   <kStem3>0.2998348</kStem3>
+   <kLeaf3>0.6848535</kLeaf3>
+   <kRoot3>0.01531178</kRoot3>
+   <kRhizome3>0.00000001</kRhizome3>
+   <kStem4>0.669772</kStem4>
+   <kLeaf4>0.2855325</kLeaf4>
+   <kRoot4>0.04469549</kRoot4>
+   <kRhizome4>0.00000001</kRhizome4>
+   <kStem5>0.1630056</kStem5>
+   <kLeaf5>0.8037141</kLeaf5>
+   <kRoot5>0.0332803</kRoot5>
+   <kRhizome5>0.00000001</kRhizome5>
+   <kStem6>0.7787245</kStem6>
+   <kLeaf6>0.02861919</kLeaf6>
+   <kRoot6>0.1399813</kRoot6>
+   <kRhizome6>0.00000001</kRhizome6>
+   <kGrain6>0.05267502</kGrain6>
   </phenoParms>
  </pft>
 </config>
