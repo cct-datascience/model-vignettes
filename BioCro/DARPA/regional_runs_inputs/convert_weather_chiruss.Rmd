@@ -136,3 +136,15 @@ ggplot() +
   geom_raster(data = spatial_met_plot, aes(x = longitude, y = latitude, fill = Temp)) +
   coord_quickmap()
 ```
+
+## Subset ecoregions
+
+Subset ecoregions data appropriate for this weather data subset. 
+
+```{r}
+ecoregions_df <- read.csv("ecoregions/ecoregions.csv")
+ecoregions_df_chiruss <- ecoregions_df %>% 
+   filter(lat > 20 & lat < 80,
+          long > 60 & long < 130)
+write.csv(ecoregions_df_chiruss, "ecoregions/eocregions_chiruss.csv")
+```

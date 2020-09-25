@@ -14,7 +14,6 @@ library(PEcAn.BIOCRO)
 library(dplyr)
 library(ggplot2)
 library(maps)
-library(rgdal)
 library(maptools)
 library(gganimate)
 ```
@@ -80,19 +79,7 @@ This map shows where the locations are in the two countries
 
 This map shows the locations closer up with the nearby ecoregions plotted in various colors. 
 ```{r}
-if (!file.exists("regional_runs_inputs/ecoregions_chiruss.csv")) {
-  ecoregions <- readOGR(file.path("regional_runs_inputs", 
-                                                "WWF_ecoregions", "official", 
-                                                "wwf_terr_ecos.shp"))
-  ecoregions@data$id <- rownames(ecoregions@data)
-  ecoregions_points <- broom::tidy(ecoregions)
-  ecoregions_df <- plyr::join(ecoregions_points, ecoregions@data, by = "id")
-  ecoregions_df_chiruss <- ecoregions_df %>% 
-   filter(lat > 20 & lat < 80,
-          long > 60 & long < 130)
-  write.csv(ecoregions_df, "regional_runs_inputs/ecoregions_chiruss.csv")
-}
-ecoregions_df_chiruss <- read.csv("regional_runs_inputs/ecoregions_chiruss.csv")
+ecoregions_df_chiruss <- read.csv("regional_runs_inputs/ecoregions/eocregions_chiruss.csv")
 
 ecoregions_background <- map_data("world") %>% 
   filter(region == "China" | region == "Russia") 
