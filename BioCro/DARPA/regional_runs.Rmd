@@ -8,76 +8,107 @@ urlcolor: blue
 ## Read in libraries
 
 ```{r}
+library(PEcAn.BIOCRO)
 library(ncdf4)
 library(PEcAn.all)
-library(PEcAn.BIOCRO)
 library(dplyr)
 library(ggplot2)
-library(maps)
-library(maptools)
+# library(maps)
+# library(maptools)
 library(gganimate)
 ```
 
 ## Read in input files
 
-The config file here is based on [the default *Setaria* file](https://github.com/PecanProject/pecan/blob/ac5aef2e755a8961591196428753eb184fb4c6cb/models/biocro/inst/extdata/defaults/setaria.xml) used for PEcAn. This one was generated from a run on the Sentinel project data. 
+The config file here comes from [the high light treatment BioCro run](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. 
+
 ```{r}
 config <- read.biocro.config("regional_runs_inputs/config.xml")
 ```
 
-A weather data file, such as that read in below, is required to run BioCro. The weather data comes from [the North American Regional Reanalysis (NARR)](https://www.esrl.noaa.gov/psd/data/gridded/data.narr.html) global gridded dataset provided by NOAA. We are using a subset of NARR in the eastern part of Illinois, near Chapaign. 
-
 We also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
-```{r}
 
+```{r}
 soil_nc <- nc_open("regional_runs_inputs/hwsd.nc")
 ```
 
-
-
 ## Run BioCro on each location
 
-The BioCro model is then run on weather and soil data for each of the locations, using *Setaria* input data. This produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values. 
+The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
+
+ The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_chiruss.Rmd). This data is specifically for an extended latitudinal range covering China and Russia. 
+
+The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. 
+
 ```{r}
-dir.create("regional_runs_inputs/results_by_location/")
-biocro_results <- c()
+met_chiruss <- nc_open("regional_runs_inputs/weather_subsets/chiruss.nc")
+latlon <- expand.grid(lat = ncvar_get(met_chiruss, "latitude"), 
+                      lon = ncvar_get(met_chiruss, "longitude"))
+
+dir.create("regional_runs_inputs/results")
+dir.create("regional_runs_inputs/results/high_light_chiruss")
+
+regional_run_results <- c()
 for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_chiruss/chiruss-", 
                             latlon$lat[point], "-", latlon$lon[point])
-  biocro_results_all <- run.biocro(latlon$lat[point], latlon$lon[point],
+  regional_run_result <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
                                soil.nc = soil_nc,
                                config = config)
-  biocro_results_daily <- biocro_results_all$daily
-  write.csv(biocro_results_daily, paste0("regional_runs_inputs/results_by_location/daily-", 
+  regional_run_result_daily <- regional_run_result$daily
+  write.csv(regional_run_result_daily, paste0("regional_runs_inputs/results/high_light_chiruss/daily-", 
                                          latlon$lat[point], "-", latlon$lon[point], ".csv"))
-  biocro_results_daily$lat <- latlon$lat[point]
-  biocro_results_daily$lon <- latlon$lon[point]
-  biocro_results <- rbind(biocro_results, biocro_results_daily)
+  regional_run_result_daily$lat <- latlon$lat[point]
+  regional_run_result_daily$lon <- latlon$lon[point]
+  regional_run_results <- rbind(regional_run_results, regional_run_result_daily)
   print(point)
 }
-write.csv(biocro_results, "regional_runs_inputs/all_biocro_results.csv")
+
+write.csv(regional_run_results, 
+          "regional_runs_inputs/results/high_light_chiruss_results.csv")
 ```
 
 ## Plot estimated biomass
 
-The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) are then visualized. 
+The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
+
 ```{r}
-biocro_results <- read.csv("regional_runs_inputs/all_biocro_results.csv")
-biocro_results <- biocro_results %>% 
+regional_run_results <- read.csv("regional_runs_inputs/results/high_light_chiruss_results.csv")
+regional_run_results <- regional_run_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
-         total_biomass = Stem + Leaf + Root + Rhizome + Grain)
+         total_biomass = as.numeric(Stem + Leaf + Root + Rhizome + Grain))
 
-ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
+ggplot(regional_run_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
   geom_line() +
   theme(legend.position = "none")
 ```
 
-This map shows where the locations are in the two countries
+Biomass estimates across space for two days of the year, one in the summer and one in the winter, are plotted. 
 
+```{r}
+overall_map <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia")
 
-This map shows the locations closer up with the nearby ecoregions plotted in various colors. 
+summer_day_plot <- ggplot() +
+  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = filter(regional_run_results, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
+  coord_quickmap() +
+  ggtitle("Day 200")
+
+winter_day_plot <- ggplot() +
+  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = filter(regional_run_results, doy == 350), aes(x = lon, y = lat, fill = total_biomass)) +
+  coord_quickmap() +
+  ggtitle("Day 350")
+
+cowplot::plot_grid(summer_day_plot, winter_day_plot, nrow = 1)
+```
+
+This map shows the locations closer up with the nearby ecoregions plotted in various colors for day 200. 
 ```{r}
 ecoregions_df_chiruss <- read.csv("regional_runs_inputs/ecoregions/eocregions_chiruss.csv")
 
@@ -85,15 +116,16 @@ ecoregions_background <- map_data("world") %>%
   filter(region == "China" | region == "Russia") 
 
 ggplot() +
-  geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, fill = ECO_NAME)) +
+  geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
   geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
-  geom_raster(data = biocro_results, aes(x = lon, y = lat), fill = "red") +
-  coord_cartesian(xlim = c(mean(biocro_results$lon) - 20, mean(biocro_results$lon) + 20), 
-                  ylim = c(min(biocro_results$lat) - 5, max(biocro_results$lat) + 5)) +
+  theme(legend.position = "none") +
+  geom_raster(data = filter(regional_run_results, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
+  coord_cartesian(xlim = c(mean(regional_run_results$lon) - 20, mean(regional_run_results$lon) + 20),
+                  ylim = c(min(regional_run_results$lat) - 5, max(regional_run_results$lat) + 5)) +
   theme(legend.position = "none")
 ```
 
-The final map plots estimated biomass values for the `r length(unique(biocro_results$latlon))` locations on this zoomed in map of east Asia, running through each day's values. 
+The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on this zoomed in map of east Asia, running through each day's values. 
 
 ```{r}
 gif_background <- map_data("world") %>% 
@@ -103,14 +135,14 @@ colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 biomass_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = biocro_results, aes(x = lon, y = lat, fill = total_biomass)) +
-    coord_cartesian(xlim = c(mean(biocro_results$lon) - 20, mean(biocro_results$lon) + 20), 
-                  ylim = c(min(biocro_results$lat) - 5, max(biocro_results$lat) + 5)) +
+  geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = total_biomass)) +
+    coord_cartesian(xlim = c(mean(regional_run_results$lon) - 20, mean(regional_run_results$lon) + 20), 
+                  ylim = c(min(regional_run_results$lat) - 5, max(regional_run_results$lat) + 5)) +
   scale_fill_gradientn(colors = colfunc(10)) +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
 animate(biomass_animation, fps = 100)
-anim_save("biomass_animation_chiruss.gif", animation = biomass_animation, 
-          path = "regional_runs_inputs/", fps = 100)
+anim_save("high_light_chiruss.gif", animation = biomass_animation, 
+          path = "regional_runs_inputs/results/", fps = 100)
 ```
