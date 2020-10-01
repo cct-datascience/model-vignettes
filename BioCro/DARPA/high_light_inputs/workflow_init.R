@@ -93,13 +93,14 @@ if(!is.null(settings$meta.analysis)) {
 }
 
 # Add high light treatment effect to all parameter values
-load("~/model-vignettes/BioCro/DARPA/high_light_results/pft/SetariaWT_ME034/trait.mcmc.Rdata")
+trait.mcmc_name <- Sys.glob("~/model-vignettes/BioCro/DARPA/high_light_results/dbfiles/posterior/*/trait.mcmc.Rdata")
+load(trait.mcmc_name)
 for(trait_name in names(trait.mcmc)){
   for(chain in 1:4){
     trait.mcmc[[trait_name]][[chain]][,"beta.o"] <- trait.mcmc[[trait_name]][[chain]][,"beta.o"] + trait.mcmc[[trait_name]][[chain]][,"beta.trt[2]"]
   }
 }
-save(trait.mcmc, file = "~/model-vignettes/BioCro/DARPA/high_light_results/pft/SetariaWT_ME034/trait.mcmc.Rdata")
+save(trait.mcmc, file = trait.mcmc_name)
 rm(trait.mcmc)
 
 # Write model specific configs
