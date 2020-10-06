@@ -13,10 +13,10 @@ library(ncdf4)
 library(PEcAn.all)
 library(dplyr)
 library(ggplot2)
-# library(maps)
-# library(maptools)
 library(gganimate)
 ```
+
+# High Light Treatment Regional Runs
 
 ## Read in input files
 
@@ -109,6 +109,7 @@ cowplot::plot_grid(summer_day_plot, winter_day_plot, nrow = 1)
 ```
 
 This map shows the locations closer up with the nearby ecoregions plotted in various colors for day 200. 
+
 ```{r}
 ecoregions_df_chiruss <- read.csv("regional_runs_inputs/ecoregions/eocregions_chiruss.csv")
 
@@ -144,5 +145,100 @@ biomass_animation <- ggplot() +
 
 animate(biomass_animation, fps = 100)
 anim_save("high_light_chiruss.gif", animation = biomass_animation, 
+          path = "regional_runs_inputs/results/", fps = 100)
+```
+
+# Decreased Stomatal Slope Regional Runs
+
+## Read in input files
+
+This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
+
+```{r}
+config_ss <- read.biocro.config("regional_runs_inputs/config_ss.xml")
+```
+
+## Run BioCro on each location
+
+```{r}
+dir.create("regional_runs_inputs/results/high_light_ss_chiruss")
+
+regional_run_results_ss <- c()
+for(point in 1:nrow(latlon)){
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_chiruss/chiruss-", 
+                            latlon$lat[point], "-", latlon$lon[point])
+  regional_run_result_ss <- run.biocro(latlon$lat[point], latlon$lon[point],
+                               metpath = biocro_met_path,
+                               soil.nc = soil_nc,
+                               config = config_ss)
+  regional_run_result_ss_daily <- regional_run_result_ss$daily
+  write.csv(regional_run_result_ss_daily, paste0("regional_runs_inputs/results/high_light_ss_chiruss/daily-", 
+                                         latlon$lat[point], "-", latlon$lon[point], ".csv"))
+  regional_run_result_ss_daily$lat <- latlon$lat[point]
+  regional_run_result_ss_daily$lon <- latlon$lon[point]
+  regional_run_results_ss <- rbind(regional_run_results_ss, regional_run_result_ss_daily)
+  print(point)
+}
+
+write.csv(regional_run_results_ss, 
+          "regional_runs_inputs/results/high_light_ss_chiruss_results.csv")
+```
+
+## Plot estimated biomass
+
+```{r}
+regional_run_results_ss <- read.csv("regional_runs_inputs/results/high_light_ss_chiruss_results.csv")
+regional_run_results_ss <- regional_run_results_ss %>% 
+  mutate(date = as.Date(doy, "2009-12-31"), 
+         latlon = paste0(lat, lon), 
+         total_biomass = as.numeric(Stem + Leaf + Root + Rhizome + Grain))
+
+ggplot(regional_run_results_ss, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
+  geom_line() +
+  theme(legend.position = "none")
+```
+
+```{r}
+summer_day_plot_ss <- ggplot() +
+  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = filter(regional_run_results_ss, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
+  coord_quickmap() +
+  ggtitle("Day 200")
+
+winter_day_plot_ss <- ggplot() +
+  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = filter(regional_run_results_ss, doy == 350), aes(x = lon, y = lat, fill = total_biomass)) +
+  coord_quickmap() +
+  ggtitle("Day 350")
+
+cowplot::plot_grid(summer_day_plot_ss, winter_day_plot_ss, nrow = 1)
+```
+
+```{r}
+ggplot() +
+  geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
+  geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  theme(legend.position = "none") +
+  geom_raster(data = filter(regional_run_results_ss, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
+  coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 20, mean(regional_run_results_ss$lon) + 20),
+                  ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5)) +
+  theme(legend.position = "none")
+```
+
+```{r}
+biomass_animation_ss <- ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = total_biomass)) +
+    coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 20, mean(regional_run_results_ss$lon) + 20), 
+                  ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5)) +
+  scale_fill_gradientn(colors = colfunc(10)) +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+animate(biomass_animation_ss, fps = 100)
+anim_save("high_light_ss_chiruss.gif", animation = biomass_animation_ss, 
           path = "regional_runs_inputs/results/", fps = 100)
 ```
