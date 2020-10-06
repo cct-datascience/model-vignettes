@@ -15,10 +15,10 @@
    <name>SetariaWT_ME034</name>
   </type>
   <canopyControl>
-   <Sp>4.98242010394736</Sp>
+   <Sp>3.91872481947326</Sp>
    <SpD>0</SpD>
    <nlayers>10</nlayers>
-   <kd>0.466203354319699</kd>
+   <kd>0.469265367273581</kd>
    <chi.l>1</chi.l>
    <mResp>0.02,0.03</mResp>
    <heightFactor>3</heightFactor>
@@ -34,15 +34,15 @@
    <ifrStem>0.01</ifrStem>
   </iPlantControl>
   <photoParms>
-   <vmax>17.3889789505865</vmax>
+   <vmax>28.6943842337059</vmax>
    <alpha>0.04</alpha>
    <kparm>0.7</kparm>
    <theta>0.83</theta>
    <beta>0.93</beta>
-   <Rd>1.5457742267877</Rd>
+   <Rd>1.55903127012347</Rd>
    <Catm>500</Catm>
-   <b0>0.0384651323890691</b0>
-   <b1>3.68612882654268</b1>
+   <b0>0.0384218152612628</b0>
+   <b1>4.86067777084403</b1>
    <ws>1</ws>
    <UPPERTEMP>37.5</UPPERTEMP>
    <LOWERTEMP>3</LOWERTEMP>
