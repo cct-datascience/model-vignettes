@@ -242,3 +242,45 @@ animate(biomass_animation_ss, fps = 100)
 anim_save("high_light_ss_chiruss.gif", animation = biomass_animation_ss, 
           path = "regional_runs_inputs/results/", fps = 100)
 ```
+
+# Comparing Regional Runs
+
+Combining data from high light and decreased stomatal slope regional runs.
+
+```{r}
+rr <- regional_run_results %>% 
+  select(date, lat, lon, latlon, total_biomass)
+rr_ss <- regional_run_results_ss %>% 
+  select(date, latlon, total_biomass) %>% 
+  rename(total_biomass_ss = total_biomass)
+comb <- left_join(rr, rr_ss, by = c("date", "latlon")) %>% 
+  mutate(total_biomass_diff = total_biomass_ss - total_biomass)
+```
+
+Time series showing mean difference in biomass for locations, with variation in daily values shown.
+
+```{r}
+comb_by_time <- comb %>% 
+  group_by(date) %>% 
+  summarise(mean_diff = mean(total_biomass_diff, na.rm = TRUE), 
+            sd_diff = sd(total_biomass_diff, na.rm = TRUE))
+
+ggplot(comb_by_time, aes(x = date, y = mean_diff)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = mean_diff - sd_diff, ymax = mean_diff + sd_diff), alpha = 0.3)
+```
+
+Spatial plot showing mean difference in biomass for days. 
+
+```{r}
+comb_by_space <- comb %>% 
+  group_by(latlon, lat, lon) %>% 
+  summarise(mean_diff = mean(total_biomass_diff, na.rm = TRUE)) 
+
+ggplot() +
+  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = comb_by_space, aes(x = lon, y = lat, fill = mean_diff)) +
+  coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 10, mean(regional_run_results_ss$lon) + 10),
+                  ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5))
+```
