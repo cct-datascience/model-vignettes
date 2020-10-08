@@ -193,10 +193,8 @@ Clean up data to have the final columns:
 upload_parameters_gr <- all_parameters %>% 
   mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/#gid=967233489")) %>% 
   filter(genotype == "ME034", 
-         TR %in% c("greenhouse"), 
+         TR  == "greenhouse", 
          trait %in% c("vmax", "Rd", "g1M", "g1BB", "g0BB")) %>% 
-  # mutate(value = ifelse(!is.na(New_Value), New_Value, Value), 
-  #        se = ifelse(!is.na(New_Value), SE.1, SE)) %>% 
   mutate(date = ymd(paste0(str_sub(File, -4, -1), 
                            "-", match(str_sub(File, 1, 3), month.abb), 
                            "-", str_sub(File, -6, -5))), 
