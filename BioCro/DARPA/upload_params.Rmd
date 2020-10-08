@@ -210,8 +210,7 @@ upload_parameters_gr <- all_parameters %>%
          stomatal_slope.BB = g1BB,
          cuticular_cond = g0BB) %>% 
   mutate(leafT = 25, 
-         n = 9999) %>% 
-  replace(is.na(.), "")
+         n = 9999)
 ```
 
 Save cleaned parameter as a .csv file in `upload_params_data` folder in `model-vignettes/BioCro/DARPA`. 
@@ -221,6 +220,18 @@ if(!dir.exists("upload_params_data/")){
 }
 
 write.csv(upload_parameters_gr, "upload_params_data/phys_parameters_gr.csv", row.names = FALSE)
+```
+
+Split dataframe for each parameter type.
+```{r}
+vars<-colnames(upload_parameters_gr)[6:10]
+for(i in vars){
+  removecols <- setdiff(vars, i)
+  new <- subset(upload_parameters_gr, select= setdiff(colnames(upload_parameters_gr), removecols))
+  new2 <- new[complete.cases(new),]
+  write.csv(new2, paste0("upload_params_data/phys_parameters_gr_", i, ".csv"), row.names = FALSE)
+}
+
 ```
 
 Upload that new parameter data file using the [Bulk Upload](http://welsch.cyverse.org:8000/bety/bulk_upload/start_upload) in Welsch BETYdb. The following additional data, which applies across all the parameters, will have to be entered
