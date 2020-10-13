@@ -227,8 +227,12 @@ for(i in vars){
   removecols <- setdiff(vars, i)
   new <- subset(upload_parameters_gr, select= setdiff(colnames(upload_parameters_gr), removecols))
   new2 <- new[complete.cases(new),]
-  write.csv(new2, paste0("upload_params_data/phys_parameters_gr_", i, ".csv"), row.names = FALSE)
+  new3 <- if(i == "stomatal_slope.g1") {subset(new2, select = -leafT)} else {new2}
+  write.csv(new3, paste0("upload_params_data/phys_parameters_gr_", i, ".csv"), row.names = FALSE)
 }
+
+#remove leafT for stomatal_slope.g1
+
 
 ```
 
