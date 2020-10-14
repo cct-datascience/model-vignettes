@@ -66,18 +66,21 @@ if(!dir.exists("upload_params_data/")){
 write.csv(upload_parameters_ch, "upload_params_data/phys_parameters_ch.csv", row.names = FALSE)
 ```
 
-Split into a separate .csv file for each parameter type.
+Split dataframe for each parameter type and save each dataframe as a csv. 
 ```{r}
-vars<-colnames(upload_parameters_ch)[5:9]
-for(i in vars){
-  removecols <- setdiff(vars, i)
-  new <- subset(upload_parameters_ch, select= setdiff(colnames(upload_parameters_ch), removecols))
-  new2 <- new[complete.cases(new),]
-  #remove leafT for stomatal_slope.g1
-  new3 <- if(i == "stomatal_slope.g1") {subset(new2, select = -leafT)} else {new2}
-  write.csv(new3, paste0("upload_params_data/phys_parameters_ch_", i, ".csv"), row.names = FALSE)
+params <- colnames(upload_parameters_ch)[5:9]
+for(param in params){
+  removecols <- setdiff(params, param)
+  trait_df <- subset(upload_parameters_ch, 
+                     select = setdiff(colnames(upload_parameters_ch), removecols))
+  trait_df2 <- trait_df[complete.cases(trait_df),]
+  trait_df3 <- if(param == "stomatal_slope.g1") {
+    subset(trait_df2, select = -leafT)
+  } else {
+      trait_df2
+    }
+  write.csv(trait_df3, paste0("upload_params_data/phys_parameters_ch_", param, ".csv"), row.names = FALSE)
 }
-
 ```
 Upload that new parameter data file using the [Bulk Upload](http://welsch.cyverse.org:8000/bety/bulk_upload/start_upload) in Welsch BETYdb. The following additional data, which applies across all the parameters, will have to be entered
 
