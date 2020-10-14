@@ -198,7 +198,7 @@ Clean up data to have the final columns:
 1. `notes`: records which row in the Google Sheet the record came from
 2. `local_datetime`: convert date into machine readable format
 3. `treatment`: specifies record's treatment using BETYdb treatment names
-4. `Vcmax`, `leaf_respiration_rate_m2`, `stomatal_slope.g1`, `stomatal_slope.BB`: measured values of physiological parameters specified
+4. `Vcmax`, `leaf_respiration_rate_m2`, `stomatal_slope.g1`, `stomatal_slope.BB`, `cuticular_cond`: measured values of physiological parameters specified
 5. `leafT`: leaf temperature, which is required by BETYdb
 
 ```{r}
@@ -223,28 +223,21 @@ upload_parameters_gr <- all_parameters %>%
          n = 9999)
 ```
 
-Save cleaned parameter as a .csv file in `upload_params_data` folder in `model-vignettes/BioCro/DARPA`. 
+Split dataframe for each parameter type and save each dataframe as a csv. 
 ```{r}
-if(!dir.exists("upload_params_data/")){
-  dir.create("upload_params_data")
+params <- colnames(upload_parameters_gr)[5:9]
+for(param in params){
+  removecols <- setdiff(params, param)
+  trait_df <- subset(upload_parameters_gr, 
+                     select = setdiff(colnames(upload_parameters_gr), removecols))
+  trait_df2 <- trait_df[complete.cases(trait_df),]
+  trait_df3 <- if(param == "stomatal_slope.g1") {
+    subset(trait_df2, select = -leafT)
+  } else {
+      trait_df2
+    }
+  write.csv(trait_df3, paste0("upload_params_data/phys_parameters_gr_", param, ".csv"), row.names = FALSE)
 }
-
-write.csv(upload_parameters_gr, "upload_params_data/phys_parameters_gr.csv", row.names = FALSE)
-```
-
-Split into a separate .csv file for each parameter type.
-```{r}
-vars<-colnames(upload_parameters_gr)[5:9]
-for(i in vars){
-  removecols <- setdiff(vars, i)
-  new <- subset(upload_parameters_gr, select= setdiff(colnames(upload_parameters_gr), removecols))
-  new2 <- new[complete.cases(new),]
-  #remove leafT for stomatal_slope.g1
-  new3 <- if(i == "stomatal_slope.g1") {subset(new2, select = -leafT)} else {new2}
-  write.csv(new3, paste0("upload_params_data/phys_parameters_gr_", i, ".csv"), row.names = FALSE)
-}
-
-
 ```
 
 Upload that new parameter data file using the [Bulk Upload](http://welsch.cyverse.org:8000/bety/bulk_upload/start_upload) in Welsch BETYdb. The following additional data, which applies across all the parameters, will have to be entered
