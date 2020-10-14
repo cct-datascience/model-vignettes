@@ -41,23 +41,23 @@ The BioCro model is then run for each location of interest, using the config fil
 The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. 
 
 ```{r}
-met_chiruss <- nc_open("regional_runs_inputs/weather_subsets/chiruss.nc")
-latlon <- expand.grid(lat = ncvar_get(met_chiruss, "latitude"), 
-                      lon = ncvar_get(met_chiruss, "longitude"))
+met_stlew <- nc_open("regional_runs_inputs/weather_subsets/stlew.nc")
+latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
+                      lon = ncvar_get(met_stlew, "longitude"))
 
 dir.create("regional_runs_inputs/results")
-dir.create("regional_runs_inputs/results/high_light_chiruss")
+dir.create("regional_runs_inputs/results/high_light_stlew")
 
 regional_run_results <- c()
 for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_chiruss/chiruss-", 
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_stlew/stlew-", 
                             latlon$lat[point], "-", latlon$lon[point])
   regional_run_result <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
                                soil.nc = soil_nc,
                                config = config)
   regional_run_result_daily <- regional_run_result$daily
-  write.csv(regional_run_result_daily, paste0("regional_runs_inputs/results/high_light_chiruss/daily-", 
+  write.csv(regional_run_result_daily, paste0("regional_runs_inputs/results/high_light_stlew/daily-", 
                                          latlon$lat[point], "-", latlon$lon[point], ".csv"))
   regional_run_result_daily$lat <- latlon$lat[point]
   regional_run_result_daily$lon <- latlon$lon[point]
@@ -66,7 +66,7 @@ for(point in 1:nrow(latlon)){
 }
 
 write.csv(regional_run_results, 
-          "regional_runs_inputs/results/high_light_chiruss_results.csv")
+          "regional_runs_inputs/results/high_light_stlew_results.csv")
 ```
 
 ## Plot estimated biomass
@@ -74,7 +74,7 @@ write.csv(regional_run_results,
 The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
 
 ```{r}
-regional_run_results <- read.csv("regional_runs_inputs/results/high_light_chiruss_results.csv")
+regional_run_results <- read.csv("regional_runs_inputs/results/high_light_stlew_results.csv")
 regional_run_results <- regional_run_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
@@ -89,7 +89,7 @@ Biomass estimates across space for two days of the year, one in the summer and o
 
 ```{r}
 overall_map <- map_data("world") %>% 
-  filter(region == "China" | region == "Russia")
+  filter(region == "USA" & is.na(subregion))
 
 summer_day_plot <- ggplot() +
   geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
@@ -111,40 +111,42 @@ cowplot::plot_grid(summer_day_plot, winter_day_plot, nrow = 1)
 This map shows the locations closer up with the nearby ecoregions plotted in various colors for day 200. 
 
 ```{r}
-ecoregions_df_chiruss <- read.csv("regional_runs_inputs/ecoregions/eocregions_chiruss.csv")
-
-ecoregions_background <- map_data("world") %>% 
-  filter(region == "China" | region == "Russia") 
-
-ggplot() +
-  geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
-  geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
-  theme(legend.position = "none") +
-  geom_raster(data = filter(regional_run_results, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_cartesian(xlim = c(mean(regional_run_results$lon) - 20, mean(regional_run_results$lon) + 20),
-                  ylim = c(min(regional_run_results$lat) - 5, max(regional_run_results$lat) + 5)) +
-  theme(legend.position = "none")
+# ecoregions_df_chiruss <- read.csv("regional_runs_inputs/ecoregions/eocregions_chiruss.csv")
+# 
+# ecoregions_background <- map_data("world") %>% 
+#   filter(region == "China" | region == "Russia") 
+# 
+# ggplot() +
+#   geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
+#   geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+#   theme(legend.position = "none") +
+#   geom_raster(data = filter(regional_run_results, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
+#   coord_cartesian(xlim = c(mean(regional_run_results$lon) - 20, mean(regional_run_results$lon) + 20),
+#                   ylim = c(min(regional_run_results$lat) - 5, max(regional_run_results$lat) + 5)) +
+#   theme(legend.position = "none")
 ```
 
 The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on this zoomed in map of east Asia, running through each day's values. 
 
 ```{r}
 gif_background <- map_data("world") %>% 
-  filter(region == "China" | region == "Russia")
+  filter(region == "USA" & is.na(subregion))
+city_coords = data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
+
 
 colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 biomass_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = total_biomass)) +
-    coord_cartesian(xlim = c(mean(regional_run_results$lon) - 20, mean(regional_run_results$lon) + 20), 
-                  ylim = c(min(regional_run_results$lat) - 5, max(regional_run_results$lat) + 5)) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradientn(colors = colfunc(10)) +
   transition_manual(doy) +
-  ggtitle('Day: {current_frame}')
+  ggtitle('Day: {current_frame}') +
+  coord_quickmap()
 
 animate(biomass_animation, fps = 100)
-anim_save("high_light_chiruss.gif", animation = biomass_animation, 
+anim_save("high_light_stlew.gif", animation = biomass_animation, 
           path = "regional_runs_inputs/results/", fps = 100)
 ```
 
