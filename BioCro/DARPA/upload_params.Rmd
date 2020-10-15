@@ -159,38 +159,6 @@ write.csv(sla, file = "upload_params_data/sla.csv", row.names = FALSE)
 
 Upload values to Welsch BETYdb using the same method as for physiological parameters. 
 
-## Physiological parameter cuticular conductance
-
-Has most of the same columns as the first set of parameters: `notes`, `local_datetime`, `treatment`, with `cuticular_cond` for the values. 
-
-```{r}
-upload_cc <- all_parameters %>% 
-  mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/#gid=967233489")) %>% 
-  filter(genotype == "ME034", 
-         trait == "g0BB", 
-         TR %in% c("low night temp low light", 
-                   "high night temp low light", 
-                   "low night temp high light")) %>% 
-  mutate(date = ymd(paste0(str_sub(File, -4, -1), 
-                           "-", match(str_sub(File, 1, 3), month.abb), 
-                           "-", str_sub(File, -6, -5))), 
-         treatment = case_when(TR == "low night temp low light" ~ "regular night temperature", 
-                               TR == "high night temp low light" ~ "high night temperature", 
-                               TR == "low night temp high light" ~ "high light"), 
-         Value = ud.convert(Value, "mol/m2/s", "umol/m2/s"), 
-         SE = ud.convert(SE, "mol/m2/s", "umol/m2/s")) %>% 
-  select(-File, -genotype, -TR, -rep, -method, -New_Value, -SE.1, -SD) %>% 
-  spread(trait, Value) %>%
-  rename(local_datetime = date, 
-         cuticular_cond = g0BB) %>% 
-  mutate(leafT = 25, 
-         n = 9999)
-```
-
-Save cuticular conductance values as a .csv. 
-```{r}
-write.csv(upload_cc, file = "upload_params_data/cut_cond.csv", row.names = FALSE)
-```
 
 ## Greenhouse physiological parameters Vmax, Rd, and stomatal slope
 
