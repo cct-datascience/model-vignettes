@@ -36,7 +36,7 @@ soil_nc <- nc_open("regional_runs_inputs/hwsd.nc")
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
 
- The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_chiruss.Rmd). This data is specifically for an extended latitudinal range covering China and Russia. 
+ The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_stlew.Rmd). This data is specifically for an extended longitudinal range across North America that includes the city of St. Louis.  
 
 The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. 
 
@@ -126,7 +126,7 @@ This map shows the locations closer up with the nearby ecoregions plotted in var
 #   theme(legend.position = "none")
 ```
 
-The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on this zoomed in map of east Asia, running through each day's values. 
+The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
 
 ```{r}
 gif_background <- map_data("state")
