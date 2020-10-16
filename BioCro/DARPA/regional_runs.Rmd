@@ -166,18 +166,18 @@ config_ss <- read.biocro.config("regional_runs_inputs/config_ss.xml")
 ## Run BioCro on each location
 
 ```{r}
-dir.create("regional_runs_inputs/results/high_light_ss_chiruss")
+dir.create("regional_runs_inputs/results/high_light_ss_stlew")
 
 regional_run_results_ss <- c()
 for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_chiruss/chiruss-", 
+  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_stlew/stlew-", 
                             latlon$lat[point], "-", latlon$lon[point])
   regional_run_result_ss <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
                                soil.nc = soil_nc,
                                config = config_ss)
   regional_run_result_ss_daily <- regional_run_result_ss$daily
-  write.csv(regional_run_result_ss_daily, paste0("regional_runs_inputs/results/high_light_ss_chiruss/daily-", 
+  write.csv(regional_run_result_ss_daily, paste0("regional_runs_inputs/results/high_light_ss_stlew/daily-", 
                                          latlon$lat[point], "-", latlon$lon[point], ".csv"))
   regional_run_result_ss_daily$lat <- latlon$lat[point]
   regional_run_result_ss_daily$lon <- latlon$lon[point]
@@ -186,13 +186,13 @@ for(point in 1:nrow(latlon)){
 }
 
 write.csv(regional_run_results_ss, 
-          "regional_runs_inputs/results/high_light_ss_chiruss_results.csv")
+          "regional_runs_inputs/results/high_light_ss_stlew_results.csv")
 ```
 
 ## Plot estimated biomass
 
 ```{r}
-regional_run_results_ss <- read.csv("regional_runs_inputs/results/high_light_ss_chiruss_results.csv")
+regional_run_results_ss <- read.csv("regional_runs_inputs/results/high_light_ss_stlew_results.csv")
 regional_run_results_ss <- regional_run_results_ss %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
@@ -222,14 +222,14 @@ cowplot::plot_grid(summer_day_plot_ss, winter_day_plot_ss, nrow = 1)
 ```
 
 ```{r}
-ggplot() +
-  geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
-  geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
-  theme(legend.position = "none") +
-  geom_raster(data = filter(regional_run_results_ss, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 20, mean(regional_run_results_ss$lon) + 20),
-                  ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5)) +
-  theme(legend.position = "none")
+# ggplot() +
+#   geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
+#   geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+#   theme(legend.position = "none") +
+#   geom_raster(data = filter(regional_run_results_ss, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
+#   coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 20, mean(regional_run_results_ss$lon) + 20),
+#                   ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5)) +
+#   theme(legend.position = "none")
 ```
 
 ```{r}
@@ -237,8 +237,7 @@ biomass_animation_ss <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = total_biomass)) +
-    coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 20, mean(regional_run_results_ss$lon) + 20), 
-                  ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5)) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
                        midpoint = 10, 
                        breaks = seq(-100, 100, 4), 
@@ -247,10 +246,11 @@ biomass_animation_ss <- ggplot() +
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
   transition_manual(doy) +
-  ggtitle('Day: {current_frame}')
+  ggtitle('Day: {current_frame}') +
+  coord_quickmap()
 
 animate(biomass_animation_ss, fps = 100)
-anim_save("high_light_ss_chiruss.gif", animation = biomass_animation_ss, 
+anim_save("high_light_ss_stlew.gif", animation = biomass_animation_ss, 
           path = "regional_runs_inputs/results/", fps = 100)
 ```
 
@@ -291,7 +291,5 @@ comb_by_space <- comb %>%
 ggplot() +
   geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = comb_by_space, aes(x = lon, y = lat, fill = mean_diff)) +
-  coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 10, mean(regional_run_results_ss$lon) + 10),
-                  ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5))
+  geom_raster(data = comb_by_space, aes(x = lon, y = lat, fill = mean_diff))
 ```
