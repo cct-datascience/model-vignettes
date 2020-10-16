@@ -129,18 +129,21 @@ This map shows the locations closer up with the nearby ecoregions plotted in var
 The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on this zoomed in map of east Asia, running through each day's values. 
 
 ```{r}
-gif_background <- map_data("world") %>% 
-  filter(region == "USA" & is.na(subregion))
-city_coords = data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
+gif_background <- map_data("state")
+city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
 
-
-colfunc <- colorRampPalette(c("yellow", "darkgreen"))
 biomass_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = total_biomass)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradientn(colors = colfunc(10)) +
+  scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
+                       midpoint = 10, 
+                       breaks = seq(-100, 100, 4), 
+                       limits = c(0, 20)) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}') +
   coord_quickmap()
@@ -236,7 +239,13 @@ biomass_animation_ss <- ggplot() +
   geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = total_biomass)) +
     coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 20, mean(regional_run_results_ss$lon) + 20), 
                   ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5)) +
-  scale_fill_gradientn(colors = colfunc(10)) +
+  scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
+                       midpoint = 10, 
+                       breaks = seq(-100, 100, 4), 
+                       limits = c(0, 20)) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
