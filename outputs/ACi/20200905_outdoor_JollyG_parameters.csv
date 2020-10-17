@@ -1,4 +1,4 @@
-"ID","rep","trait","Value","SE","SD"
-"20200905_outdoor_JollyG","plant_1","vmax",25.6725055606776,NA,6.23129974976573
-"20200905_outdoor_JollyG","plant_2","vmax",29.9525952158358,NA,6.67162133573102
-"20200905_outdoor_JollyG","plant_3","vmax",22.0657900787715,NA,4.6737881049637
+"ID","rep","trait","Value","SE","SD","Date.run"
+"20200905_outdoor_JollyG","plant_1","vmax",25.783289728747,NA,8.16019753552983,2020-10-17
+"20200905_outdoor_JollyG","plant_2","vmax",30.0848098069863,NA,7.79500002460534,2020-10-17
+"20200905_outdoor_JollyG","plant_3","vmax",22.0511044461156,NA,4.95728226513593,2020-10-17
