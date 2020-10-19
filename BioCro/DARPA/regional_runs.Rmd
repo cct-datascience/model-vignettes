@@ -268,6 +268,25 @@ comb <- left_join(rr, rr_ss, by = c("date", "latlon")) %>%
   mutate(total_biomass_diff = total_biomass_ss - total_biomass)
 ```
 
+Comparison of time series of mean and variation of total biomass by date. 
+
+```{r}
+rr_mean <- rr %>% 
+  group_by(date) %>% 
+  summarize(mean_total_biomass = mean(total_biomass), 
+            var_total_biomass = sd(total_biomass))
+rr_ss_mean <- rr_ss %>% 
+  group_by(date) %>% 
+  summarize(mean_total_biomass = mean(total_biomass_ss), 
+            var_total_biomass = sd(total_biomass_ss))
+
+ggplot() +
+  geom_line(data = rr_mean, aes(x = date, y = mean_total_biomass)) +
+  geom_ribbon(data = rr_mean, aes(x = date, ymin = mean_total_biomass - var_total_biomass, ymax = mean_total_biomass + var_total_biomass), alpha = 0.2) +
+  geom_line(data = rr_ss_mean, aes(x = date, y = mean_total_biomass), color = "blue") +
+  geom_ribbon(data = rr_ss_mean, aes(x = date, ymin = mean_total_biomass - var_total_biomass, ymax = mean_total_biomass + var_total_biomass), alpha = 0.2, fill = "blue") +
+  theme(legend.position = "none")
+```
 Time series showing mean difference in biomass for locations, with variation in daily values shown.
 
 ```{r}
@@ -407,6 +426,26 @@ rr_ca <- regional_run_results_ca %>%
   rename(total_biomass_ca = total_biomass)
 comb <- left_join(rr, rr_ca, by = c("date", "latlon")) %>% 
   mutate(total_biomass_diff = total_biomass_ca - total_biomass)
+```
+
+Comparison of time series of mean and variation of total biomass by date. 
+
+```{r}
+rr_mean <- rr %>% 
+  group_by(date) %>% 
+  summarize(mean_total_biomass = mean(total_biomass), 
+            var_total_biomass = sd(total_biomass))
+rr_ca_mean <- rr_ca %>% 
+  group_by(date) %>% 
+  summarize(mean_total_biomass = mean(total_biomass_ca), 
+            var_total_biomass = sd(total_biomass_ca))
+
+ggplot() +
+  geom_line(data = rr_mean, aes(x = date, y = mean_total_biomass)) +
+  geom_ribbon(data = rr_mean, aes(x = date, ymin = mean_total_biomass - var_total_biomass, ymax = mean_total_biomass + var_total_biomass), alpha = 0.2) +
+  geom_line(data = rr_ca_mean, aes(x = date, y = mean_total_biomass), color = "red") +
+  geom_ribbon(data = rr_ca_mean, aes(x = date, ymin = mean_total_biomass - var_total_biomass, ymax = mean_total_biomass + var_total_biomass), alpha = 0.2, fill = "red") +
+  theme(legend.position = "none")
 ```
 
 Time series showing mean difference in biomass for locations, with variation in daily values shown.
