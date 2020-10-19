@@ -1,0 +1,90 @@
+---
+title: "Parameter estimation pipeline from cleaned Licor data"
+author: "Jessica Guo, Tonantzin Tarin"
+output: github_document
+urlcolor: blue
+---
+
+Load necessary packages and functions. 
+```{r}
+library(dplyr)
+source("R/C4_Collatz.R")
+source("R/LRC.R")
+source("R/Gs.R")
+```
+
+
+When data from a new experiment becomes available, record the experiment metadata into a local copy of "experiments.csv" and upload to the "cleaned_data" folder. Columns include ID, Date, Genotype, Treatment, A_Ci, and A_Qin. ID and Date are in YYYYMMDD format and are synonymous unless multiple experiments were completed on the same date (e.g., outdoor experiments). ID should be read in as a character. A_Ci and A_Qin columns are binary 1/0 to indicate whether each type of curve is available. 
+
+Read in the experiment metadata. 
+```{r}
+expDF <- read.csv("cleaned_data/experiments.csv",
+                  colClasses = c("character", "numeric", rep("character",2), rep("numeric",2)))
+```
+
+Because new experiments are conducted periodically, load the previously estimated parameter sheet. Only new  experiments (without existing parameters data) will be run. 
+```{r}
+params <- read.csv("outputs/parameters_data.csv")
+```
+
+First, run the C4_Collatz.R function on ACi data to estimate vmax, or the maximum rate of carboxylation (umol CO2 m^-2 s^-1) for each plant replicate. This function uses a Bayesian estimation routine on a C4 photosynthesis model (Collatz et al. 1992). 
+```{r}
+aci_ID <- expDF$ID[which(expDF$A_Ci == 1 & expDF$Date > max(params$Date))] 
+for(i in 1:length(aci_ID)){
+  C4_Collatz(fileID = aci_ID[i])
+  print(paste0(aci_ID[i], " completed"))
+}
+```
+
+Second, run the LRC.R function on AQ data to estimate a suite of 6 light-response parameters for each plant replicate.  Here, the nonrectangular hyperbola model of Marshall & Biscoe (1980) is used to estiamte Am (gross maximum assimilation, umol CO2 m^-2 s^-1), AQY (apparent quantum yield umol CO2 mmol^-1 photons), Rd (dark respiration, umol CO2 m^-2, s^-1), and theta_lrc (curvature parameter, unitless). A root function is then used to find the LCPT (light compensation point, umol photons m^-2 s^-1), or PAR when assimilation is zero, and LSP (light saturation point, umol photons m^-2 s^-1), here defined as PAR when assimilation is 75% of the maximum. 
+```{r}
+aq_ID <- expDF$ID[which(expDF$A_Qin == 1 & expDF$Date > max(params$Date))]
+for(i in 1:length(aq_ID)){
+  LRC(fileID = aq_ID[i])
+  print(paste0(aq_ID[i], " completed"))
+}
+```
+
+Next, run the Gs.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) across the plant replicates. Here, the data from both types of curves are restricted to 390 ppm < CO2 < 410 ppm and PAR > 1200 umol photons m^-2 s^-1 and fit to the Ball-Berry (1987) and Medlyn (2011) models using the package 'plantecophys'. 
+```{r}
+ID <- expDF$ID[which(expDF$Date > max(params$Date))]
+for(i in 1:length(ID)){
+  Gs(fileID = ID[i])
+  print(paste0(ID[i], " completed"))
+}
+```
+
+Finally, once all three functions above are run and output parameter files produced, they can be collated and combined with the experiment data to produce a final 'parameters_data.csv'. 
+```{r}
+# Declare empty dataframe
+params <- data.frame()
+
+# Add ACi parameters
+aci <- list.files("outputs/ACi", pattern = "csv")
+for(i in 1:length(aci)){
+  temp <- read.csv(paste0("outputs/ACi/", aci[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Add AQ parameters
+aq <- list.files("outputs/AQ", pattern = "csv")
+for(i in 1:length(aq)){
+  temp <- read.csv(paste0("outputs/AQ/", aq[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Add stomatal parameters
+st <- list.files("outputs/stomatal", pattern = "csv")
+for(i in 1:length(st)){
+  temp <- read.csv(paste0("outputs/stomatal/", st[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Combine parameters with experiment metadata
+params2 <- left_join(params, expDF, by = "ID")
+write.csv(params2, file = "outputs/parameters_data.csv", row.names = F)
+```
+
