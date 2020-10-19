@@ -59,21 +59,45 @@ ggplot() +
   geom_point(data = narr_all_corners, aes(x = lon, y = lat), color = "red")
 ```
 
-### 3. Use nco to subset file
+### 3. Subset file on HPC
 
-Navigate in the HPC web interface to `/xdisk/username/`. The .nc files should be there now. You can see the subsetting command by looking at the first line under history after running this: 
+In local command line, log onto UA HPC by executing `ssh username@hpc.arizona.edu`, then entering password and two factor authentication info. Choose the ocelote machine. 
+
+Now on login node, where no analysis should occur. Code can be run either using a PBS script or in an interactive session. We'll use the latter for subsetting, as shown below. 
+
+Here we are subsetting the North American NARR all.nc into a wide longitudinal range across the United States that includes St. Louis. 
+
+1. Start interactive session with an hour of time
 
 ```{shell}
-ncdump -h champaign.nc
+qsub -I -N stl_subset -W group_list=dlebauer -q standard -l select=1:ncpus=1:mem=6gb -l walltime=1:0:0
 ```
 
-The command is below. This is what was used to generate `champaign.nc` from `all.nc`, and will be the basis for creating new subsets. The `ncks` arguments -O is for overwrite, and -d is for dimensions for specified variables. 
+2. Navigate to David's xdisk space where the original file is stored
 
+```{shell}
+cd /xdisk/dlebauer/mig2020/xdisk/kristinariemer/narr/
+```
+
+3. Do subsetting steps using NCO tools, for both space and time
+
+```{shell}
+ncks -O -d longitude,-110.9,-80.9 -d latitude,37.5,39.5 all.nc stl_space.nc
+ncea -d time,112494.4,113589.9 stl_space.nc stl_space_time.nc
+```
+
+4. Once done, check for final file and end session
+
+```{shell}
+exit
+```
+
+The relevant NCO commands for other weather subsets are shown here: 
+
+Champaign: 
 ```{shell}
 ncks -O -d longitude,-88.9,-87.5 -d latitude,39.8,40.5 all.nc champaign.nc
 ```
-
-The following are modified commands for different weather subsets, including new file names. 
 
 Eastern Illinois: 
 ```{shell}
