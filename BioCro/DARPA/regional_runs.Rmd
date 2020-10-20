@@ -322,14 +322,17 @@ anim_save("high_light_ss_stlew_trans.gif", animation = transpiration_animation,
 
 # Comparing Regional Runs
 
+## Biomass
+
 Combining data from high light and decreased stomatal slope regional runs.
 
 ```{r}
 rr <- regional_run_results %>% 
-  select(date, lat, lon, latlon, total_biomass)
+  select(date, lat, lon, latlon, total_biomass, CanopyTrans)
 rr_ss <- regional_run_results_ss %>% 
-  select(date, latlon, total_biomass) %>% 
-  rename(total_biomass_ss = total_biomass)
+  select(date, latlon, total_biomass, CanopyTrans) %>% 
+  rename(total_biomass_ss = total_biomass, 
+         CanopyTrans_ss = CanopyTrans)
 comb <- left_join(rr, rr_ss, by = c("date", "latlon")) %>% 
   mutate(total_biomass_diff = total_biomass_ss - total_biomass)
 ```
@@ -340,11 +343,15 @@ Comparison of time series of mean and variation of total biomass by date.
 rr_mean <- rr %>% 
   group_by(date) %>% 
   summarize(mean_total_biomass = mean(total_biomass), 
-            var_total_biomass = sd(total_biomass))
+            var_total_biomass = sd(total_biomass), 
+            mean_transpiration = mean(CanopyTrans), 
+            var_transpiration = sd(CanopyTrans))
 rr_ss_mean <- rr_ss %>% 
   group_by(date) %>% 
   summarize(mean_total_biomass = mean(total_biomass_ss), 
-            var_total_biomass = sd(total_biomass_ss))
+            var_total_biomass = sd(total_biomass_ss),
+            mean_transpiration = mean(CanopyTrans_ss), 
+            var_transpiration = sd(CanopyTrans_ss))
 
 ggplot() +
   geom_line(data = rr_mean, aes(x = date, y = mean_total_biomass)) +
@@ -353,6 +360,7 @@ ggplot() +
   geom_ribbon(data = rr_ss_mean, aes(x = date, ymin = mean_total_biomass - var_total_biomass, ymax = mean_total_biomass + var_total_biomass), alpha = 0.2, fill = "blue") +
   theme(legend.position = "none")
 ```
+
 Time series showing mean difference in biomass for locations, with variation in daily values shown.
 
 ```{r}
@@ -377,6 +385,19 @@ ggplot() +
   geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = comb_by_space, aes(x = lon, y = lat, fill = mean_diff))
+```
+
+## Transpiration
+
+Comparison of time series of mean and variation of transpiration by date. 
+
+```{r}
+ggplot() +
+  geom_line(data = rr_mean, aes(x = date, y = mean_transpiration)) +
+  geom_ribbon(data = rr_mean, aes(x = date, ymin = mean_transpiration - var_transpiration, ymax = mean_transpiration + var_transpiration), alpha = 0.2) +
+  geom_line(data = rr_ss_mean, aes(x = date, y = mean_transpiration), color = "blue") +
+  geom_ribbon(data = rr_ss_mean, aes(x = date, ymin = mean_transpiration - var_transpiration, ymax = mean_transpiration + var_transpiration), alpha = 0.2, fill = "blue") +
+  theme(legend.position = "none")
 ```
 
 # Changed Carbon Allocation Regional Runs
@@ -513,14 +534,17 @@ anim_save("high_light_ca_stlew_trans.gif", animation = transpiration_animation,
 
 # Comparing Regional Runs
 
+## Biomass
+
 Combining data from high light and changed carbon allocation regional runs.
 
 ```{r}
 rr <- regional_run_results %>% 
-  select(date, lat, lon, latlon, total_biomass)
+  select(date, lat, lon, latlon, total_biomass, CanopyTrans)
 rr_ca <- regional_run_results_ca %>% 
-  select(date, latlon, total_biomass) %>% 
-  rename(total_biomass_ca = total_biomass)
+  select(date, latlon, total_biomass, CanopyTrans) %>% 
+  rename(total_biomass_ca = total_biomass, 
+         CanopyTrans_ca = CanopyTrans)
 comb <- left_join(rr, rr_ca, by = c("date", "latlon")) %>% 
   mutate(total_biomass_diff = total_biomass_ca - total_biomass)
 ```
@@ -531,11 +555,15 @@ Comparison of time series of mean and variation of total biomass by date.
 rr_mean <- rr %>% 
   group_by(date) %>% 
   summarize(mean_total_biomass = mean(total_biomass), 
-            var_total_biomass = sd(total_biomass))
+            var_total_biomass = sd(total_biomass), 
+            mean_transpiration = mean(CanopyTrans), 
+            var_transpiration = sd(CanopyTrans))
 rr_ca_mean <- rr_ca %>% 
   group_by(date) %>% 
   summarize(mean_total_biomass = mean(total_biomass_ca), 
-            var_total_biomass = sd(total_biomass_ca))
+            var_total_biomass = sd(total_biomass_ca),
+            mean_transpiration = mean(CanopyTrans_ca), 
+            var_transpiration = sd(CanopyTrans_ca))
 
 ggplot() +
   geom_line(data = rr_mean, aes(x = date, y = mean_total_biomass)) +
@@ -570,3 +598,17 @@ ggplot() +
                fill = "white", color = "black") +
   geom_raster(data = comb_by_space, aes(x = lon, y = lat, fill = mean_diff))
 ```
+
+## Transpiration
+
+Comparison of time series of mean and variation of transpiration by date. 
+
+```{r}
+ggplot() +
+  geom_line(data = rr_mean, aes(x = date, y = mean_transpiration)) +
+  geom_ribbon(data = rr_mean, aes(x = date, ymin = mean_transpiration - var_transpiration, ymax = mean_transpiration + var_transpiration), alpha = 0.2) +
+  geom_line(data = rr_ca_mean, aes(x = date, y = mean_transpiration), color = "red") +
+  geom_ribbon(data = rr_ca_mean, aes(x = date, ymin = mean_transpiration - var_transpiration, ymax = mean_transpiration + var_transpiration), alpha = 0.2, fill = "red") +
+  theme(legend.position = "none")
+```
+
