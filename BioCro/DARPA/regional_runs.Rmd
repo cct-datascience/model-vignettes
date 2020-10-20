@@ -12,6 +12,7 @@ library(PEcAn.BIOCRO)
 library(ncdf4)
 library(PEcAn.all)
 library(dplyr)
+library(udunits2)
 library(ggplot2)
 library(gganimate)
 ```
@@ -78,7 +79,9 @@ regional_run_results <- read.csv("regional_runs_inputs/results/high_light_stlew_
 regional_run_results <- regional_run_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
-         total_biomass = as.numeric(Stem + Leaf + Root + Rhizome + Grain))
+         total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
+                                    "Mg/ha", "kg/m2"), 
+         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"))
 
 ggplot(regional_run_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
   geom_line() +
@@ -138,19 +141,20 @@ biomass_animation <- ggplot() +
   geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = total_biomass)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
-                       midpoint = 10, 
-                       breaks = seq(-100, 100, 4), 
-                       limits = c(0, 20)) +
+                       midpoint = 1, 
+                       breaks = seq(-10, 10, 0.4), 
+                       limits = c(0, 2)) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "Biomass (kg/m2)") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}') +
   coord_quickmap()
 
-animate(biomass_animation, fps = 100)
+animate(biomass_animation, fps = 100, height = 200, width = 400)
 anim_save("high_light_stlew.gif", animation = biomass_animation, 
-          path = "regional_runs_inputs/results/", fps = 100)
+          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
 ```
 
 ## Plot estimated transpiration
@@ -158,9 +162,9 @@ anim_save("high_light_stlew.gif", animation = biomass_animation,
 The results for evapotranspiration for each location across the year of 2010 are visualized. 
 
 ```{r}
-ggplot(regional_run_results, aes(x = date, y = CanopyTrans, group = latlon, color = latlon)) +
+ggplot(regional_run_results, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
   geom_line(alpha = 0.2) +
-  labs(y = "Transpiration (Mg/ha/h)") +
+  labs(y = "Transpiration (kg/m2/hr)") +
   theme(legend.position = "none")
 ```
 
@@ -170,22 +174,23 @@ The final map plots estimated transpiration values for the `r length(unique(regi
 transpiration_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = CanopyTrans)) +
+  geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = transpiration)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
-                       midpoint = 75, 
-                       breaks = seq(0, 200, 50), 
-                       limits = c(0, 150)) +
+                       midpoint = 7.5, 
+                       breaks = seq(0, 20, 5), 
+                       limits = c(0, 15)) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "Transpiration (kg/m2/hr)") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}') +
   coord_quickmap()
 
-animate(transpiration_animation, fps = 100)
+animate(transpiration_animation, fps = 100, height = 200, width = 400)
 anim_save("high_light_stlew_trans.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", fps = 100)
+          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
 ```
 
 # Decreased Stomatal Slope Regional Runs
@@ -231,7 +236,9 @@ regional_run_results_ss <- read.csv("regional_runs_inputs/results/high_light_ss_
 regional_run_results_ss <- regional_run_results_ss %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
-         total_biomass = as.numeric(Stem + Leaf + Root + Rhizome + Grain))
+         total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
+                                    "Mg/ha", "kg/m2"), 
+         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"))
 
 ggplot(regional_run_results_ss, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
   geom_line() +
@@ -274,27 +281,28 @@ biomass_animation_ss <- ggplot() +
   geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = total_biomass)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
-                       midpoint = 10, 
-                       breaks = seq(-100, 100, 4), 
-                       limits = c(0, 20)) +
+                       midpoint = 1,
+                       breaks = seq(-10, 10, 0.4),
+                       limits = c(0, 2)) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "Biomass (kg/m2)") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}') +
   coord_quickmap()
 
-animate(biomass_animation_ss, fps = 100)
+animate(biomass_animation_ss, fps = 100, height = 200, width = 400)
 anim_save("high_light_ss_stlew.gif", animation = biomass_animation_ss, 
-          path = "regional_runs_inputs/results/", fps = 100)
+          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
 ```
 
 ## Plot estimated transpiration
 
 ```{r}
-ggplot(regional_run_results_ss, aes(x = date, y = CanopyTrans, group = latlon, color = latlon)) +
+ggplot(regional_run_results_ss, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
   geom_line(alpha = 0.2) +
-  labs(y = "Transpiration (Mg/ha/h)") +
+  labs(y = "Transpiration (kg/m2/hr)") +
   theme(legend.position = "none")
 ```
 
@@ -302,22 +310,23 @@ ggplot(regional_run_results_ss, aes(x = date, y = CanopyTrans, group = latlon, c
 transpiration_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = CanopyTrans)) +
+  geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = transpiration)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
-                       midpoint = 75, 
-                       breaks = seq(0, 200, 50), 
-                       limits = c(0, 150)) +
+                       midpoint = 7.5, 
+                       breaks = seq(0, 20, 5), 
+                       limits = c(0, 15)) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "Transpiration (kg/m2/hr)") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}') +
   coord_quickmap()
 
-animate(transpiration_animation, fps = 100)
+animate(transpiration_animation, fps = 100, height = 200, width = 400)
 anim_save("high_light_ss_stlew_trans.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", fps = 100)
+          path = "regional_runs_inputs/results/", height = 200, width = 400)
 ```
 
 # Comparing Regional Runs
@@ -443,7 +452,9 @@ regional_run_results_ca <- read.csv("regional_runs_inputs/results/high_light_ca_
 regional_run_results_ca <- regional_run_results_ca %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
-         total_biomass = as.numeric(Stem + Leaf + Root + Rhizome + Grain))
+         total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain),
+                                    "Mg/ha", "kg/m2"), 
+         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"))
 
 ggplot(regional_run_results_ca, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
   geom_line() +
@@ -486,27 +497,28 @@ biomass_animation_ca <- ggplot() +
   geom_raster(data = regional_run_results_ca, aes(x = lon, y = lat, fill = total_biomass)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
-                       midpoint = 10, 
-                       breaks = seq(-100, 100, 4), 
-                       limits = c(0, 20)) +
+                       midpoint = 1,
+                       breaks = seq(-10, 10, 0.4),
+                       limits = c(0, 2)) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "Biomass (kg/m2)") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}') +
   coord_quickmap()
 
-animate(biomass_animation_ca, fps = 100)
+animate(biomass_animation_ca, fps = 100, height = 200, width = 400)
 anim_save("high_light_ca_stlew.gif", animation = biomass_animation_ca, 
-          path = "regional_runs_inputs/results/", fps = 100)
+          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
 ```
 
 ## Plot estimated transpiration
 
 ```{r}
-ggplot(regional_run_results_ca, aes(x = date, y = CanopyTrans, group = latlon, color = latlon)) +
+ggplot(regional_run_results_ca, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
   geom_line(alpha = 0.2) +
-  labs(y = "Transpiration (Mg/ha/h)") +
+  labs(y = "Transpiration (kg/m2/hr)") +
   theme(legend.position = "none")
 ```
 
@@ -514,22 +526,23 @@ ggplot(regional_run_results_ca, aes(x = date, y = CanopyTrans, group = latlon, c
 transpiration_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = regional_run_results_ca, aes(x = lon, y = lat, fill = CanopyTrans)) +
+  geom_raster(data = regional_run_results_ca, aes(x = lon, y = lat, fill = transpiration)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
-                       midpoint = 75, 
-                       breaks = seq(0, 200, 50), 
-                       limits = c(0, 150)) +
+                       midpoint = 7.5, 
+                       breaks = seq(0, 20, 5), 
+                       limits = c(0, 15)) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "Transpiration (kg/m2/hr)") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}') +
   coord_quickmap()
 
-animate(transpiration_animation, fps = 100)
+animate(transpiration_animation, fps = 100, height = 200, width = 400)
 anim_save("high_light_ca_stlew_trans.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", fps = 100)
+          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
 ```
 
 # Comparing Regional Runs
