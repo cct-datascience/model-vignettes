@@ -480,6 +480,37 @@ anim_save("high_light_ca_stlew.gif", animation = biomass_animation_ca,
           path = "regional_runs_inputs/results/", fps = 100)
 ```
 
+## Plot estimated transpiration
+
+```{r}
+ggplot(regional_run_results_ca, aes(x = date, y = CanopyTrans, group = latlon, color = latlon)) +
+  geom_line(alpha = 0.2) +
+  labs(y = "Transpiration (Mg/ha/h)") +
+  theme(legend.position = "none")
+```
+
+```{r}
+transpiration_animation <- ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = regional_run_results_ca, aes(x = lon, y = lat, fill = CanopyTrans)) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
+                       midpoint = 75, 
+                       breaks = seq(0, 200, 50), 
+                       limits = c(0, 150)) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}') +
+  coord_quickmap()
+
+animate(transpiration_animation, fps = 100)
+anim_save("high_light_ca_stlew_trans.gif", animation = transpiration_animation, 
+          path = "regional_runs_inputs/results/", fps = 100)
+```
+
 # Comparing Regional Runs
 
 Combining data from high light and changed carbon allocation regional runs.
