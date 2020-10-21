@@ -14,6 +14,7 @@ source("R/Gs.R")
 source("R/Gs_all.R")
 source("R/Gs_all_byplant.R")
 source("R/Gs_all_byplant_50.R")
+source("R/Gs_all_byplant_50_LCPT.R")
 ```
 
 
@@ -56,6 +57,15 @@ for(i in 1:length(ID)){
 }
 ```
 
+Run the Gs_all_byplant_50_LCPT.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) for each plant replicate after excluding CO2 < 45 ppm and restricting AQ data to values taken above the light compensation point. 
+```{r}
+ID <- unique(expDF$ID)
+for(i in 1:length(ID)){
+  Gs_all_byplant_50_LCPT(fileID = ID[i])
+  print(paste0(ID[i], " completed"))
+}
+```
+
 Compare stomatal parameters for Gs, Gs_all, and Gs_all_byplant
 ```{r}
 # Declare empty dataframe
@@ -93,11 +103,20 @@ for(i in 1:length(gs_all_byplant_50)){
   params <- rbind.data.frame(params, temp)
 }
 
+# Add Gs_all_byplant_50_LCPT parameters
+gs_all_byplant_50_lcpt <- list.files("outputs/stomatal/all_byplant_50_LCPT", pattern = "csv")
+for(i in 1:length(gs_all_byplant_50)){
+  temp <- read.csv(paste0("outputs/stomatal/all_byplant_50_LCPT/", gs_all_byplant_50_lcpt[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
 # Add column identifying which function used
 params$method <- c(rep("Gs", length(gs)*4), 
                    rep("Gs_all", length(gs_all)*4),
                    rep("Gs_all_byplant", length(gs_all_byplant)*12),
-                   rep("Gs_all_byplant_50", length(gs_all_byplant_50)*12))
+                   rep("Gs_all_byplant_50", length(gs_all_byplant_50)*12),
+                   rep("Gs_all_byplant_50_LCPT", length(gs_all_byplant_50_lcpt)*12))
 
 # Combine parameters with experiment metadata
 gs_params <- left_join(params, expDF, by = "ID")
@@ -116,5 +135,15 @@ ggplot(subset(gs_params, method == "Gs_all_byplant" | method == "Gs_all_byplant_
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
   scale_shape_manual(values = c(15, 16, 17))+
   scale_color_manual(values = c("#619CFF", "goldenrod"))
+
+ggplot(subset(gs_params, method == "Gs_all_byplant_50" | method == "Gs_all_byplant_50_LCPT"), 
+       aes(x = ID, y = Value, col = method, shape = type))+
+  geom_pointrange(aes(ymin = Value - SE, ymax = Value + SE), position = position_dodge(width = 1))+
+  geom_hline(yintercept = 0, lwd = 1)+
+  facet_wrap( ~ trait, scale = "free_y")+
+  theme_bw(base_size = 14)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  scale_shape_manual(values = c(15, 16, 17))+
+  scale_color_manual(values = c("goldenrod", "purple4"))
   
 ```
