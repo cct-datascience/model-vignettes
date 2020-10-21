@@ -1,4 +1,4 @@
-#Function to run the light response curve with nls
+# Function to run the light response curve with nls
 
 LRC <- function(fileID){# input is ID column from the experiments dataframe
   
@@ -17,17 +17,17 @@ LRC <- function(fileID){# input is ID column from the experiments dataframe
   loc <- paste0("outputs/AQ/")
   
   for (i in 1:length(LIS)) {
-    for(j in seq_along(mods)) {
       PARlrc<-LIS[[i]]$Qin #Qin (aka PPFD or PAR)
       photolrc<-LIS[[i]]$A #net photosynthetic rate (Anet)
       curvelrc<-data.frame(PARlrc,photolrc)
 
       # Fit the nolinear model
-      mods[[j]] <- nls(photolrc ~ (1/(2*theta))*
+      mods[[i]] <- nls(photolrc ~ (1/(2*theta))*
                          (AQY*PARlrc+Am-sqrt((AQY*PARlrc+Am)^2-4*AQY*theta*Am*PARlrc))
                        -Rd,start=list(Am=(max(photolrc)-min(photolrc)),AQY=0.05,Rd=-min(photolrc),theta=1)) 
-    }  
-    
+
+   
+
     # Plot AQ curves
     # Plotting parameters
     heading <- unique(df$rep)       
@@ -95,7 +95,8 @@ LRC <- function(fileID){# input is ID column from the experiments dataframe
                          Date.run = rep(as.Date(Sys.time()), 6))
     
     out <- rbind(out, params)
-    # Write to file
-    write.csv(out, file = paste0(loc, fileID, "_parameters.csv"), row.names = F)
+   
   }
+  # Write to file
+  write.csv(out, file = paste0(loc, fileID, "_parameters.csv"), row.names = F)
 }

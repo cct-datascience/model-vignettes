@@ -1,4 +1,4 @@
-#Function to run the C4_Collatz model in JAGS
+# Function to run the C4_Collatz model in JAGS
 
 C4_Collatz <- function(fileID){# input is ID column from the experiments dataframe
   
