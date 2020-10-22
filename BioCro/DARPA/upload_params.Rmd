@@ -95,7 +95,7 @@ write.csv(upload_parameters_ch, "upload_params_data/phys_parameters.csv", row.na
 
 Upload that new parameter data file using the API. 
 ```{bash}
-curl -X POST --data-binary @upload_params_data/phys_parameters localhost:3000/api/v1/traits.csv?key=<fOME9Ga8VMGmieLfuFD2QDgvFbWHqMUBthXEYkjz> -H "Content-Type: text/csv"
+curl -X POST --data-binary @upload_params_data/phys_parameters welsch.cyverse.org:8787/bety/api/v1/traits.csv?key=<fOME9Ga8VMGmieLfuFD2QDgvFbWHqMUBthXEYkjz> -H "Content-Type: text/csv"
 ```
 
 
