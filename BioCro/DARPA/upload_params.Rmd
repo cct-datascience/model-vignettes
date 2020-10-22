@@ -15,41 +15,40 @@ library(readxl)
 library(udunits2)
 ```
 
-## Physiological parameters Vmax, Rd, stomatal slope, and cuticular conductance from the growth chamber
+## Physiological parameters Vmax, Rd, AQY, stomatal slope, and cuticular conductance from the growth chamber
 
-Read in parameters data from [model-vignettes-data repository](https://github.com/az-digitalag/model-vignettes-data), which should be cloned into the same folder as model-vignettes repo. 
+Read in parameters data from [sentinel-detection repository](https://github.com/jessicaguo/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
 ```{r}
-all_parameters <- read.csv("../../../model-vignettes-data/parameters_data.csv")
+all_parameters <- read.csv("../../../sentinel-detection/parameters_pipeline/outputs/parameters_data.csv")
 ```
 
 Clean up data to have the final columns: 
 
-1. `notes`: records which row in the Google Sheet the record came from
+1. `notes`: records which row in the parameters_data.csv the record came from
 2. `local_datetime`: convert date into machine readable format
 3. `treatment`: specifies record's treatment using BETYdb treatment names
-4. `Vcmax`, `leaf_respiration_rate_m2`, `stomatal_slope.g1`, `stomatal_slope.BB`,  `cuticular_cond`: measured values of physiological parameters specified
+4. `Vcmax`, `leaf_respiration_rate_m2`, `quantum_efficiency`, `stomatal_slope.g1`, `stomatal_slope.BB`,  `cuticular_cond`: measured values of physiological parameters specified
 5. `leafT`: leaf temperature, which is required by BETYdb
 
 First, manage the chamber experiment parameters:
 ```{r}
 upload_parameters_ch <- all_parameters %>% 
-  mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/#gid=967233489")) %>% 
-  filter(genotype == "ME034", 
-         TR %in% c("low night temp low light", 
-                   "high night temp low light", 
-                   "low night temp high light"), 
-         trait %in% c("vmax", "Rd", "g1M", "g1BB", "g0BB")) %>% 
-  mutate(Date = ymd(paste0(str_sub(File, -4, -1), 
-                           "-", match(str_sub(File, 1, 3), month.abb), 
-                           "-", str_sub(File, -6, -5))), 
-         treatment = case_when(TR == "low night temp low light" ~ "regular night temperature", 
-                               TR == "high night temp low light" ~ "high night temperature", 
-                               TR == "low night temp high light" ~ "high light")) %>% 
-  select(-File, -genotype, -TR, -rep, -method, -SD, -TR.1) %>% 
+  dplyr::mutate(notes = paste("row", row_number(), "in parameters_data.csv")) %>% 
+  filter(Genotype == "ME034", 
+         Treatment %in% c("31_22_250",
+                          "31_31_250",
+                          "31_22_450"), 
+         trait %in% c("vmax", "Rd", "AQY", "g1M", "g1BB", "g0BB")) %>% 
+  mutate(Date = as.POSIXct(as.character(Date), format = "%Y%m%d"), 
+         treatment = case_when(Treatment == "31_22_250" ~ "regular night temperature", 
+                               Treatment == "31_31_250" ~ "high night temperature", 
+                               Treatment == "31_22_450" ~ "high light")) %>% 
+  select(-ID, -rep, -SD, -Date.run, -Genotype, -A_Ci, -A_Qin, -Rd, -Treatment) %>% 
   spread(trait, Value) %>% 
-  rename(local_datetime = Date, 
+  dplyr::rename(local_datetime = Date, 
          Vcmax = vmax, 
          leaf_respiration_rate_m2 = Rd, 
+         quantum_efficiency = AQY,
          stomatal_slope.g1 = g1M, 
          stomatal_slope.BB = g1BB,
          cuticular_cond = g0BB) %>% 
@@ -68,17 +67,18 @@ write.csv(upload_parameters_ch, "upload_params_data/phys_parameters_ch.csv", row
 
 Split dataframe for each parameter type and save each dataframe as a csv. 
 ```{r}
-params <- colnames(upload_parameters_ch)[5:9]
+params <- colnames(upload_parameters_ch)[5:10]
 for(param in params){
   removecols <- setdiff(params, param)
   trait_df <- subset(upload_parameters_ch, 
                      select = setdiff(colnames(upload_parameters_ch), removecols))
-  trait_df2 <- trait_df[complete.cases(trait_df),]
+  trait_df2 <- trait_df[complete.cases(trait_df[,2:ncol(trait_df)]),] # exclude SE from complete.cases
   trait_df3 <- if(param == "stomatal_slope.g1") {
     subset(trait_df2, select = -leafT)
   } else {
       trait_df2
-    }
+  }
+  print(nrow(trait_df3))
   write.csv(trait_df3, paste0("upload_params_data/phys_parameters_ch_", param, ".csv"), row.names = FALSE)
 }
 ```
@@ -92,31 +92,30 @@ Upload that new parameter data file using the [Bulk Upload](http://welsch.cyvers
 
 
 
-## Physiological parameters Vmax, Rd, stomatal slope, and cuticular conductance from the greenhouse
+## Physiological parameters Vmax, Rd, AQY, stomatal slope, and cuticular conductance from the greenhouse
 
 Clean up data to have the final columns: 
 
 1. `notes`: records which row in the Google Sheet the record came from
 2. `local_datetime`: convert date into machine readable format
 3. `treatment`: specifies record's treatment using BETYdb treatment names
-4. `Vcmax`, `leaf_respiration_rate_m2`, `stomatal_slope.g1`, `stomatal_slope.BB`, `cuticular_cond`: measured values of physiological parameters specified
+4. `Vcmax`, `leaf_respiration_rate_m2`, `quantum_efficiency`, `stomatal_slope.g1`, `stomatal_slope.BB`, `cuticular_cond`: measured values of physiological parameters specified
 5. `leafT`: leaf temperature, which is required by BETYdb
 
 ```{r}
 upload_parameters_gr <- all_parameters %>% 
-  mutate(notes = paste("row", row_number(), "in https://docs.google.com/spreadsheets/d/1doQI0T7vav7LmNdMEoZJDx9iY_Imqa229CLRbRvurFc/#gid=967233489")) %>% 
-  filter(genotype == "ME034", 
-         TR  == "greenhouse", 
-         trait %in% c("vmax", "Rd", "g1M", "g1BB", "g0BB")) %>% 
-  mutate(Date = ymd(paste0(str_sub(File, -4, -1), 
-                           "-", match(str_sub(File, 1, 3), month.abb), 
-                           "-", str_sub(File, -6, -5))), 
-         treatment = case_when(TR == "greenhouse" ~ "greenhouse")) %>% 
-  select(-File, -genotype, -TR, -rep, -method, -SD, -TR.1) %>% 
+  dplyr::mutate(notes = paste("row", row_number(), "in parameters_data.csv")) %>% 
+  filter(Genotype == "ME034", 
+         Treatment == "greenhouse", 
+         trait %in% c("vmax", "Rd", "AQY", "g1M", "g1BB", "g0BB")) %>% 
+  mutate(Date = as.POSIXct(as.character(Date), format = "%Y%m%d"), 
+         treatment = case_when(Treatment == "greenhouse" ~ "greenhouse")) %>% 
+  select(-ID, -rep, -SD, -Date.run, -Genotype, -A_Ci, -A_Qin, -Rd, -Treatment) %>% 
   spread(trait, Value) %>% 
-  rename(local_datetime = Date, 
+  dplyr::rename(local_datetime = Date, 
          Vcmax = vmax, 
          leaf_respiration_rate_m2 = Rd, 
+         quantum_efficiency = AQY,
          stomatal_slope.g1 = g1M, 
          stomatal_slope.BB = g1BB,
          cuticular_cond = g0BB) %>% 
@@ -126,12 +125,12 @@ upload_parameters_gr <- all_parameters %>%
 
 Split dataframe for each parameter type and save each dataframe as a csv. 
 ```{r}
-params <- colnames(upload_parameters_gr)[5:9]
+params <- colnames(upload_parameters_gr)[5:10]
 for(param in params){
   removecols <- setdiff(params, param)
   trait_df <- subset(upload_parameters_gr, 
                      select = setdiff(colnames(upload_parameters_gr), removecols))
-  trait_df2 <- trait_df[complete.cases(trait_df),]
+  trait_df2 <- trait_df[complete.cases(trait_df[,2:ncol(trait_df)]),] # exclude SE from complete.cases
   trait_df3 <- if(param == "stomatal_slope.g1") {
     subset(trait_df2, select = -leafT)
   } else {
