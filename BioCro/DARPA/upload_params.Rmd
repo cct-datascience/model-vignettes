@@ -15,45 +15,72 @@ library(readxl)
 library(udunits2)
 ```
 
-## Physiological parameters Vmax, Rd, AQY, stomatal slope, and cuticular conductance from the growth chamber
+## Physiological parameters Vmax, Rd, AQY, stomatal slope, and cuticular conductance f
 
 Read in parameters data from [sentinel-detection repository](https://github.com/jessicaguo/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
 ```{r}
 all_parameters <- read.csv("../../../sentinel-detection/parameters_pipeline/outputs/parameters_data.csv")
 ```
 
+Read in previous phys_parameters.csv. 
+```{r}
+phys <- read.csv("upload_params_data/phys_parameters.csv")
+```
+
 Clean up data to have the final columns: 
 
-1. `notes`: records which row in the parameters_data.csv the record came from
-2. `local_datetime`: convert date into machine readable format
-3. `treatment`: specifies record's treatment using BETYdb treatment names
-4. `Vcmax`, `leaf_respiration_rate_m2`, `quantum_efficiency`, `stomatal_slope.g1`, `stomatal_slope.BB`,  `cuticular_cond`: measured values of physiological parameters specified
-5. `leafT`: leaf temperature, which is required by BETYdb
+1. `citation_author`, `citation_year`, and `citation_title`: indicate the source of the data using author, year, and title from BETYdb
+2. `species`: Setaria viridis, `cultivar`: ME-034
+3. `site`: one of three sites at Donald Danforth Plant Science Center, either Growth Chamber, Greenhouse, or Outdoor, using BETYdb site names
+4. `treatment`: specifies record's treatment using BETYdb treatment names
+5. `local_datetime`: convert date into machine readable format
+6.  `Vcmax`, `leaf_respiration_rate_m2`, `quantum_efficiency`, `stomatal_slope.BB`,  `cuticular_cond`: estimated mean of physiological parameters from parameters_data.csv
+7. `leafT`: leaf temperature, which is required by BETYdb
+8. `n`: sample size, always set to 1
+9. `SE`: estimated standard error of physiological parameters from parameters_data.csv
+10. `notes`: records which row in the parameters_data.csv the record came from
+11. `access_level`: Internal & Collaborators
 
 First, manage the chamber experiment parameters:
 ```{r}
-upload_parameters_ch <- all_parameters %>% 
+upload_parameters <- all_parameters %>% 
   dplyr::mutate(notes = paste("row", row_number(), "in parameters_data.csv")) %>% 
   filter(Genotype == "ME034", 
-         Treatment %in% c("31_22_250",
-                          "31_31_250",
-                          "31_22_450"), 
-         trait %in% c("vmax", "Rd", "AQY", "g1M", "g1BB", "g0BB")) %>% 
+         trait %in% c("vmax", "Rd", "AQY", "g1BB", "g0BB")) %>% 
   mutate(Date = as.POSIXct(as.character(Date), format = "%Y%m%d"), 
          treatment = case_when(Treatment == "31_22_250" ~ "regular night temperature", 
                                Treatment == "31_31_250" ~ "high night temperature", 
-                               Treatment == "31_22_450" ~ "high light")) %>% 
+                               Treatment == "31_22_450" ~ "high light",
+                               Treatment == "greenhouse" ~ "greenhouse",
+                               Treatment == "outdoor_5cm" ~ "outdoor 5 cm density",
+                               Treatment == "outdoor_JollyG" ~ "outdoor 5 cm density"),
+         site = case_when(Treatment == "31_22_250" ~ "Donald Danforth Plant Science Center Growth Chamber", 
+                               Treatment == "31_31_250" ~ "Donald Danforth Plant Science Center Growth Chamber", 
+                               Treatment == "31_22_450" ~ "Donald Danforth Plant Science Center Growth Chamber",
+                               Treatment == "greenhouse" ~ "Donald Danforth Plant Science Center Greenhouse",
+                               Treatment == "outdoor_5cm" ~ "Donald Danforth Plant Science Center Outdoor",
+                               Treatment == "outdoor_JollyG" ~ "Donald Danforth Plant Science Center Outdoor")) %>% 
   select(-ID, -rep, -SD, -Date.run, -Genotype, -A_Ci, -A_Qin, -Rd, -Treatment) %>% 
   spread(trait, Value) %>% 
   dplyr::rename(local_datetime = Date, 
          Vcmax = vmax, 
          leaf_respiration_rate_m2 = Rd, 
          quantum_efficiency = AQY,
-         stomatal_slope.g1 = g1M, 
          stomatal_slope.BB = g1BB,
          cuticular_cond = g0BB) %>% 
   mutate(leafT = 25, 
-         n = 9999)
+         n = 1,
+         species = "Setaria viridis",
+         cultivar = "ME-034",
+         citation_author = "Zhang, Gehan, LeBauer, Riemer, Tarin, Vargas",
+         citation_year = "2018", 
+         citation_title = "Unpublished DARPA experimental data",
+         access_level = "Internal & Collaborators"
+         ) %>%
+  select(citation_author, citation_year, citation_title, 
+         species, cultivar, site, treatment, local_datetime,
+         Vcmax, leaf_respiration_rate_m2, quantum_efficiency, stomatal_slope.BB, cuticular_cond,
+         leafT, n, SE, notes, access_level)
 ```
 
 Save cleaned parameter as a .csv file in `upload_params_data` folder in `model-vignettes/BioCro/DARPA`. 
@@ -62,90 +89,14 @@ if(!dir.exists("upload_params_data/")){
   dir.create("upload_params_data")
 }
 
-write.csv(upload_parameters_ch, "upload_params_data/phys_parameters_ch.csv", row.names = FALSE)
+write.csv(upload_parameters_ch, "upload_params_data/phys_parameters.csv", row.names = FALSE)
 ```
 
-Split dataframe for each parameter type and save each dataframe as a csv. 
-```{r}
-params <- colnames(upload_parameters_ch)[5:10]
-for(param in params){
-  removecols <- setdiff(params, param)
-  trait_df <- subset(upload_parameters_ch, 
-                     select = setdiff(colnames(upload_parameters_ch), removecols))
-  trait_df2 <- trait_df[complete.cases(trait_df[,2:ncol(trait_df)]),] # exclude SE from complete.cases
-  trait_df3 <- if(param == "stomatal_slope.g1") {
-    subset(trait_df2, select = -leafT)
-  } else {
-      trait_df2
-  }
-  print(nrow(trait_df3))
-  write.csv(trait_df3, paste0("upload_params_data/phys_parameters_ch_", param, ".csv"), row.names = FALSE)
-}
+
+Upload that new parameter data file using the API. 
+```{bash}
+curl -X POST --data-binary @upload_params_data/phys_parameters localhost:3000/api/v1/traits.csv?key=<fOME9Ga8VMGmieLfuFD2QDgvFbWHqMUBthXEYkjz> -H "Content-Type: text/csv"
 ```
-Upload that new parameter data file using the [Bulk Upload](http://welsch.cyverse.org:8000/bety/bulk_upload/start_upload) in Welsch BETYdb. The following additional data, which applies across all the parameters, will have to be entered
-
-- site: Donald Danforth Plant Science Center Growth Chamber
-- species: Setaria viridis
-- access_level: Internal & Collaborators
-- cultivar: ME-034
-
-
-
-
-## Physiological parameters Vmax, Rd, AQY, stomatal slope, and cuticular conductance from the greenhouse
-
-Clean up data to have the final columns: 
-
-1. `notes`: records which row in the Google Sheet the record came from
-2. `local_datetime`: convert date into machine readable format
-3. `treatment`: specifies record's treatment using BETYdb treatment names
-4. `Vcmax`, `leaf_respiration_rate_m2`, `quantum_efficiency`, `stomatal_slope.g1`, `stomatal_slope.BB`, `cuticular_cond`: measured values of physiological parameters specified
-5. `leafT`: leaf temperature, which is required by BETYdb
-
-```{r}
-upload_parameters_gr <- all_parameters %>% 
-  dplyr::mutate(notes = paste("row", row_number(), "in parameters_data.csv")) %>% 
-  filter(Genotype == "ME034", 
-         Treatment == "greenhouse", 
-         trait %in% c("vmax", "Rd", "AQY", "g1M", "g1BB", "g0BB")) %>% 
-  mutate(Date = as.POSIXct(as.character(Date), format = "%Y%m%d"), 
-         treatment = case_when(Treatment == "greenhouse" ~ "greenhouse")) %>% 
-  select(-ID, -rep, -SD, -Date.run, -Genotype, -A_Ci, -A_Qin, -Rd, -Treatment) %>% 
-  spread(trait, Value) %>% 
-  dplyr::rename(local_datetime = Date, 
-         Vcmax = vmax, 
-         leaf_respiration_rate_m2 = Rd, 
-         quantum_efficiency = AQY,
-         stomatal_slope.g1 = g1M, 
-         stomatal_slope.BB = g1BB,
-         cuticular_cond = g0BB) %>% 
-  mutate(leafT = 25, 
-         n = 9999)
-```
-
-Split dataframe for each parameter type and save each dataframe as a csv. 
-```{r}
-params <- colnames(upload_parameters_gr)[5:10]
-for(param in params){
-  removecols <- setdiff(params, param)
-  trait_df <- subset(upload_parameters_gr, 
-                     select = setdiff(colnames(upload_parameters_gr), removecols))
-  trait_df2 <- trait_df[complete.cases(trait_df[,2:ncol(trait_df)]),] # exclude SE from complete.cases
-  trait_df3 <- if(param == "stomatal_slope.g1") {
-    subset(trait_df2, select = -leafT)
-  } else {
-      trait_df2
-    }
-  write.csv(trait_df3, paste0("upload_params_data/phys_parameters_gr_", param, ".csv"), row.names = FALSE)
-}
-```
-
-Upload that new parameter data file using the [Bulk Upload](http://welsch.cyverse.org:8000/bety/bulk_upload/start_upload) in Welsch BETYdb. The following additional data, which applies across all the parameters, will have to be entered
-
-- site: Donald Danforth Plant Science Center Greenhouse
-- species: Setaria viridis
-- access_level: Internal & Collaborators
-- cultivar: ME-034
 
 
 ## Specific leaf area
