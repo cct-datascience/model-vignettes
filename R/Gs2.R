@@ -1,8 +1,9 @@
 # Function to estimate stomatal parameters with 'plantecophys'
 # Uses both ACi and AQ data across entire range of CO2 and PAR conditions
 # Excludes PAR < LCPT and CO2 < 45 ppm
+# Identical to Gs_all_byplant_50_LCPT.R except where outputs are saved and how they are named
 
-Gs_all_byplant_50_LCPT <- function(fileID){# input is ID column from the experiments dataframe
+Gs <- function(fileID){# input is ID column from the experiments dataframe
   
   # Required packages
   library(ggplot2)
@@ -76,20 +77,20 @@ Gs_all_byplant_50_LCPT <- function(fileID){# input is ID column from the experim
     
     # create vector of data for output file (site, species, g1, ci_low, ci_hig)
     temp <- data.frame(ID = rep(fileID, 4),
-                      rep = rep(names(dflist)[i], 4),
-                      trait = c("g0M", "g1M", "g0BB", "g1BB"),
-                      Value = c(g0M, g1M, g0BB, g1BB),
-                      SE = c(g0M_se, g1M_se, g0BB_se, g1BB_se),
-                      SD = rep(NA, 4),
-                      Date.run = rep(as.Date(Sys.time()), 4))
+                       rep = rep(names(dflist)[i], 4),
+                       trait = c("g0M", "g1M", "g0BB", "g1BB"),
+                       Value = c(g0M, g1M, g0BB, g1BB),
+                       SE = c(g0M_se, g1M_se, g0BB_se, g1BB_se),
+                       SD = rep(NA, 4),
+                       Date.run = rep(as.Date(Sys.time()), 4))
     
     out <- rbind.data.frame(out, temp)
     
   }
   
   # Location of output files
-  loc <- paste0("outputs/stomatal/all_byplant_50_LCPT/")
-  write.csv(out, file = paste0(loc, fileID, "_parameters_all_byplant_50.csv"), row.names = F)
+  loc <- paste0("outputs/stomatal/")
+  write.csv(out, file = paste0(loc, fileID, "_parameters.csv"), row.names = F)
   
   # Plotting 
   # Visualize across 2 replicates
@@ -104,7 +105,7 @@ Gs_all_byplant_50_LCPT <- function(fileID){# input is ID column from the experim
                        slope = out$Value[out$trait %in% c("g1BB", "g1M")],
                        int = out$Value[out$trait %in% c("g0BB", "g0M")])
   
-  # Medlyn model is not strictly linear, therefore no line shows up
+  # Medlyn model is not strictly linear, therefore plotted line does not go through points
   
   fig_stomatal <- ggplot()+
     geom_point(data = DF, aes(x = x, y = gsw))+

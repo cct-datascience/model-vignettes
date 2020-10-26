@@ -10,7 +10,7 @@ Load necessary packages and functions.
 library(dplyr)
 source("R/C4_Collatz.R")
 source("R/LRC.R")
-source("R/Gs.R")# or one of the other options
+source("R/Gs2.R")# or one of the other options
 source("R/Rd.R")
 ```
 
