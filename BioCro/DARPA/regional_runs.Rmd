@@ -12,121 +12,105 @@ library(PEcAn.BIOCRO)
 library(ncdf4)
 library(PEcAn.all)
 library(dplyr)
+library(purrr)
 library(udunits2)
 library(ggplot2)
 library(gganimate)
 ```
 
-# High Light Treatment Regional Runs
+Decreased Stomatal Slope Regional Runs
 
-## Read in input files
+This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
 
-The config file here comes from [the high light treatment BioCro run](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. 
+Changed Carbon Allocation Regional Runs
 
-```{r}
-config <- read.biocro.config("regional_runs_inputs/config.xml")
-```
+This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` 
+
+# Estimate biomass & transpiration
+
+The three genotypes are 1) high light chamber treatment, 2) decreased stomatal slope values, and 3) modified carbon allocation to represent the dwarf plants. The first genotype's config file here comes from [the high light treatment BioCro run](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. The second has the stomatal slope value changed from 4.86 to 3.36. The third has the values of all `kStem` halved, with the remaining half split evenly between the other plant parts by stage. 
 
 We also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
 
 ```{r}
+genotypes <- c("wt", "ss", "ca")
+
 soil_nc <- nc_open("regional_runs_inputs/hwsd.nc")
-```
 
-## Run BioCro on each location
-
-The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
-
- The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_stlew.Rmd). This data is specifically for an extended longitudinal range across North America that includes the city of St. Louis.  
-
-The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. 
-
-```{r}
 met_stlew <- nc_open("regional_runs_inputs/weather_subsets/stlew.nc")
 latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
                       lon = ncvar_get(met_stlew, "longitude"))
 
 dir.create("regional_runs_inputs/results")
-dir.create("regional_runs_inputs/results/high_light_stlew")
+```
 
-regional_run_results <- c()
-for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_stlew/stlew-", 
+The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
+
+ The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_stlew.Rmd). This data is specifically for an extended longitudinal range across North America that includes the city of St. Louis.  
+
+The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. These are saved as csv files. 
+
+```{r}
+estimate_biomass <- function(genotype){
+  config_path <- paste0("regional_runs_inputs/config_", genotype, ".xml")
+  config <- read.biocro.config(config_path)
+  regional_run_results <- c()
+  for(point in 1:nrow(latlon)){ 
+    biocro_met_path <- paste0("regional_runs_inputs/biocro_met_stlew/stlew-",
                             latlon$lat[point], "-", latlon$lon[point])
-  regional_run_result <- run.biocro(latlon$lat[point], latlon$lon[point],
+    regional_run_result <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
                                soil.nc = soil_nc,
                                config = config)
-  regional_run_result_daily <- regional_run_result$daily
-  write.csv(regional_run_result_daily, paste0("regional_runs_inputs/results/high_light_stlew/daily-", 
-                                         latlon$lat[point], "-", latlon$lon[point], ".csv"))
-  regional_run_result_daily$lat <- latlon$lat[point]
-  regional_run_result_daily$lon <- latlon$lon[point]
-  regional_run_results <- rbind(regional_run_results, regional_run_result_daily)
-  print(point)
+    regional_run_result_daily <- regional_run_result$daily
+    regional_run_result_daily$lat <- latlon$lat[point]
+    regional_run_result_daily$lon <- latlon$lon[point]
+    regional_run_results <- rbind(regional_run_results, regional_run_result_daily)
+    print(point)
+  }
+  results_path <- paste0("regional_runs_inputs/results/stlew_", genotype, ".csv")
+  write.csv(regional_run_results, results_path)
 }
-
-write.csv(regional_run_results, 
-          "regional_runs_inputs/results/high_light_stlew_results.csv")
+lapply(genotypes, estimate_biomass)
 ```
 
-## Plot estimated biomass
-
-The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
+The csv files are read in, combined, and cleaned/modified for later plotting. 
 
 ```{r}
-regional_run_results <- read.csv("regional_runs_inputs/results/high_light_stlew_results.csv")
-regional_run_results <- regional_run_results %>% 
+rr_results <- c()
+for(genotype in genotypes){
+  biomass_path <- paste0("regional_runs_inputs/results/stlew_", genotype, ".csv")
+  rr_single <- read.csv(biomass_path)
+  rr_single$genotype <- genotype
+  rr_results <- rbind(rr_results, rr_single)
+}
+
+rr_results <- rr_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
          total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
                                     "Mg/ha", "kg/m2"), 
-         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"))
+         total_biomass = ifelse(total_biomass < 0, 0, total_biomass), 
+         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"), 
+         genotype_formal = case_when(
+           genotype == "wt" ~ "Wild type", 
+           genotype == "ss" ~ "Decreased stomata", 
+           genotype == "ca" ~ "Changed carbon allocation" 
+         ), 
+         genotype_formal = factor(genotype_formal, levels = c("Wild type", "Decreased stomata", "Changed carbon allocation")))
+```
 
-ggplot(regional_run_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
+# Plot biomass 
+
+## By genotype
+
+The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
+
+```{r}
+ggplot(rr_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
   geom_line() +
-  theme(legend.position = "none")
-```
-
-Biomass estimates across space for two days of the year, one in the summer and one in the winter, are plotted. 
-
-```{r}
-overall_map <- map_data("world") %>% 
-  filter(region == "USA" & is.na(subregion))
-
-summer_day_plot <- ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = filter(regional_run_results, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
-  ggtitle("Day 200")
-
-winter_day_plot <- ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = filter(regional_run_results, doy == 350), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
-  ggtitle("Day 350")
-
-cowplot::plot_grid(summer_day_plot, winter_day_plot, nrow = 1)
-```
-
-This map shows the locations closer up with the nearby ecoregions plotted in various colors for day 200. 
-
-```{r}
-# ecoregions_df_chiruss <- read.csv("regional_runs_inputs/ecoregions/eocregions_chiruss.csv")
-# 
-# ecoregions_background <- map_data("world") %>% 
-#   filter(region == "China" | region == "Russia") 
-# 
-# ggplot() +
-#   geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
-#   geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
-#   theme(legend.position = "none") +
-#   geom_raster(data = filter(regional_run_results, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-#   coord_cartesian(xlim = c(mean(regional_run_results$lon) - 20, mean(regional_run_results$lon) + 20),
-#                   ylim = c(min(regional_run_results$lat) - 5, max(regional_run_results$lat) + 5)) +
-#   theme(legend.position = "none")
+  theme(legend.position = "none") +
+  facet_wrap(~genotype_formal)
 ```
 
 The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
@@ -138,34 +122,83 @@ city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
 biomass_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = total_biomass)) +
+  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = total_biomass)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
                        midpoint = 1, 
                        breaks = seq(-10, 10, 0.4), 
                        limits = c(0, 2)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(34, 42)) +
+  facet_wrap(~genotype_formal, ncol = 1) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
   labs(x = "", y = "", fill = "Biomass (kg/m2)") +
   transition_manual(doy) +
-  ggtitle('Day: {current_frame}') +
-  coord_quickmap()
+  ggtitle('Day: {current_frame}')
 
-animate(biomass_animation, fps = 100, height = 200, width = 400)
-anim_save("high_light_stlew.gif", animation = biomass_animation, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
+animate(biomass_animation, fps = 100, height = 600, width = 400)
+anim_save("stlew_biomass.gif", animation = biomass_animation, 
+          path = "regional_runs_inputs/results/", fps = 100, height = 600, width = 400)
 ```
 
-## Plot estimated transpiration
+## Comparisons
+
+Calculating biomass and transpiration summaries by day for each genotype. 
+
+```{r}
+rr <- rr_results %>% 
+  mutate(date = as.POSIXct(date)) %>% 
+  select(date, lat, lon, latlon, total_biomass, transpiration, genotype_formal) %>% 
+  group_by(genotype_formal, date) %>% 
+  summarize(mean_total_biomass = mean(total_biomass), 
+            var_total_biomass = sd(total_biomass), 
+            mean_transpiration = mean(transpiration), 
+            var_transpiration = sd(transpiration))
+```
+
+Comparison of time series of mean and variation of total biomass by date, between two modified genotypes with the wild type. 
+
+```{r}
+bio_comp_1 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Decreased stomata")), 
+            aes(x = date, y = mean_total_biomass, group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Decreased stomata")), 
+              aes(x = date, ymin = mean_total_biomass - var_total_biomass, 
+                  ymax = mean_total_biomass + var_total_biomass, 
+                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
+  theme_classic()
+
+bio_comp_2 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Changed carbon allocation")), 
+            aes(x = date, y = mean_total_biomass, group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Changed carbon allocation")), 
+              aes(x = date, ymin = mean_total_biomass - var_total_biomass, 
+                  ymax = mean_total_biomass + var_total_biomass,
+                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
+  theme_classic()
+
+cowplot::plot_grid(bio_comp_1, bio_comp_2, ncol = 1)
+```
+
+# Plot transpiration
+
+## By genotype
 
 The results for evapotranspiration for each location across the year of 2010 are visualized. 
 
 ```{r}
-ggplot(regional_run_results, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
+ggplot(rr_results, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
   geom_line(alpha = 0.2) +
   labs(y = "Transpiration (kg/m2/hr)") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  facet_wrap(~genotype_formal)
 ```
 
 The final map plots estimated transpiration values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
@@ -174,464 +207,54 @@ The final map plots estimated transpiration values for the `r length(unique(regi
 transpiration_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = regional_run_results, aes(x = lon, y = lat, fill = transpiration)) +
+  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = transpiration)) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
                        midpoint = 7.5, 
                        breaks = seq(0, 20, 5), 
                        limits = c(0, 15)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(34, 42)) +
+  facet_wrap(~genotype_formal, ncol = 1) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
   labs(x = "", y = "", fill = "Transpiration (kg/m2/hr)") +
   transition_manual(doy) +
-  ggtitle('Day: {current_frame}') +
-  coord_quickmap()
+  ggtitle('Day: {current_frame}')
 
-animate(transpiration_animation, fps = 100, height = 200, width = 400)
-anim_save("high_light_stlew_trans.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
+animate(transpiration_animation, fps = 100, height = 600, width = 400)
+anim_save("stlew_transpiration.gif", animation = transpiration_animation, 
+          path = "regional_runs_inputs/results/", fps = 100, height = 600, width = 400)
 ```
 
-# Decreased Stomatal Slope Regional Runs
+## Comparisons
 
-## Read in input files
-
-This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
+Comparison of time series of mean and variation of total biomass by date, between two modified genotypes with the wild type. 
 
 ```{r}
-config_ss <- read.biocro.config("regional_runs_inputs/config_ss.xml")
-```
-
-## Run BioCro on each location
-
-```{r}
-dir.create("regional_runs_inputs/results/high_light_ss_stlew")
-
-regional_run_results_ss <- c()
-for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_stlew/stlew-", 
-                            latlon$lat[point], "-", latlon$lon[point])
-  regional_run_result_ss <- run.biocro(latlon$lat[point], latlon$lon[point],
-                               metpath = biocro_met_path,
-                               soil.nc = soil_nc,
-                               config = config_ss)
-  regional_run_result_ss_daily <- regional_run_result_ss$daily
-  write.csv(regional_run_result_ss_daily, paste0("regional_runs_inputs/results/high_light_ss_stlew/daily-", 
-                                         latlon$lat[point], "-", latlon$lon[point], ".csv"))
-  regional_run_result_ss_daily$lat <- latlon$lat[point]
-  regional_run_result_ss_daily$lon <- latlon$lon[point]
-  regional_run_results_ss <- rbind(regional_run_results_ss, regional_run_result_ss_daily)
-  print(point)
-}
-
-write.csv(regional_run_results_ss, 
-          "regional_runs_inputs/results/high_light_ss_stlew_results.csv")
-```
-
-## Plot estimated biomass
-
-```{r}
-regional_run_results_ss <- read.csv("regional_runs_inputs/results/high_light_ss_stlew_results.csv")
-regional_run_results_ss <- regional_run_results_ss %>% 
-  mutate(date = as.Date(doy, "2009-12-31"), 
-         latlon = paste0(lat, lon), 
-         total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
-                                    "Mg/ha", "kg/m2"), 
-         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"))
-
-ggplot(regional_run_results_ss, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
-  geom_line() +
-  theme(legend.position = "none")
-```
-
-```{r}
-summer_day_plot_ss <- ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = filter(regional_run_results_ss, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
-  ggtitle("Day 200")
-
-winter_day_plot_ss <- ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = filter(regional_run_results_ss, doy == 350), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
-  ggtitle("Day 350")
-
-cowplot::plot_grid(summer_day_plot_ss, winter_day_plot_ss, nrow = 1)
-```
-
-```{r}
-# ggplot() +
-#   geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
-#   geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
-#   theme(legend.position = "none") +
-#   geom_raster(data = filter(regional_run_results_ss, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-#   coord_cartesian(xlim = c(mean(regional_run_results_ss$lon) - 20, mean(regional_run_results_ss$lon) + 20),
-#                   ylim = c(min(regional_run_results_ss$lat) - 5, max(regional_run_results_ss$lat) + 5)) +
-#   theme(legend.position = "none")
-```
-
-```{r}
-biomass_animation_ss <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = total_biomass)) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
-                       midpoint = 1,
-                       breaks = seq(-10, 10, 0.4),
-                       limits = c(0, 2)) +
-  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
-        panel.grid.major = element_line(colour = "grey"),
-        panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "Biomass (kg/m2)") +
-  transition_manual(doy) +
-  ggtitle('Day: {current_frame}') +
-  coord_quickmap()
-
-animate(biomass_animation_ss, fps = 100, height = 200, width = 400)
-anim_save("high_light_ss_stlew.gif", animation = biomass_animation_ss, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
-```
-
-## Plot estimated transpiration
-
-```{r}
-ggplot(regional_run_results_ss, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
-  geom_line(alpha = 0.2) +
-  labs(y = "Transpiration (kg/m2/hr)") +
-  theme(legend.position = "none")
-```
-
-```{r}
-transpiration_animation <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = regional_run_results_ss, aes(x = lon, y = lat, fill = transpiration)) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
-                       midpoint = 7.5, 
-                       breaks = seq(0, 20, 5), 
-                       limits = c(0, 15)) +
-  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
-        panel.grid.major = element_line(colour = "grey"),
-        panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "Transpiration (kg/m2/hr)") +
-  transition_manual(doy) +
-  ggtitle('Day: {current_frame}') +
-  coord_quickmap()
-
-animate(transpiration_animation, fps = 100, height = 200, width = 400)
-anim_save("high_light_ss_stlew_trans.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", height = 200, width = 400)
-```
-
-# Comparing Regional Runs
-
-## Biomass
-
-Combining data from high light and decreased stomatal slope regional runs.
-
-```{r}
-rr <- regional_run_results %>% 
-  select(date, lat, lon, latlon, total_biomass, transpiration)
-rr_ss <- regional_run_results_ss %>% 
-  select(date, latlon, total_biomass, transpiration) %>% 
-  rename(total_biomass_ss = total_biomass, 
-         transpiration_ss = transpiration)
-comb <- left_join(rr, rr_ss, by = c("date", "latlon")) %>% 
-  mutate(total_biomass_diff = total_biomass_ss - total_biomass)
-```
-
-Comparison of time series of mean and variation of total biomass by date. 
-
-```{r}
-rr_mean <- rr %>% 
-  mutate(date = as.POSIXct(date)) %>% 
-  group_by(date) %>% 
-  summarize(mean_total_biomass = mean(total_biomass), 
-            var_total_biomass = sd(total_biomass), 
-            mean_transpiration = mean(transpiration), 
-            var_transpiration = sd(transpiration)) %>% 
-  mutate(genotype = "Wild type")
-rr_ss_mean <- rr_ss %>% 
-  mutate(date = as.POSIXct(date)) %>% 
-  group_by(date) %>% 
-  summarize(mean_total_biomass = mean(total_biomass_ss), 
-            var_total_biomass = sd(total_biomass_ss),
-            mean_transpiration = mean(transpiration_ss), 
-            var_transpiration = sd(transpiration_ss)) %>% 
-  mutate(genotype = "Modified stomata")
-rr_comb_ss <- bind_rows(rr_mean, rr_ss_mean)
-
-ggplot() +
-  geom_line(data = rr_comb_ss, aes(x = date, y = mean_total_biomass, 
-                                   group = genotype, color = genotype)) +
-  geom_ribbon(data = rr_comb_ss, aes(x = date, ymin = mean_total_biomass - var_total_biomass, ymax = mean_total_biomass + var_total_biomass, 
-                                     group = genotype, fill = genotype), alpha = 0.2) +
+trans_comp_1 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Decreased stomata")), 
+            aes(x = date, y = mean_transpiration, group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Decreased stomata")), 
+              aes(x = date, ymin = mean_transpiration - var_transpiration, 
+                  ymax = mean_transpiration + var_transpiration, 
+                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
   scale_x_datetime(labels = scales::date_format("%b")) +
-  labs(x = "Month", y = "Biomass (kg/m2)") +
+  labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
   theme_classic()
-```
 
-Time series showing mean difference in biomass for locations, with variation in daily values shown.
-
-```{r}
-comb_by_time <- comb %>% 
-  group_by(date) %>% 
-  summarise(mean_diff = mean(total_biomass_diff, na.rm = TRUE), 
-            sd_diff = sd(total_biomass_diff, na.rm = TRUE))
-
-ggplot(comb_by_time, aes(x = date, y = mean_diff)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = mean_diff - sd_diff, ymax = mean_diff + sd_diff), alpha = 0.3)
-```
-
-Spatial plot showing mean difference in biomass for days. 
-
-```{r}
-comb_by_space <- comb %>% 
-  group_by(latlon, lat, lon) %>% 
-  summarise(mean_diff = mean(total_biomass_diff, na.rm = TRUE)) 
-
-ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = comb_by_space, aes(x = lon, y = lat, fill = mean_diff))
-```
-
-## Transpiration
-
-Comparison of time series of mean and variation of transpiration by date. 
-
-```{r}
-ggplot() +
-  geom_line(data = rr_comb_ss, aes(x = date, y = mean_transpiration, 
-                                   group = genotype, color = genotype)) +
-  geom_ribbon(data = rr_comb_ss, aes(x = date, ymin = mean_transpiration - var_transpiration, ymax = mean_transpiration + var_transpiration, 
-                                  group = genotype, fill = genotype), alpha = 0.2) +
+trans_comp_2 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Changed carbon allocation")), 
+            aes(x = date, y = mean_transpiration, group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Changed carbon allocation")), 
+              aes(x = date, ymin = mean_transpiration - var_transpiration, 
+                  ymax = mean_transpiration + var_transpiration,
+                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
   scale_x_datetime(labels = scales::date_format("%b")) +
-  labs(x = "Month", y = "Transpiration (kg/m2/hr)") +
+  labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
   theme_classic()
+
+cowplot::plot_grid(trans_comp_1, trans_comp_2, ncol = 1)
 ```
-
-# Changed Carbon Allocation Regional Runs
-
-## Read in input files
-
-This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the values of all `kStem` are halved, with the remaining half split evenly between the other plant parts by stage. 
-
-```{r}
-config_ca <- read.biocro.config("regional_runs_inputs/config_ca.xml")
-```
-
-## Run BioCro on each location
-
-```{r}
-dir.create("regional_runs_inputs/results/high_light_ca_stlew")
-
-regional_run_results_ca <- c()
-for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_stlew/stlew-", 
-                            latlon$lat[point], "-", latlon$lon[point])
-  regional_run_result_ca <- run.biocro(latlon$lat[point], latlon$lon[point],
-                               metpath = biocro_met_path,
-                               soil.nc = soil_nc,
-                               config = config_ca)
-  regional_run_result_ca_daily <- regional_run_result_ca$daily
-  write.csv(regional_run_result_ca_daily, paste0("regional_runs_inputs/results/high_light_ca_stlew/daily-", 
-                                         latlon$lat[point], "-", latlon$lon[point], ".csv"))
-  regional_run_result_ca_daily$lat <- latlon$lat[point]
-  regional_run_result_ca_daily$lon <- latlon$lon[point]
-  regional_run_results_ca <- rbind(regional_run_results_ca, regional_run_result_ca_daily)
-  print(point)
-}
-
-write.csv(regional_run_results_ca, 
-          "regional_runs_inputs/results/high_light_ca_stlew_results.csv")
-```
-
-## Plot estimated biomass
-
-```{r}
-regional_run_results_ca <- read.csv("regional_runs_inputs/results/high_light_ca_stlew_results.csv")
-regional_run_results_ca <- regional_run_results_ca %>% 
-  mutate(date = as.Date(doy, "2009-12-31"), 
-         latlon = paste0(lat, lon), 
-         total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain),
-                                    "Mg/ha", "kg/m2"), 
-         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"))
-
-ggplot(regional_run_results_ca, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
-  geom_line() +
-  theme(legend.position = "none")
-```
-
-```{r}
-summer_day_plot_ca <- ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = filter(regional_run_results_ca, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
-  ggtitle("Day 200")
-
-winter_day_plot_ca <- ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = filter(regional_run_results_ca, doy == 350), aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
-  ggtitle("Day 350")
-
-cowplot::plot_grid(summer_day_plot_ca, winter_day_plot_ca, nrow = 1)
-```
-
-```{r}
-# ggplot() +
-#   geom_polygon(data = ecoregions_df_chiruss, aes(long, lat, group = group, col = ECO_NAME)) +
-#   geom_polygon(data = ecoregions_background, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
-#   theme(legend.position = "none") +
-#   geom_raster(data = filter(regional_run_results_ca, doy == 200), aes(x = lon, y = lat, fill = total_biomass)) +
-#   coord_cartesian(xlim = c(mean(regional_run_results_ca$lon) - 20, mean(regional_run_results_ca$lon) + 20),
-#                   ylim = c(min(regional_run_results_ca$lat) - 5, max(regional_run_results_ca$lat) + 5)) +
-#   theme(legend.position = "none")
-```
-
-```{r}
-biomass_animation_ca <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = regional_run_results_ca, aes(x = lon, y = lat, fill = total_biomass)) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
-                       midpoint = 1,
-                       breaks = seq(-10, 10, 0.4),
-                       limits = c(0, 2)) +
-  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
-        panel.grid.major = element_line(colour = "grey"),
-        panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "Biomass (kg/m2)") +
-  transition_manual(doy) +
-  ggtitle('Day: {current_frame}') +
-  coord_quickmap()
-
-animate(biomass_animation_ca, fps = 100, height = 200, width = 400)
-anim_save("high_light_ca_stlew.gif", animation = biomass_animation_ca, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
-```
-
-## Plot estimated transpiration
-
-```{r}
-ggplot(regional_run_results_ca, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
-  geom_line(alpha = 0.2) +
-  labs(y = "Transpiration (kg/m2/hr)") +
-  theme(legend.position = "none")
-```
-
-```{r}
-transpiration_animation <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = regional_run_results_ca, aes(x = lon, y = lat, fill = transpiration)) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
-                       midpoint = 7.5, 
-                       breaks = seq(0, 20, 5), 
-                       limits = c(0, 15)) +
-  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
-        panel.grid.major = element_line(colour = "grey"),
-        panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "Transpiration (kg/m2/hr)") +
-  transition_manual(doy) +
-  ggtitle('Day: {current_frame}') +
-  coord_quickmap()
-
-animate(transpiration_animation, fps = 100, height = 200, width = 400)
-anim_save("high_light_ca_stlew_trans.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 200, width = 400)
-```
-
-# Comparing Regional Runs
-
-## Biomass
-
-Combining data from high light and changed carbon allocation regional runs.
-
-```{r}
-rr <- regional_run_results %>% 
-  select(date, lat, lon, latlon, total_biomass, transpiration)
-rr_ca <- regional_run_results_ca %>% 
-  select(date, latlon, total_biomass, transpiration) %>% 
-  rename(total_biomass_ca = total_biomass, 
-         transpiration_ca = transpiration)
-comb <- left_join(rr, rr_ca, by = c("date", "latlon")) %>% 
-  mutate(total_biomass_diff = total_biomass_ca - total_biomass)
-```
-
-Comparison of time series of mean and variation of total biomass by date. 
-
-```{r}
-rr_ca_mean <- rr_ca %>% 
-  mutate(date = as.POSIXct(date)) %>% 
-  group_by(date) %>% 
-  summarize(mean_total_biomass = mean(total_biomass_ca), 
-            var_total_biomass = sd(total_biomass_ca),
-            mean_transpiration = mean(transpiration_ca), 
-            var_transpiration = sd(transpiration_ca)) %>% 
-  mutate(genotype = "Changed carbon allocation")
-rr_comb_ca <- bind_rows(rr_mean, rr_ca_mean)
-
-ggplot() +
-  geom_line(data = rr_comb_ca, aes(x = date, y = mean_total_biomass, 
-                                   group = genotype, color = genotype)) +
-  geom_ribbon(data = rr_comb_ca, aes(x = date, ymin = mean_total_biomass - var_total_biomass, ymax = mean_total_biomass + var_total_biomass, 
-                                     group = genotype, fill = genotype), alpha = 0.2) +
-  scale_x_datetime(labels = scales::date_format("%b")) +
-  labs(x = "Month", y = "Biomass (kg/m2)") +
-  theme_classic()
-```
-
-Time series showing mean difference in biomass for locations, with variation in daily values shown.
-
-```{r}
-comb_by_time <- comb %>% 
-  group_by(date) %>% 
-  summarise(mean_diff = mean(total_biomass_diff, na.rm = TRUE), 
-            sd_diff = sd(total_biomass_diff, na.rm = TRUE))
-
-ggplot(comb_by_time, aes(x = date, y = mean_diff)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = mean_diff - sd_diff, ymax = mean_diff + sd_diff), alpha = 0.3)
-```
-
-Spatial plot showing mean difference in biomass for days. 
-
-```{r}
-comb_by_space <- comb %>% 
-  group_by(latlon, lat, lon) %>% 
-  summarise(mean_diff = mean(total_biomass_diff, na.rm = TRUE)) 
-
-ggplot() +
-  geom_polygon(data = overall_map, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = comb_by_space, aes(x = lon, y = lat, fill = mean_diff))
-```
-
-## Transpiration
-
-Comparison of time series of mean and variation of transpiration by date. 
-
-```{r}
-ggplot() +
-  geom_line(data = rr_comb_ca, aes(x = date, y = mean_transpiration, 
-                                   group = genotype, color = genotype)) +
-  geom_ribbon(data = rr_comb_ca, aes(x = date, ymin = mean_transpiration - var_transpiration, ymax = mean_transpiration + var_transpiration, 
-                                  group = genotype, fill = genotype), alpha = 0.2) +
-  scale_x_datetime(labels = scales::date_format("%b")) +
-  labs(x = "Month", y = "Transpiration (kg/m2/hr)") +
-  theme_classic()
-```
-
