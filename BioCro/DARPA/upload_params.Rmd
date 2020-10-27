@@ -22,7 +22,7 @@ Read in parameters data from [sentinel-detection repository](https://github.com/
 all_parameters <- read.csv("../../../sentinel-detection/parameters_pipeline/outputs/parameters_data.csv")
 ```
 
-Read in previous phys_parameters.csv; will need for latest data. 
+Read in previous phys_parameters.csv; will need to constrain to latest data. 
 ```{r}
 phys <- read.csv("upload_params_data/phys_parameters.csv")
 phys$local_datetime <- as.POSIXct(phys$local_datetime)
@@ -110,15 +110,15 @@ if(!dir.exists(paste0("upload_params_data/", dname))){
 }
 newdir <- paste0("upload_params_data/", dname)
 
-#subset by date
-sub <- subset(upload_parameters, local_datetime > max(phys$local_datetime))
-write.csv(sub, file = paste0(newdir, "/upload_parameters.csv"), row.names = F)
+#previous maximum date
+prevDate <- max(phys$local_datetime)
 
 #split dataframe for each parameter type and save each dataframe as a csv 
 params <- c("Vcmax", "leaf_respiration_rate_m2", "quantum_efficiency", "stomatal_slope.BB", "cuticular_cond")
 for(p in params){
   trait_df <- upload_parameters %>%
-    filter(variable == p) %>%
+    filter(variable == p, 
+           local_datetime > prevDate) %>%
     spread(variable, mean)
   
   # If Vcmax, rename columns n and SE 
@@ -130,19 +130,15 @@ for(p in params){
 }
 ```
 
-Upload that new parameter data file using the API. 
+Upload that new parameter data file using the API. NOTE: Must update to latest folder (date), which on the R side is the variable 'dname'. 
 ```{bash}
-cd /home/jessicaguo/model-vignettes/BioCro/DARPA/upload_params_data
+#change to directory of latest date
+cd /home/jessicaguo/model-vignettes/BioCro/DARPA/upload_params_data/20200905
 
-curl -X POST --data-binary @20200905/phys_parameters_Vcmax.csv http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
-
-curl -X POST --data-binary @20200905/phys_parameters_leaf_respiration_rate_m2.csv http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
-
-curl -X POST --data-binary @20200905/phys_parameters_quantum_efficiency.csv http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
-
-curl -X POST --data-binary @20200905/phys_parameters_stomatal_slope.BB.csv http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
-
-curl -X POST --data-binary @20200905/phys_parameters_cuticular_cond.csv http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
+#add all .csv files from this diretory
+for file in *.csv; do
+  curl -X POST --data-binary @$file    http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
+done
 ```
 
 
