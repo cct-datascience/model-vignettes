@@ -1,0 +1,61 @@
+---
+title: "Simultaneous fitting of CO2 and light response curves"
+author: "Jessica Guo"
+output: github_document
+urlcolor: blue
+---
+
+Necessary functions. 
+```{r}
+source("/home/jessicaguo/pecan/modules/photosynthesis/R/fitA.R")
+```
+
+The above function is modified from the 'PEcAn.photosynthesis' package to include a Collatz model for C4 photosynthesis and an option for data from the Licor 6800. Retained from the original model include options for fixed and random effects. The function has 5 arguments:
+- flux.data, required, a dataframe of gas exchange data, labeled with a column to associate sampling units. Default is 'fname', but can be indicated in the model argument below. This column is used to identify random effects. 
+- cov.data, default is NULL, a dataframe of covariates should the fixed effects be used. The column names are used in model formulas and should be succint. 
+- model, default is NULL, a list of at least six components:
+    - a.fixed, a.random: fixed and random effects for parameter alpha, quantum yield
+    - V.fixed, V.random: fixed and random effects for parameter Vmax, maximum Rubisco capacity
+    - k.fixed, k.random: fixed and random effects for parameter k, initial slope of CO2 response
+    - match: the variable used identify sampling units for random effects and to match the gas-exchange and covariate data for fixed effects. 
+    - n.iter: the number of MCMC interations (n.iter). Default is 5000
+##' 
+#initial test, null model
+flux.data = dat
+pathway = "C4"
+model = NULL
+cov.data = NULL
+
+foo <- fitA(flux.data = dat, pathway = "C4")
+
+#test with RE
+leaf.model <- list(a.fixed = NULL, a.random = "leaf", 
+                V.fixed= NULL, V.random = "leaf",
+                k.fixed = NULL, k.random = "leaf",
+                n.iter = 5000, match = "fname")
+
+foo <- fitA(flux.data = dat, pathway = "C4", model = leaf.model)
+
+
+#test with FE
+cov.data = read.csv(system.file("extdata", "cov.csv", package = "PEcAn.photosynthesis"))
+
+N.model <- list(a.fixed = NULL, a.random = "leaf", 
+                V.fixed= "N", V.random = NULL,
+                n.iter = 5000, match = "fname")
+foo <- fitA(flux.data = dat, pathway = "C4", model = N.model, cov.data = cov.data)
+
+#test with Danforth data
+dat <- read.csv("/home/jessicaguo/sentinel-detection/parameters_pipeline/cleaned_data/ACi/A_Ci_curves_20200304.csv")
+#restrict to a single plant
+dat2 <- subset(dat, rep == "plant_1")
+null.model <- list(V.fixed = NULL, V.random = NULL, 
+                          a.fixed = NULL, a.random = NULL, 
+                          k.fixed = NULL, k.random = NULL, 
+                          n.iter = 5000, match = "rep")
+foo <- fitA(flux.data = dat2, model=null.model, pathway = "C4", licor = "6800")
+
+#check output
+colnames(foo[[1]][[1]])
+s<-summary(foo[[1]])
+s$statistics
