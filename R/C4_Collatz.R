@@ -58,6 +58,9 @@ C4_Collatz <- function(fileID){# input is ID column from the experiments datafra
   }
   
   # Save out diagnostic plots
+  if(dir.exists("outputs/ACi/diagnostic/") == F){
+    dir.create("outputs/ACi/diagnostic/")
+  }
   loc <- paste0("outputs/ACi/diagnostic/")
   
   # Gelman plots

@@ -8,6 +8,9 @@ Rd <- function (fileID){# input is ID column from the experiments dataframe
   df <- read.csv(paste0("cleaned_data/Rd/Rd_", fileID, ".csv"))
 
   # Location of output files
+  if(dir.exists("outputs/Rd/") == F){
+    dir.create("outputs/Rd/")
+  }
   loc <- paste0("outputs/Rd/")
   
   # Summarize to population level mean and SE

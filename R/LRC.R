@@ -14,6 +14,9 @@ LRC <- function(fileID){# input is ID column from the experiments dataframe
   head <- c("Plant 1", "Plant 2", "Plant 3")        
 
   # Location of output files
+  if(dir.exists("outputs/AQ/") == F){
+    dir.create("outputs/AQ/")
+  }
   loc <- paste0("outputs/AQ/")
   
   for (i in 1:length(LIS)) {
@@ -43,31 +46,31 @@ LRC <- function(fileID){# input is ID column from the experiments dataframe
     plot(PARlrc,photolrc,xlab="", ylab="", ylim=c(-3,30),cex.lab=1.2,cex.axis=1.5,cex=2, main=(head[i]))
     mtext(expression("PPFD ("*mu*"mol "*m^-2*s^-1*")"),side=1,line=3.3,cex=1)
     mtext(expression(A[net]*" ("*mu*"mol "*CO[2]*" "*m^-2*s^-1*")"),side=2,line=2,cex=1)
-    curve((1/(2*summary(mods[[j]])$coef[4,1]))*
-            (summary(mods[[j]])$coef[2,1]*x+summary(mods[[j]])$coef[1,1]-
-               sqrt((summary(mods[[j]])$coef[2,1]*x+summary(mods[[j]])$coef[1,1])^2-4*
-                      summary(mods[[j]])$coef[2,1]*summary(mods[[j]])$coef[4,1]*
-                      summary(mods[[j]])$coef[1,1]*x))-summary(mods[[j]])$coef[3,1],lwd=2,col="blue",add=T)
+    curve((1/(2*summary(mods[[i]])$coef[4,1]))*
+            (summary(mods[[i]])$coef[2,1]*x+summary(mods[[i]])$coef[1,1]-
+               sqrt((summary(mods[[i]])$coef[2,1]*x+summary(mods[[i]])$coef[1,1])^2-4*
+                      summary(mods[[i]])$coef[2,1]*summary(mods[[i]])$coef[4,1]*
+                      summary(mods[[i]])$coef[1,1]*x))-summary(mods[[i]])$coef[3,1],lwd=2,col="blue",add=T)
        dev.off()
     
     
     # ---Solve for light compensation point (LCPT), PPFD where Anet=0 ---
-    x<-function(x) {(1/(2*summary(mods[[j]])$coef[4,1]))*
-        (summary(mods[[j]])$coef[2,1]*x+summary(mods[[j]])$coef[1,1]-
-           sqrt((summary(mods[[j]])$coef[2,1]*x+summary(mods[[j]])$coef[1,1])^2-4*
-                  summary(mods[[j]])$coef[2,1]*summary(mods[[j]])$coef[4,1]*
-                  summary(mods[[j]])$coef[1,1]*x))-summary(mods[[j]])$coef[3,1]}
+    x<-function(x) {(1/(2*summary(mods[[i]])$coef[4,1]))*
+        (summary(mods[[i]])$coef[2,1]*x+summary(mods[[i]])$coef[1,1]-
+           sqrt((summary(mods[[i]])$coef[2,1]*x+summary(mods[[i]])$coef[1,1])^2-4*
+                  summary(mods[[i]])$coef[2,1]*summary(mods[[i]])$coef[4,1]*
+                  summary(mods[[i]])$coef[1,1]*x))-summary(mods[[i]])$coef[3,1]}
     
     LCPT <- uniroot(x,c(0,250))$root #LCPT    light compensation point
     
     # ---Solve for light saturation point (LSP), PPFD where 75% of Amax is achieved (75% is arbitrary - cutoff could be changed)
     x<-function(x) {
-      (1/(2*summary(mods[[j]])$coef[4,1]))*
-        (summary(mods[[j]])$coef[2,1]*x+summary(mods[[j]])$coef[1,1]
-         -sqrt((summary(mods[[j]])$coef[2,1]*x+summary(mods[[j]])$coef[1,1])^2-4*
-                 summary(mods[[j]])$coef[2,1]*summary(mods[[j]])$coef[4,1]*
-                 summary(mods[[j]])$coef[1,1]*x))-summary(mods[[j]])$coef[3,1]-
-        (0.75*summary(mods[[j]])$coef[1,1])+0.75*(summary(mods[[j]])$coef[3,1])}
+      (1/(2*summary(mods[[i]])$coef[4,1]))*
+        (summary(mods[[i]])$coef[2,1]*x+summary(mods[[i]])$coef[1,1]
+         -sqrt((summary(mods[[i]])$coef[2,1]*x+summary(mods[[i]])$coef[1,1])^2-4*
+                 summary(mods[[i]])$coef[2,1]*summary(mods[[i]])$coef[4,1]*
+                 summary(mods[[i]])$coef[1,1]*x))-summary(mods[[i]])$coef[3,1]-
+        (0.75*summary(mods[[i]])$coef[1,1])+0.75*(summary(mods[[i]])$coef[3,1])}
     
     
     LSP <-  uniroot(x,c(10,2000))$root #LSP 
@@ -75,14 +78,14 @@ LRC <- function(fileID){# input is ID column from the experiments dataframe
     
     # Getting estimated parametters 
     
-    Am         <- summary(mods[[j]])$coef[1,1]     # Maximum assimilation
-    Am_se      <- summary(mods[[j]])$coef[1,2]     # p-value of Am
-    AQY        <- summary(mods[[j]])$coef[2,1]     #AQY (apparent quantum yield), 
-    AQY_se     <- summary(mods[[j]])$coef[2,2]     # p-value of AQY
-    Rd         <- summary(mods[[j]])$coef[3,1]     #Rd (dark respiration)
-    Rd_se      <- summary(mods[[j]])$coef[3,2]
-    theta      <- summary(mods[[j]])$coef[4,1]     #Theta (curvature parameter, dimensionless)
-    theta_se   <- summary(mods[[j]])$coef[4,2]
+    Am         <- summary(mods[[i]])$coef[1,1]     # Maximum assimilation
+    Am_se      <- summary(mods[[i]])$coef[1,2]     # p-value of Am
+    AQY        <- summary(mods[[i]])$coef[2,1]     #AQY (apparent quantum yield), 
+    AQY_se     <- summary(mods[[i]])$coef[2,2]     # p-value of AQY
+    Rd         <- summary(mods[[i]])$coef[3,1]     #Rd (dark respiration)
+    Rd_se      <- summary(mods[[i]])$coef[3,2]
+    theta      <- summary(mods[[i]])$coef[4,1]     #Theta (curvature parameter, dimensionless)
+    theta_se   <- summary(mods[[i]])$coef[4,2]
     
     # create vector of data for output file (site, species, g1, ci_low, ci_hig)
     
