@@ -122,24 +122,26 @@ city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
 biomass_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = total_biomass)) +
+  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = total_biomass), 
+              alpha = 0.9) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
                        midpoint = 1, 
                        breaks = seq(-10, 10, 0.4), 
                        limits = c(0, 2)) +
-  coord_cartesian(xlim = c(-113, -80), ylim = c(34, 42)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
   facet_wrap(~genotype_formal, ncol = 1) +
+  theme_classic(base_size = 20) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "Biomass (kg/m2)") +
+  labs(x = "", y = "", fill = "") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
-animate(biomass_animation, fps = 100, height = 600, width = 400)
+animate(biomass_animation, fps = 100, height = 400, width = 400)
 anim_save("stlew_biomass.gif", animation = biomass_animation, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 600, width = 400)
+          path = "regional_runs_inputs/results/", fps = 100, height = 400, width = 400)
 ```
 
 ## Comparisons
@@ -170,7 +172,8 @@ bio_comp_1 <- ggplot() +
                   group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
   scale_x_datetime(labels = scales::date_format("%b")) +
   labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
-  theme_classic()
+  theme_classic() +
+  lims(y = c(0, 2))
 
 bio_comp_2 <- ggplot() +
   geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Changed carbon allocation")), 
@@ -182,7 +185,8 @@ bio_comp_2 <- ggplot() +
                   group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
   scale_x_datetime(labels = scales::date_format("%b")) +
   labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
-  theme_classic()
+  theme_classic() +
+  lims(y = c(0, 2))
 
 cowplot::plot_grid(bio_comp_1, bio_comp_2, ncol = 1)
 ```
@@ -207,24 +211,26 @@ The final map plots estimated transpiration values for the `r length(unique(regi
 transpiration_animation <- ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = transpiration)) +
+  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = transpiration), 
+              alpha = 0.9) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
                        midpoint = 7.5, 
                        breaks = seq(0, 20, 5), 
                        limits = c(0, 15)) +
-  coord_cartesian(xlim = c(-113, -80), ylim = c(34, 42)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
   facet_wrap(~genotype_formal, ncol = 1) +
+  theme_classic(base_size = 20) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "Transpiration (kg/m2/hr)") +
+  labs(x = "", y = "", fill = "") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
-animate(transpiration_animation, fps = 100, height = 600, width = 400)
+animate(transpiration_animation, fps = 100, height = 400, width = 400)
 anim_save("stlew_transpiration.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 600, width = 400)
+          path = "regional_runs_inputs/results/", fps = 100, height = 400, width = 400)
 ```
 
 ## Comparisons
@@ -242,7 +248,8 @@ trans_comp_1 <- ggplot() +
                   group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
   scale_x_datetime(labels = scales::date_format("%b")) +
   labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
-  theme_classic()
+  theme_classic() +
+  lims(y = c(0, 15))
 
 trans_comp_2 <- ggplot() +
   geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Changed carbon allocation")), 
@@ -254,7 +261,8 @@ trans_comp_2 <- ggplot() +
                   group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
   scale_x_datetime(labels = scales::date_format("%b")) +
   labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
-  theme_classic()
+  theme_classic() +
+  lims(y = c(0, 15))
 
 cowplot::plot_grid(trans_comp_1, trans_comp_2, ncol = 1)
 ```
