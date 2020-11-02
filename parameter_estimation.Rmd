@@ -46,7 +46,7 @@ for(i in 1:length(aq_ID)){
 }
 ```
 
-Next, run the Gs.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) across the plant replicates. Here, the data from both types of curves are restricted to 390 ppm < CO2 < 410 ppm and PAR > 1200 umol photons m^-2 s^-1 and fit to the Ball-Berry (1987) and Medlyn (2011) models using the package 'plantecophys'. 
+Next, run the Gs2.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) across the plant replicates. Here, the data from both types of curves used across the entire range of CO2 and PAR conditions excepting extremely low values (PAR < LCPT and CO2 < 45 ppm)
 ```{r}
 ID <- expDF$ID[which(expDF$Date > max(params$Date))]
 for(i in 1:length(ID)){

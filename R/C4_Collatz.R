@@ -3,8 +3,8 @@
 C4_Collatz <- function(fileID){# input is ID column from the experiments dataframe
   
   # Required packages
-  require(rjags)
-  require(dplyr)
+  library(rjags)
+  library(dplyr)
   
   # Read in data
   dat <- read.csv(paste0("cleaned_data/ACi/A_Ci_curves_", fileID, ".csv"))
