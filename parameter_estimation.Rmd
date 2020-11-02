@@ -64,39 +64,20 @@ for(i in 1:length(ID)){
 }
 ```
 
-Finally, once all three functions above are run and output parameter files produced, they can be collated and combined with the experiment data to produce a final 'parameters_data.csv'. 
+Finally, once all three or four functions above are run and output parameter files produced, they can be collated and combined with the experiment data to produce a final 'parameters_data.csv'. 
 ```{r}
 # Declare empty dataframe
 params <- data.frame()
 
-# Add ACi parameters
-aci <- list.files("outputs/ACi", pattern = "csv")
-for(i in 1:length(aci)){
-  temp <- read.csv(paste0("outputs/ACi/", aci[i]),
-                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
-  params <- rbind.data.frame(params, temp)
-}
+# Create vector of filenames
+fnames <- c(paste0("outputs/ACi/", list.files("outputs/ACi", pattern = "csv")),
+            paste0("outputs/AQ/", list.files("outputs/AQ", pattern = "csv")), 
+            paste0("outputs/stomatal/", list.files("outputs/stomatal", pattern = "csv")),
+            paste0("outputs/Rd/", list.files("outputs/Rd", pattern = "csv")))
 
-# Add AQ parameters
-aq <- list.files("outputs/AQ", pattern = "csv")
-for(i in 1:length(aq)){
-  temp <- read.csv(paste0("outputs/AQ/", aq[i]),
-                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
-  params <- rbind.data.frame(params, temp)
-}
 
-# Add stomatal parameters
-st <- list.files("outputs/stomatal", pattern = "csv")
-for(i in 1:length(st)){
-  temp <- read.csv(paste0("outputs/stomatal/", st[i]),
-                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
-  params <- rbind.data.frame(params, temp)
-}
-
-# Add Rd
-rd<- list.files("outputs/Rd", pattern = "csv")
-for(i in 1:length(rd)){
-  temp <- read.csv(paste0("outputs/Rd/", rd[i]),
+for(i in 1:length(fnames)){
+  temp <- read.csv(fnames[i],
                    colClasses = c(rep("character", 3), rep("numeric",3), "character"))
   params <- rbind.data.frame(params, temp)
 }
