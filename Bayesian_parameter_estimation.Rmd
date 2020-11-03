@@ -13,6 +13,8 @@ source("/home/jessicaguo/pecan/modules/photosynthesis/R/fitA.R")
 library(postjags)
 library(dplyr)
 library(ggplot2)
+source("R/multiplot.R")
+load("outputs/Bayesian_parameter_estimation/out_mcmc.Rdata")
 ```
 
 The above function is modified from the 'PEcAn.photosynthesis' package to include a Collatz model for C4 photosynthesis and an option for data from the Licor 6800. Retained from the original model include options for fixed and random effects. The function has 5 arguments:
@@ -56,7 +58,7 @@ Each plant replicate will be modeled separately, rather than as a random effect.
 # Data types to select
 types <- list("ACi", "AQ", c("ACi", "AQ"))
 
-# simple model
+# Simple model, no fixed or random effects
 model <- list(V.fixed = NULL, V.random = NULL, 
                   a.fixed = NULL, a.random = NULL, 
                   k.fixed = NULL, k.random = NULL, 
@@ -74,8 +76,91 @@ for(i in 1:length(ids)){ # 10 experiments
     }
   }
 }
+
+# Save output list as .Rdata object
+if(dir.exists("outputs/Bayesian_parameter_estimation") == F){
+  dir.create("outputs/Bayesian_parameter_estimation")
+}
+
+save(out, file = "outputs/Bayesian_parameter_estimation/out_mcmc.Rdata")
 ```
 
+Two sets of posteriors are created, $params and $predict. First, summarize the $predict posteriors and align with empirical data. 
+```{r}
+temp <- data.frame()
+preds1 <- data.frame()
+preds2 <- data.frame()
+preds <- list()
+# Add columns to datlist for each type of output
+for(i in 1:length(ids)){
+  preds1 <- data.frame()
+  preds2 <- data.frame()
+  for(j in 1:2){# For types = ACi or AQ, stack
+    temp <- data.frame()
+    for(k in 1:3){
+      sumDF <- coda.fast(out[[i]][[j]][[k]]$predict)[
+        grep("pA", row.names(coda.fast(out[[i]][[j]][[k]]$predict))), c(1, 3:5)
+      ]
+      temp <- rbind.data.frame(temp, sumDF)
+    }
+    preds1 <- rbind.data.frame(preds1, temp)
+  }  
+  for(j in 3){
+    temp <- data.frame()
+    for(k in 1:3){# For types = Aci and AQ, as is
+      sumDF <- coda.fast(out[[i]][[j]][[k]]$predict)[
+        grep("pA", row.names(coda.fast(out[[i]][[j]][[k]]$predict))), c(1, 3:5)
+      ]
+      temp <- rbind.data.frame(temp, sumDF)
+    }
+    preds2 <- temp
+  }
+  
+  # add to existing data as new columns
+  preds[[i]] <- rbind.data.frame(cbind.data.frame(datlist[[i]], preds1),
+                                 cbind.data.frame(datlist[[i]], preds2))
+  preds[[i]]$data <- rep(c("single", "both"), each = nrow(datlist[[i]]))
+}
+
+```
+
+Plot predicted and empirical ACi and AQ curves. 
+```{r}
+# Create folder to save plots
+if(dir.exists("outputs/Bayesian_parameter_estimation/plots") == F){
+  dir.create("outputs/Bayesian_parameter_estimation/plots")
+}
+
+for(i in 1:length(preds)){
+  preds[[i]]$data <- factor(preds[[i]]$data, levels = c("single", "both"))
+  aciDF <- subset(preds[[i]], type == "ACi" & data == "single" | data == "both")
+  fig_aci <- ggplot(aciDF, aes(x = Pci))+
+  geom_point(aes(y = A, color = "Observed", shape = type))+
+  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = "Predicted"), alpha = 0.5)+
+  facet_grid(rep~data)+
+  theme_bw(base_size = 12)+
+  scale_color_manual(values = c("black", "forestgreen"))
+  
+  aqDF <- subset(preds[[i]], type == "AQ" & data == "single" | data == "both")
+  fig_aq <- ggplot(aqDF, aes(x = Qin))+
+  geom_point(aes(y = A, color = "Observed", shape = type))+
+  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = "Predicted"), alpha = 0.5)+
+  facet_grid(rep~data)+
+  theme_bw(base_size = 12)+
+  scale_color_manual(values = c("black", "forestgreen"))
+  
+  # Print out separately
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_ACi.jpg"),
+       height = 4, width = 6, units = "in", res = 600)
+  print(fig_aci)
+  dev.off()
+  
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_AQ.jpg"),
+       height = 4, width = 6, units = "in", res = 600)
+  print(fig_aq)
+  dev.off()
+}
+```
 
 Summarize the posteriors into long format labeled with ID, type, rep, and trait.  
 ```{r}
@@ -159,6 +244,8 @@ fig3 <- ggplot(rdDF)+
 print(fig3)
 
 ```
+
+
 #initial test, null model
 flux.data = dat
 pathway = "C4"
