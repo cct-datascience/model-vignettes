@@ -52,7 +52,7 @@ Gs <- function(fileID){# input is ID column from the experiments dataframe
   
   # Location of output files
   if(dir.exists("outputs/stomatal/") == F){
-    dir.create("outputs/stomatal/")
+    dir.create("outputs/stomatal/", recursive = TRUE)
   }
   loc <- paste0("outputs/stomatal/")
   

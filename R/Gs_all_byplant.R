@@ -64,7 +64,11 @@ Gs_all_byplant <- function(fileID){# input is ID column from the experiments dat
   }
   
   # Location of output files
+  if(dir.exists("outputs/stomatal/all_byplant") == F){
+    dir.create("outputs/stomatal/all_byplant", recursive = TRUE)
+  }
   loc <- paste0("outputs/stomatal/all_byplant/")
+  
   write.csv(out, file = paste0(loc, fileID, "_parameters_all_byplant.csv"), row.names = F)
   
   # Plotting 

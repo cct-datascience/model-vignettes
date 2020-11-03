@@ -59,7 +59,7 @@ C4_Collatz <- function(fileID){# input is ID column from the experiments datafra
   
   # Save out diagnostic plots
   if(dir.exists("outputs/ACi/diagnostic/") == F){
-    dir.create("outputs/ACi/diagnostic/")
+    dir.create("outputs/ACi/diagnostic/", recursive = TRUE)
   }
   loc <- paste0("outputs/ACi/diagnostic/")
   

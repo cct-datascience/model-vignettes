@@ -88,7 +88,11 @@ Gs_all_byplant_50_LCPT <- function(fileID){# input is ID column from the experim
   }
   
   # Location of output files
+  if(dir.exists("outputs/stomatal/all_byplant_50_LCPT") == F){
+    dir.create("outputs/stomatal/all_byplant_50_LCPT", recursive = TRUE)
+  }
   loc <- paste0("outputs/stomatal/all_byplant_50_LCPT/")
+
   write.csv(out, file = paste0(loc, fileID, "_parameters_all_byplant_50.csv"), row.names = F)
   
   # Plotting 

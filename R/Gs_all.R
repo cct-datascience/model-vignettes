@@ -41,8 +41,12 @@ Gs_all <- function(fileID){# input is ID column from the experiments dataframe
   g0BB_se  <- summary(gsfit2$fit)$parameters[2,2]    
   
   # Location of output files
+  if(dir.exists("outputs/stomatal/all") == F){
+    dir.create("outputs/stomatal/all", recursive = TRUE)
+  }
   loc <- paste0("outputs/stomatal/all/")
   
+
   # create vector of data for output file (site, species, g1, ci_low, ci_hig)
   out <- data.frame(ID = rep(fileID, 4),
                     rep = rep(NA, 4),

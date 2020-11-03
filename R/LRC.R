@@ -15,7 +15,7 @@ LRC <- function(fileID){# input is ID column from the experiments dataframe
 
   # Location of output files
   if(dir.exists("outputs/AQ/") == F){
-    dir.create("outputs/AQ/")
+    dir.create("outputs/AQ/", recursive = TRUE)
   }
   loc <- paste0("outputs/AQ/")
   
