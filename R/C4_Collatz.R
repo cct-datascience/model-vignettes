@@ -5,6 +5,7 @@ C4_Collatz <- function(fileID){# input is ID column from the experiments datafra
   # Required packages
   library(rjags)
   library(dplyr)
+  library(tibble)
   
   # Read in data
   dat <- read.csv(paste0("cleaned_data/ACi/A_Ci_curves_", fileID, ".csv"))
