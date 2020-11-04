@@ -32,7 +32,7 @@ The above function is modified from the 'PEcAn.photosynthesis' package to includ
 Here, our goal is to test performance of fitA with the Collatz model using the Danforth data. Three sets of data inputs will be used and resulting parameters compared: ACi curve only,  AQ curve only, and ACi & AQ curves simultaneously. As an added check, these parameters will be compared to outputs from "parameter_estimation.Rmd"
 Only the default model will be used here. 
 
-First, extract, label, and combine the ACi and AQ data for each experiment with both datasets. 
+First, extract, label, and combine the ACi and AQ data for each experiment with both datasets. Following Feng and Dietze (2012), only include low light range of the AQ curve, between 0 and 250 umol m^-2 s^-1. Also, remove Pci values < 0; those arise erroneously from a match error that results in a high A and low E. 
 ```{r}
 expDF <- read.csv("cleaned_data/experiments.csv",
                   colClasses = c("character", "numeric", rep("character",2), rep("numeric",2)))
@@ -43,11 +43,11 @@ datlist <- list()
 for(i in 1:length(ids)){
   aci <- read.csv(paste0("cleaned_data/ACi/A_Ci_curves_", ids[i], ".csv"), header=T)
   aci$type <- rep("ACi", nrow(aci))
-  aci <- subset(aci, select = c("type", "rep", "A", "Pci", "Qin"))
+  aci <- subset(aci, Pci > 0, select = c("type", "rep", "A", "Pci", "Qin"))
   
   aq <- read.csv(paste0("cleaned_data/AQ/AQin_curves_", ids[i], ".csv"), header=T)
   aq$type <- rep("AQ", nrow(aq))
-  aq <- subset(aq, select = c("type", "rep", "A", "Pci", "Qin"))
+  aq <- subset(aq, Pci > 0 & Qin < 250, select = c("type", "rep", "A", "Pci", "Qin"))
   
   datlist[[i]] <- rbind(aci, aq)
 }
@@ -83,6 +83,11 @@ if(dir.exists("outputs/Bayesian_parameter_estimation") == F){
 }
 
 save(out, file = "outputs/Bayesian_parameter_estimation/out_mcmc.Rdata")
+```
+
+Model diagnostic plots
+```{r}
+mcmcplots::mcmcplot(out[[10]][[1]][[1]]$params, parms = c("alpha0", "r0", "vmax0"))
 ```
 
 Two sets of posteriors are created, $params and $predict. First, summarize the $predict posteriors and align with empirical data. 
