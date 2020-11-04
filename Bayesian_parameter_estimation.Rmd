@@ -53,7 +53,7 @@ for(i in 1:length(ids)){
 }
 ```
 
-Each plant replicate will be modeled separately, rather than as a random effect. There are currently 10 datasets with both ACi and AQ data, each measured on 3 plant replicates. A total of 3 sets of thirty outputs wil be recorded, distinguishing 
+Each plant replicate will be modeled separately, rather than as a random effect. There are currently 10 datasets with both ACi and AQ data, each measured on 3 plant replicates.
 ```{r}
 # Data types to select
 types <- list("ACi", "AQ", c("ACi", "AQ"))
@@ -128,27 +128,42 @@ Plot predicted and empirical ACi and AQ curves.
 ```{r}
 # Create folder to save plots
 if(dir.exists("outputs/Bayesian_parameter_estimation/plots") == F){
-  dir.create("outputs/Bayesian_parameter_estimation/plots")
+  dir.create("outputs/Bayesian_parameter_estimation/plots", recursive = T)
 }
 
 for(i in 1:length(preds)){
   preds[[i]]$data <- factor(preds[[i]]$data, levels = c("single", "both"))
+  
+  # ACi plots
   aciDF <- subset(preds[[i]], type == "ACi" & data == "single" | data == "both")
   fig_aci <- ggplot(aciDF, aes(x = Pci))+
-  geom_point(aes(y = A, color = "Observed", shape = type))+
-  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = "Predicted"), alpha = 0.5)+
+  geom_point(aes(y = A, shape = type), color = "black")+
+  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = Qin), alpha = 0.5)+
   facet_grid(rep~data)+
   theme_bw(base_size = 12)+
-  scale_color_manual(values = c("black", "forestgreen"))
-  
+  scale_color_gradient(low = "darkgreen", high = "yellowgreen")
+
+  # AQ plots
   aqDF <- subset(preds[[i]], type == "AQ" & data == "single" | data == "both")
   fig_aq <- ggplot(aqDF, aes(x = Qin))+
-  geom_point(aes(y = A, color = "Observed", shape = type))+
-  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = "Predicted"), alpha = 0.5)+
+  geom_point(aes(y = A, shape = type), color = "black")+
+  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = Pci), alpha = 0.5)+
   facet_grid(rep~data)+
   theme_bw(base_size = 12)+
-  scale_color_manual(values = c("black", "forestgreen"))
-  
+  scale_color_gradient(low = "lavender", high = "midnightblue")
+
+  # Observed vs. predicted plots
+  preds[[i]]$data2 <- c(rep("ACi", length(which(preds[[i]]$type=="ACi" & preds[[i]]$data=="single"))),
+                      rep("AQ", length(which(preds[[i]]$type=="AQ" & preds[[i]]$data=="single"))),
+                      rep("Both", length(which(preds[[i]]$data=="both"))))
+  fig_obs_pred <- ggplot(preds[[i]])+
+  geom_point(aes(x = A, y = mean))+
+  geom_abline(slope = 1, intercept = 0, col = "red", lty = 2)+
+  scale_x_continuous(expression(paste("Observed " ,A[net], " (μmol ", m^-2, s^-1, ")")))+
+  scale_y_continuous(expression(paste("Predicted " ,A[net], " (μmol ", m^-2, s^-1, ")")))+
+  facet_wrap(~data2)+
+  theme_bw(base_size = 12)
+
   # Print out separately
   jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_ACi.jpg"),
        height = 4, width = 6, units = "in", res = 600)
@@ -158,6 +173,11 @@ for(i in 1:length(preds)){
   jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_AQ.jpg"),
        height = 4, width = 6, units = "in", res = 600)
   print(fig_aq)
+  dev.off()
+  
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_ObsvsPred.jpg"),
+       height = 4, width = 6, units = "in", res = 600)
+  print(fig_obs_pred)
   dev.off()
 }
 ```
