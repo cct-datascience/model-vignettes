@@ -145,7 +145,6 @@ for file in *.csv; do
   curl -X POST --data-binary @$file    http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
 done
 
-curl -X POST --data-binary @phys_parameters_cuticular_cond.csv    http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
 ```
 
 
