@@ -17,7 +17,7 @@ library(udunits2)
 
 ## Physiological parameters Vmax, Rd, AQY, stomatal slope, and cuticular conductance f
 
-Read in parameters data from [sentinel-detection repository](https://github.com/jessicaguo/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
+Read in parameters data from [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
 ```{r}
 all_parameters <- read.csv("../../../sentinel-detection/parameters_pipeline/outputs/parameters_data.csv")
 ```
@@ -45,7 +45,6 @@ Clean up data to have the final columns:
 First, manage the chamber experiment parameters:
 ```{r}
 upload_parameters <- all_parameters %>% 
-  #dplyr::mutate(notes = paste("row", row_number(), "in parameters_data.csv")) %>% 
   filter(Genotype == "ME034", 
          trait %in% c("vmax", "Rd", "AQY", "theta_lc", "g1BB", "g0BB")) %>% 
   mutate(date = as.POSIXct(as.character(Date), format = "%Y%m%d"), 
@@ -103,7 +102,7 @@ write.csv(upload_parameters, "upload_params_data/phys_parameters.csv", row.names
 ```
 
 
-Split dataframe, first by new data since last  upload, then by parameter.  
+Split dataframe, first by new data since last  upload, then by parameter. Uploading to BETYdb using the API requires one file per parameter. 
 ```{r}
 #create new folder with date
 dname <- gsub('-', '', grep(max(upload_parameters$local_datetime), pattern = "(\\D+)", value = T))
@@ -138,13 +137,12 @@ for(p in params){
 Upload that new parameter data file using the API. NOTE: Must update to latest folder (date), which on the R side is the variable 'dname'. 
 ```{bash}
 #change to directory of latest date
-cd /home/jessicaguo/model-vignettes/BioCro/DARPA/upload_params_data/20200905
+cd ~/model-vignettes/BioCro/DARPA/upload_params_data/20200905
 
 #add all .csv files from this diretory
 for file in *.csv; do
   curl -X POST --data-binary @$file    http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
 done
-
 ```
 
 
