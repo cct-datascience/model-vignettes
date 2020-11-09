@@ -137,7 +137,8 @@ for(p in params){
 Upload that new parameter data file using the API. NOTE: Must update to latest folder (date), which on the R side is the variable 'dname'. 
 ```{bash}
 #change to directory of latest date
-cd ~/model-vignettes/BioCro/DARPA/upload_params_data/20200905
+x=$(ls -d ~/model-vignettes/BioCro/DARPA/upload_params_data/*/ | sort -r | head -n 1)
+cd $x
 
 #add all .csv files from this diretory
 for file in *.csv; do
