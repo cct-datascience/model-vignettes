@@ -255,9 +255,9 @@ Create 1:1 figures for each trait with Tonantzin's estimates as the baseline. Fo
 vmaxDF <- subset(masterDF, trait == "vmax")
 fig1 <- ggplot(vmaxDF)+
   geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = mean - SD, ymax = mean + SD), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
   geom_point(aes(x = Value, y = mean))+
-  geom_errorbar(aes(x = Value, ymin = mean - SD, ymax = mean + SD))+
-  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2))+
   scale_x_continuous(expression(paste(V[max], " (T)")))+
   scale_y_continuous(expression(paste(V[max], " (fitA)")))+
   # facet_wrap(~type)+
@@ -268,9 +268,9 @@ print(fig1)
 aqyDF <- subset(masterDF, trait == "AQY")
 fig2 <- ggplot(aqyDF)+
   geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = pc2.5, ymax = pc97.5), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
   geom_point(aes(x = Value, y = mean))+
-  geom_errorbar(aes(x = Value, ymin = pc2.5, ymax = pc97.5))+
-  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2))+
   scale_x_continuous(expression(paste(alpha, " (T)")))+
   scale_y_continuous(expression(paste(alpha, " (ftA)")))+
   # facet_wrap(~type, scales = "free_y")+
@@ -281,9 +281,9 @@ print(fig2)
 rdDF <- subset(masterDF, trait == "Rd")
 fig3 <- ggplot(rdDF)+
   geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = pc2.5, ymax = pc97.5), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
   geom_point(aes(x = Value, y = mean))+
-  geom_errorbar(aes(x = Value, ymin = pc2.5, ymax = pc97.5))+
-  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2))+
   scale_x_continuous(expression(paste(R[d], " (T)")))+
   scale_y_continuous(expression(paste(R[d], " (fitA)")))+
   # facet_wrap(~type, scales = "free_y")+
