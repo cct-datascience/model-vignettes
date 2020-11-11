@@ -56,7 +56,7 @@ for(i in 1:length(ids)){
 Each plant replicate will be modeled separately, rather than as a random effect. There are currently 10 datasets with both ACi and AQ data, each measured on 3 plant replicates.
 ```{r}
 # Data types to select
-types <- list("ACi", "AQ", c("ACi", "AQ"))
+# types <- list("ACi", "AQ", c("ACi", "AQ"))
 types <-list(c("ACi", "AQ"))
 # Simple model, no fixed or random effects
 model <- list(V.fixed = NULL, V.random = "leaf", 
@@ -76,7 +76,7 @@ for(i in 1:length(ids)){ # 10 experiments
 
 # Save output list as .Rdata object
 if(dir.exists("outputs/Bayesian_parameter_estimation") == F){
-  dir.create("outputs/Bayesian_parameter_estimation")
+  dir.create("outputs/Bayesian_parameter_estimation", recursive = T)
 }
 
 save(out, file = "outputs/Bayesian_parameter_estimation/out_mcmc.Rdata")
@@ -94,15 +94,15 @@ Two sets of posteriors are created, $params and $predict. First, summarize the $
 preds <- list()
 # Add columns to datlist for each type of output
 for(i in 1:length(ids)){
-  preds1 <- data.frame()
-  preds2 <- data.frame()
-  for(j in 1:2){# For types = ACi or AQ, stack
-    sumDF <- coda.fast(out[[i]][[j]]$predict)[
-        grep("pA", row.names(coda.fast(out[[i]][[j]]$predict))), c(1, 3:5)
-    ]
-    preds1 <- rbind.data.frame(preds1, sumDF)
-  }  
-  for(j in 3){# For types = Aci and AQ, as is
+  # preds1 <- data.frame()
+  # preds2 <- data.frame()
+  # for(j in 1:2){# For types = ACi or AQ, stack
+  #   sumDF <- coda.fast(out[[i]][[j]]$predict)[
+  #       grep("pA", row.names(coda.fast(out[[i]][[j]]$predict))), c(1, 3:5)
+  #   ]
+  #   preds1 <- rbind.data.frame(preds1, sumDF)
+  # }  
+  for(j in 1){# For types = Aci and AQ, as is
     sumDF <- coda.fast(out[[i]][[j]]$predict)[
       grep("pA", row.names(coda.fast(out[[i]][[j]]$predict))), c(1, 3:5)
     ]
@@ -110,66 +110,69 @@ for(i in 1:length(ids)){
   }
   
   # add to existing data as new columns
-  preds[[i]] <- rbind.data.frame(cbind.data.frame(datlist[[i]], preds1),
-                                 cbind.data.frame(datlist[[i]], preds2))
-  preds[[i]]$data <- rep(c("single", "both"), each = nrow(datlist[[i]]))
+  preds[[i]] <- cbind.data.frame(datlist[[i]], preds2)
+  # preds[[i]] <- rbind.data.frame(cbind.data.frame(datlist[[i]], preds1),
+  #                                cbind.data.frame(datlist[[i]], preds2))
+  # preds[[i]]$data <- rep(c("single", "both"), each = nrow(datlist[[i]]))
 }
-
 ```
 
 Plot predicted and empirical ACi and AQ curves. 
 ```{r}
 # Create folder to save plots
-if(dir.exists("outputs/Bayesian_parameter_estimation/plots") == F){
-  dir.create("outputs/Bayesian_parameter_estimation/plots", recursive = T)
+if(dir.exists("outputs/Bayesian_parameter_estimation/plots2") == F){
+  dir.create("outputs/Bayesian_parameter_estimation/plots2", recursive = T)
 }
 
 for(i in 1:length(preds)){
-  preds[[i]]$data <- factor(preds[[i]]$data, levels = c("single", "both"))
+  # preds[[i]]$data <- factor(preds[[i]]$data, levels = c("single", "both"))
   
   # ACi plots
-  aciDF <- subset(preds[[i]], type == "ACi" & data == "single" | data == "both")
-  fig_aci <- ggplot(aciDF, aes(x = Pci))+
+  # aciDF <- subset(preds[[i]], type == "ACi" & data == "single" | data == "both")
+  fig_aci <- ggplot(preds[[i]], aes(x = Pci))+
   geom_point(aes(y = A, shape = type), color = "black")+
   geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = Qin), alpha = 0.5)+
-  facet_grid(rep~data)+
+  # facet_grid(rep~data)+
+  facet_wrap(~rep) +
   theme_bw(base_size = 12)+
   scale_color_gradient(low = "darkgreen", high = "yellowgreen")
 
   # AQ plots
-  aqDF <- subset(preds[[i]], type == "AQ" & data == "single" | data == "both")
-  fig_aq <- ggplot(aqDF, aes(x = Qin))+
+  # aqDF <- subset(preds[[i]], type == "AQ" & data == "single" | data == "both")
+  fig_aq <- ggplot(preds[[i]], aes(x = Qin))+
   geom_point(aes(y = A, shape = type), color = "black")+
   geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = Pci), alpha = 0.5)+
-  facet_grid(rep~data)+
+  # facet_grid(rep~data)+
+  facet_wrap(~rep) +
   theme_bw(base_size = 12)+
   scale_color_gradient(low = "lavender", high = "midnightblue")
 
   # Observed vs. predicted plots
-  preds[[i]]$data2 <- c(rep("ACi", length(which(preds[[i]]$type=="ACi" & preds[[i]]$data=="single"))),
-                      rep("AQ", length(which(preds[[i]]$type=="AQ" & preds[[i]]$data=="single"))),
-                      rep("Both", length(which(preds[[i]]$data=="both"))))
+  # preds[[i]]$data2 <- c(rep("ACi", length(which(preds[[i]]$type=="ACi" & preds[[i]]$data=="single"))),
+  #                     rep("AQ", length(which(preds[[i]]$type=="AQ" & preds[[i]]$data=="single"))),
+  #                     rep("Both", length(which(preds[[i]]$data=="both"))))
   fig_obs_pred <- ggplot(preds[[i]])+
   geom_point(aes(x = A, y = mean))+
   geom_abline(slope = 1, intercept = 0, col = "red", lty = 2)+
   scale_x_continuous(expression(paste("Observed " ,A[net], " (μmol ", m^-2, s^-1, ")")))+
   scale_y_continuous(expression(paste("Predicted " ,A[net], " (μmol ", m^-2, s^-1, ")")))+
-  facet_wrap(~data2)+
-  theme_bw(base_size = 12)
+  # facet_wrap(~data2)+
+  theme_bw(base_size = 12)+
+  coord_equal()
 
   # Print out separately
-  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_ACi.jpg"),
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots2/", ids[i], "_ACi.jpg"),
        height = 4, width = 6, units = "in", res = 600)
   print(fig_aci)
   dev.off()
   
-  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_AQ.jpg"),
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots2/", ids[i], "_AQ.jpg"),
        height = 4, width = 6, units = "in", res = 600)
   print(fig_aq)
   dev.off()
   
-  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots/", ids[i], "_ObsvsPred.jpg"),
-       height = 4, width = 6, units = "in", res = 600)
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots2/", ids[i], "_ObsvsPred.jpg"),
+       height = 4, width = 4, units = "in", res = 600)
   print(fig_obs_pred)
   dev.off()
 }
@@ -177,20 +180,20 @@ for(i in 1:length(preds)){
 
 Summarize the posteriors into long format labeled with ID, type, rep, and trait.  
 ```{r}
-types <- c("ACi", "AQ", "both")
+# types <- c("ACi", "AQ", "both")
 master <- data.frame()
 for(i in 1:length(ids)){
-  for(j in 1:length(types)){
+  for(j in 1){
     sumDF <- coda.fast(out[[i]][[j]]$params)
     sumDF$trait2 <- row.names(sumDF)
     sumDF <- sumDF[c(grep("V[", fixed = T, sumDF$trait),
                      grep("A[", fixed = T, sumDF$trait),
-                     grep("K[", fixed = T, sumDF$trait),
+                     grep("R[", fixed = T, sumDF$trait),
                      grep("r0", fixed = T, sumDF$trait)),]
     sumDF$ID <- rep(ids[i], nrow(sumDF))
-    sumDF$type <- rep(types[j], nrow(sumDF))
-    sumDF$trait <- c(rep("vmax", 3), rep("AQY", 3),"Rd")
-    sumDF$rep <- c(rep(c("plant_1", "plant_2", "plant_3"), 2), "all")
+    # sumDF$type <- rep(types[j], nrow(sumDF))
+    sumDF$trait <- c(rep("vmax", 3), rep("AQY", 3),rep("Rd", 3), "r0")
+    sumDF$rep <- c(rep(c("plant_1", "plant_2", "plant_3"), 3), "all")
     master <- rbind.data.frame(master, sumDF)
   }
 }
@@ -201,7 +204,7 @@ For Rd only, when comparing population vs. plant level parameters.
 params <- read.csv("outputs/parameters_data.csv")
 add <- subset(params, select = c(ID, rep, trait, Value, SE, SD))
 add <- subset(add, trait == "Rd" & ID %in% ids)
-plot(tapply(add$Value, add$ID, mean)[1:10], master$mean[master$type == "both" & master$trait == "Rd"])
+plot(tapply(add$Value, add$ID, mean)[1:10], master$mean[master$trait == "r0"])
 abline(a = 1, b = 0, col = "red")
 ```
 
@@ -210,14 +213,14 @@ Plot traits for each experiment.
 for(i in 1:10){
 sub <- subset(master, ID == ids[i])
 fig1 <- ggplot(sub)+
-  geom_point(aes(x = type, y = mean, color = rep), position = position_dodge(width = 0.5))+
+  geom_pointrange(aes(x = rep, y = mean, ymin = pc2.5, ymax = pc97.5), position = position_dodge(width = 0.5))+
   # geom_pointrange(aes(x = type, y = mean, ymin = pc2.5, ymax = pc97.5, color = rep),
   #                 position = position_dodge(width = 0.5))+
   facet_wrap(~ trait, scales  = "free_y")+
   theme_bw(base_size = 12)
 print(fig1)
 
-sub2 <- subset(master, ID == ids[i] & type == "both")
+sub2 <- subset(master, ID == ids[i])
 fig2 <- ggplot(sub2)+
   geom_pointrange(aes(x = rep, y = mean, ymin = pc2.5, ymax = pc97.5),
                   position = position_dodge(width = 0.5))+
@@ -239,7 +242,7 @@ add <- subset(add, trait %in% c("vmax", "Rd", "AQY") & ID %in% ids)
 masterDF <- master %>%
   filter(trait != "k")%>%
   left_join(add, by = c("ID", "rep", "trait")) %>%
-  select(ID, rep, type, trait, 
+  select(ID, rep, trait, 
          Value, SE, SD, # traits estimated from Tonantzin's workflow
          mean, median, sd, pc2.5, pc97.5) #traits from this analysis
 
@@ -257,8 +260,9 @@ fig1 <- ggplot(vmaxDF)+
   geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2))+
   scale_x_continuous(expression(paste(V[max], " (T)")))+
   scale_y_continuous(expression(paste(V[max], " (fitA)")))+
-  facet_wrap(~type)+
-  theme_bw(base_size = 14)
+  # facet_wrap(~type)+
+  theme_bw(base_size = 14)+
+  coord_equal()
 print(fig1)
 
 aqyDF <- subset(masterDF, trait == "AQY")
@@ -269,8 +273,9 @@ fig2 <- ggplot(aqyDF)+
   geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2))+
   scale_x_continuous(expression(paste(alpha, " (T)")))+
   scale_y_continuous(expression(paste(alpha, " (ftA)")))+
-  facet_wrap(~type, scales = "free_y")+
-  theme_bw(base_size = 14)
+  # facet_wrap(~type, scales = "free_y")+
+  theme_bw(base_size = 14)+
+  coord_equal()
 print(fig2)
 
 rdDF <- subset(masterDF, trait == "Rd")
@@ -281,14 +286,36 @@ fig3 <- ggplot(rdDF)+
   geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2))+
   scale_x_continuous(expression(paste(R[d], " (T)")))+
   scale_y_continuous(expression(paste(R[d], " (fitA)")))+
-  facet_wrap(~type, scales = "free_y")+
-  theme_bw(base_size = 14)
+  # facet_wrap(~type, scales = "free_y")+
+  theme_bw(base_size = 14)+
+  coord_equal()
 print(fig3)
 
 jpeg(filename = "outputs/Bayesian_parameter_estimation/comparison_plots.jpg",
-     height = 8, width = 8, units = "in", res = 600)
+     height = 8, width = 3, units = "in", res = 600)
 multiplot(fig1, fig2, fig3, cols = 1)
 dev.off()
+```
+
+Test for Rd < 0
+```{r}
+which(masterDF$mean< 0 & masterDF$trait == "Rd")
+ind <- which(ids %in% masterDF$ID[which(masterDF$mean< 0 & masterDF$trait == "Rd")])
+
+for(i in ind){
+  sub <- subset(datlist[[i]], type == "AQ")
+  rd <- subset(masterDF, trait == "Rd" & ID == ids[i])
+  
+  sumDF <- coda.fast(out[[i]][[1]]$params)
+  sumDF$trait2 <- row.names(sumDF)
+  sumDF <- sumDF[c(grep("r0", fixed = T, sumDF$trait2)),]
+  ggplot()+
+    geom_point(data = sub, aes(x=Qin, y = A))+
+    geom_hline(data = rd, aes(yintercept = -1*mean))+
+    geom_hline(yintercept = -1*sumDF$mean, col = "red")+
+    facet_wrap(~rep)
+}
+
 ```
 
 Create ACi vs both for vmax, and AQ vs both for alpha and Rd
