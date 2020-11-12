@@ -297,25 +297,23 @@ multiplot(fig1, fig2, fig3, cols = 1)
 dev.off()
 ```
 
-Test for Rd < 0
+Explore variation in Rd
 ```{r}
-which(masterDF$mean< 0 & masterDF$trait == "Rd")
-ind <- which(ids %in% masterDF$ID[which(masterDF$mean< 0 & masterDF$trait == "Rd")])
+rdDF <- subset(masterDF, trait == "Rd")
 
-for(i in ind){
-  sub <- subset(datlist[[i]], type == "AQ")
-  rd <- subset(masterDF, trait == "Rd" & ID == ids[i])
-  
-  sumDF <- coda.fast(out[[i]][[1]]$params)
-  sumDF$trait2 <- row.names(sumDF)
-  sumDF <- sumDF[c(grep("r0", fixed = T, sumDF$trait2)),]
-  ggplot()+
-    geom_point(data = sub, aes(x=Qin, y = A))+
-    geom_hline(data = rd, aes(yintercept = -1*mean))+
-    geom_hline(yintercept = -1*sumDF$mean, col = "red")+
-    facet_wrap(~rep)
-}
-
+rdDF2 <- rdDF %>%
+  left_join(expDF, by = "ID")
+fig3b <- ggplot(rdDF2)+
+  geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = mean - sd, ymax = mean + sd), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
+  geom_point(aes(x = Value, y = mean, col = Treatment))+
+  scale_x_continuous(expression(paste(R[d], " (T)")))+
+  scale_y_continuous(expression(paste(R[d], " (fitA)")))+
+  # facet_wrap(~type, scales = "free_y")+
+  theme_bw(base_size = 14)+
+  coord_equal()
+print(fig3b)
 ```
 
 Create ACi vs both for vmax, and AQ vs both for alpha and Rd
