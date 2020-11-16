@@ -149,20 +149,24 @@ done
 
 ## Specific leaf area
 
-These SLA values are only for the high night temperature treatment from experiment 3rd_Biomass_ME034_GA_Exp. Read in, clean up, and combine leaf biomass measurements with corresponding leaf area measurements. 
+These SLA values are calculated from leaf area and leaf dry biomass. Below, the data are read in, filtered, and combined to produce specific leaf area in units of m2/kg. 
 
 These are the final columns:
 
 1. `local_datetime`: convert date into machine readable format
 2. `treatment`: specifies record's treatment using BETYdb treatment names
-3. `SLA`: measured values of specific leaf area
+3. `SLA`: values of specific leaf area in m2/kg
+
+First, load in data from the chamber experiments, an Excel sheet entitled "manual-measurements-Darpa_setaria_chambers_experiments.xlsx", which consists of multiple tabs. All leaf areas are avaiable in tab 'total_leaf_area'; biomass for the high night temperature experiment are found in '3rd_Biomass_ME034_GA_Exp' and the biomass for the high light experiment are found in '5th_Biomass_A10&ME034_cycling_t'. Note that because physiological and biomass data were taken on different individual plants, unique filters are applied to each biomass data to obtain the same set of experimental conditions as the physiological data. 
 ```{r}
-data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+# Data from chamber experiments
+data_path <- "../../../sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
 
+# Biomass and leaf area for high light treatment, 31_31_250
 leaf_biomass_hightemp <- read_excel(data_path, sheets_names[11]) %>% 
-  rename(temperature = 6, 
-         leaf_dry_biomass_mg = 19) %>% 
+  dplyr::rename(temperature = 6, 
+                leaf_dry_biomass_mg = 19) %>% 
   filter(temperature == "31.0", 
          `light_intensity(umol/m2/s)` == "250.0",
          !is.na(leaf_dry_biomass_mg), 
@@ -170,7 +174,7 @@ leaf_biomass_hightemp <- read_excel(data_path, sheets_names[11]) %>%
   mutate(leaf_dry_biomass_mg == as.numeric(leaf_dry_biomass_mg))
 
 leaf_area_hightemp <- read_excel(data_path, sheets_names[2]) %>% 
-  rename(leaf_area_cm2 = 8) %>% 
+  dplyr::rename(leaf_area_cm2 = 8) %>% 
   filter(experiment == "3rd_Biomass_ME034_GA", 
          treatment == "control")
 
@@ -184,8 +188,10 @@ sla_hightemp <- left_join(leaf_biomass_hightemp, leaf_area_hightemp, by = "plant
   select(local_datetime, treatment, SLA) %>% 
   mutate(statname = '')
 
+
+# Biomass and leaf area for control treatment, 31_22_450
 leaf_biomass_control <- read_excel(data_path, sheets_names[7]) %>% 
-  rename(temperature = 6, 
+  dplyr::rename(temperature = 6, 
          leaf_dry_biomass_mg = 19, 
          plantID = 1) %>% 
   filter(temperature == "31/22", 
@@ -193,7 +199,7 @@ leaf_biomass_control <- read_excel(data_path, sheets_names[7]) %>%
          !is.na(leaf_dry_biomass_mg))
 
 leaf_area_control <- read_excel(data_path, sheets_names[2]) %>% 
-  rename(leaf_area_cm2 = 8) %>% 
+  dplyr::rename(leaf_area_cm2 = 8) %>% 
   filter(experiment == "5th_Biomass_A10&ME034_cycling_temp")
 
 sla_control <- left_join(leaf_biomass_control, leaf_area_control, by = "plantID") %>% 
