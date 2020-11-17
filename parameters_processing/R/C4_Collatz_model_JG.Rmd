@@ -1,0 +1,205 @@
+---
+title: "Fitting C4 Photosynthesis Model"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Information
+## Edits by Tonantzin Tarin            Date/edits: Dec-2019
+
+This script is taken from PEcAn repository 
+It uses the Photosynthesis PEcAn package to fit A/Ci curvers
+with Collatz et al. (1992) model for C4 plants. 
+
+Here we are using LICO6800 data. Note that some variables have changed from LICOR6400 to LICOR6800, for example: photosynthesis was called "Photo" in LICOR6400, now is called "A" in the LICOR6400. 
+
+Data is in the common LICOR format, but files has been cleaned up and two additional columns were added "species" and "rep". These stand for species (WT, ME034, A10) and replicates (plant_1, plant_2, ...n) respectively.
+
+Raw data islocated in Cleaned_up_files folder 
+
+```{r, message=FALSE, warning=FALSE}
+library(PEcAn.photosynthesis)
+library(rjags)
+library(here)
+library(readr)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+## Load files
+
+Here we are using one file at the time with three replicates (plant 1, plant 2 and plant 3).
+This can be change to upload several files at the time.
+
+Here we are also re-naming columns. 
+
+```{r, message=FALSE, warning=FALSE}
+new <- "A_Ci_curves_Sep052020_outdoor_JollyG"
+dat <- read.csv(file.path(paste0("Cleaned_up_files/", new, ".csv")))
+
+names(dat)[names(dat) == c("A")] <- "Photo"   # photosynthesis
+names(dat)[names(dat) == c("Qin")] <- "PARi"  # light 
+names(dat)[names(dat) == c("Pci")] <- "Ci_Pa" # intercellular CO2 concentration  
+names(dat)[names(dat) == c("rep")] <- "id"    # plant ID
+```
+
+Reconfigure data into a list for each individual to run outlier detection
+
+```{r, message=FALSE, warning=FALSE}
+datlist <- list()
+for(i in 1:length(unique(dat$id))){
+  datlist[[i]] <- subset(dat, id==i)
+}
+```
+
+Use the Licor_QC() function to remove outliers for each individual. 
+
+```{r}
+master <- list()
+for(i in 1:length(datlist)){
+    master[[i]] = Licor_QC(datlist[[i]], curve="ACi")
+}
+```
+
+Combine into single dataframe and remove the flagged points
+
+```{r}
+dat <- do.call("rbind", master)
+## if QC was done, remove both unchecked points and those that fail QC
+if("QC" %in% colnames(dat)){
+  dat <- dat[-which(dat$QC < 1),]  
+} else {
+  QC <- rep(1, nrow(dat))
+  dat <- cbind(dat, QC)
+}
+```
+
+Check data by plotting. 
+
+```{r}
+dat$id <- factor(dat$id)
+fig_curves <- ggplot(dat)+
+  geom_point(aes(x = Ci_Pa, y = Photo, col = id))+
+  theme_bw(base_size = 12)
+print(fig_curves)  
+```
+
+## Specify model
+
+```{r}
+my.model.jags <- "
+model{
+  alpha ~ dlnorm(-3.21,3.7) 	    	## initial slope of photosynthesis light response
+  vmax ~ dlnorm(3,3)                ## maximum rubisco capacity
+  r ~ dlnorm(-0.2,2.8)              ## leaf respiration
+  k ~ dlnorm(11.5, 2.8)             ## initial slope of photosynthetic CO2 response
+  tau ~ dgamma(0.1,0.1)
+
+  for(i in 1:n){                ## process model
+    al[i] <- alpha*q[i]         ## light limited without covariates
+    ac[i] <- k*pi[i]/100000     ## CO2 limited without covariates
+    ae[i] <- vmax               ## rubisco limited without covariates
+    prean[i] <- min(min(al[i],ac[i]),ae[i])-r
+    an[i] ~ dnorm(prean[i],tau) ## likelihood
+    pA[i] ~ dnorm(prean[i],tau) ## prediction
+  }
+}
+"
+```
+
+## Define initial conditions
+
+```{r}
+init <- list()
+init[[1]] <- list(r = 0.8, vmax = 50,alpha = 0.03, tau = 10, k = 0.7*100000)
+init[[2]] <- list(r = 1, vmax = 30, alpha = 0.07, tau = 20, k = 0.8*100000)
+init[[3]] <- list(r = 2, vmax = 15,alpha = 0.06, tau = 20, k = 0.2*1000000)
+```
+
+## Fit the C4 model
+
+Note here the number of iterations can be increased 
+
+```{r, echo=TRUE, results='hide'}
+spp.list = unique(as.character(dat$id))   
+c4mcmc <- list()
+
+for(s in spp.list){
+  sel = which(dat$id == s)
+  an = dat$Photo[sel]
+  pi = dat$Ci_Pa[sel]
+  q = dat$PARi[sel]
+
+  c4 <- jags.model(file = textConnection(my.model.jags), 
+                   data = list(an = an, pi = pi, q = q, n = length(an)), 
+                   inits = init, 
+                   n.chains = 3)
+  update(c4, n.iter = 5000)
+  c4.out <- coda.samples(model = c4, 
+                         variable.names = c("r","vmax","alpha", "k", "prean", "pA"), 
+                         n.iter = 100000, 
+                         thin = 25)
+  c4mcmc[[s]] = c4.out
+}
+```
+
+## Review model fit
+
+Here Rhat as a diagnostic factor for the fitting. It should be closer to 1. These will be saved in the "A_Ci_outputs" folder. 
+
+```{r}
+nom <- paste0("A_Ci_outputs/", new)
+for(s in spp.list){
+  print(gelman.diag(c4mcmc[[s]], multivariate = FALSE))
+  pdf(paste(nom, s, "_gelman.pdf", sep = ""))
+  gelman.plot(c4mcmc[[s]])
+  dev.off()
+}
+```
+
+## Save and plot output files
+
+Density plots are save as PDFs in the "A_Ci_outputs" folder, and the comparison plots for predicted vs measured photosynthesis are printed. 
+
+```{r}
+nom <- paste0("A_Ci_outputs/", new)
+for(s in spp.list){
+  pdf(paste(nom, s, "_model_trace.pdf",sep=""))
+  plot(as.mcmc.list(c4mcmc[[s]]))
+  dev.off()
+}
+
+
+for(s in spp.list){
+  sel1 = which(dat$id == s)
+  an = dat$Photo[sel1]
+  preans = data.frame(summary(c4mcmc[[s]])$statistics) %>% 
+    select(Mean) %>% 
+    rownames_to_column() %>% 
+    filter(grepl("prean", rowname))
+  
+  pdf(paste(nom, s, "_FitvsObs.pdf", sep = ""))
+  plot(an, preans$Mean, pch = 19, main = s, xlab = "Measured An (umol m-2 s-1)",
+       ylab = "Predicted An (umol m-2 s-1)", cex.main = 1.3, cex.lab = 1.4)
+  abline(0, 1, col="dark green", lwd = 3)
+  dev.off()
+}
+```
+
+## Results 
+
+Select posterior statistics for vmax and save. 
+
+```{r}
+out <- data.frame()
+for(i in 1:length(spp.list)){
+  out <- rbind.data.frame(out, data.frame(summary(c4mcmc[[i]])$statistics) %>% rownames_to_column() %>% filter(rowname == "vmax"))
+}
+out$id <- spp.list
+
+write.csv(out, paste0("A_Ci_outputs/", new, "_parameters.csv"), row.names = F)
+
+```
