@@ -1,0 +1,390 @@
+---
+title: "Simultaneous fitting of CO2 and light response curves"
+author: "Jessica Guo"
+output: github_document
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---
+
+Necessary functions. 
+```{r}
+source("/home/jessicaguo/pecan/modules/photosynthesis/R/fitA.R")
+library(postjags)
+library(dplyr)
+library(ggplot2)
+source("R/multiplot.R")
+load("outputs/Bayesian_parameter_estimation/out_mcmc.Rdata")
+```
+
+The above function is modified from the 'PEcAn.photosynthesis' package to include a Collatz model for C4 photosynthesis and an option for data from the Licor 6800. Retained from the original model include options for fixed and random effects. The function has 5 arguments:
+- flux.data, required, a dataframe of gas exchange data, labeled with a column to associate sampling units. Default is 'fname', but can be indicated in the model argument below. This column is used to identify random effects. 
+- cov.data, default is NULL, a dataframe of covariates should the fixed effects be used. The column names are used in model formulas and should be succint. 
+- model, default is NULL, a list of at least six components:
+    - a.fixed, a.random: fixed and random effects for parameter alpha, quantum yield
+    - V.fixed, V.random: fixed and random effects for parameter Vmax, maximum Rubisco capacity
+    - k.fixed, k.random: fixed and random effects for parameter k, initial slope of CO2 response
+    - match: the variable used identify sampling units for random effects and to match the gas-exchange and covariate data for fixed effects. 
+    - n.iter: the number of MCMC interations (n.iter). Default is 5000
+- pathway, either "C3" or "C4"
+- licor, either "6400" or "6800"
+
+Here, our goal is to test performance of fitA with the Collatz model using the Danforth data. Three sets of data inputs will be used and resulting parameters compared: ACi curve only,  AQ curve only, and ACi & AQ curves simultaneously. As an added check, these parameters will be compared to outputs from "parameter_estimation.Rmd"
+The default model was likely overparameterized. Therefore, models will be run with plant replicate as the random effect.  
+
+First, extract, label, and combine the ACi and AQ data for each experiment with both datasets. Following Feng and Dietze (2012), only include low light range of the AQ curve, between 0 and 250 umol m^-2 s^-1. Also, remove Pci values < 0; those arise erroneously from a match error that results in a high A and low E. 
+```{r}
+expDF <- read.csv("cleaned_data/experiments.csv",
+                  colClasses = c("character", "numeric", rep("character",2), rep("numeric",2)))
+
+ids <- unique(expDF$ID[which(expDF$A_Ci == 1 & expDF$A_Qin == 1)])
+
+datlist <- list()
+for(i in 1:length(ids)){
+  aci <- read.csv(paste0("cleaned_data/ACi/A_Ci_curves_", ids[i], ".csv"), header=T)
+  aci$type <- rep("ACi", nrow(aci))
+  aci <- subset(aci, Pci > 0, select = c("type", "rep", "A", "Pci", "Qin"))
+  
+  aq <- read.csv(paste0("cleaned_data/AQ/AQin_curves_", ids[i], ".csv"), header=T)
+  aq$type <- rep("AQ", nrow(aq))
+  aq <- subset(aq, Pci > 0 & Qin < 250, select = c("type", "rep", "A", "Pci", "Qin"))
+  
+  datlist[[i]] <- rbind(aci, aq)
+}
+```
+
+Each plant replicate will be modeled separately, rather than as a random effect. There are currently 10 datasets with both ACi and AQ data, each measured on 3 plant replicates.
+```{r}
+# Data types to select
+# types <- list("ACi", "AQ", c("ACi", "AQ"))
+types <-list(c("ACi", "AQ"))
+# Simple model, no fixed or random effects
+model <- list(V.fixed = NULL, V.random = "leaf", 
+                a.fixed = NULL, a.random = "leaf", 
+                k.fixed = NULL, k.random = NULL, 
+                r.random = "leaf",
+                n.iter = 5000, match = "rep")
+out <- list()
+for(i in 1:length(ids)){ # 10 experiments
+  out[[i]] <- list()
+  for(j in 1){ # 3 sets of inputs: ACi, AQ, or both
+    flux.data <- subset(datlist[[i]], type %in% types[[j]])
+    out[[i]][[j]] <- fitA(flux.data = flux.data, pathway = "C4", licor = "6800", model = model)
+    print(paste0("Run ", i, "_", j, " completed"))
+  }
+}
+
+# Save output list as .Rdata object
+if(dir.exists("outputs/Bayesian_parameter_estimation") == F){
+  dir.create("outputs/Bayesian_parameter_estimation", recursive = T)
+}
+
+save(out, file = "outputs/Bayesian_parameter_estimation/out_mcmc.Rdata")
+```
+
+Model diagnostic plots
+```{r}
+mcmcplots::mcmcplot(out[[10]][[1]]$params, parms = c("alpha0", "r0", "vmax0", "Vleaf", "Kleaf", "Aleaf",
+                                                     "tau", "tau.Vleaf", "tau.Kleaf", "tau.Aleaf", "tau.r0",
+                                                     "Rleaf"))
+```
+
+Two sets of posteriors are created, $params and $predict. First, summarize the $predict posteriors and align with empirical data. 
+```{r}
+preds <- list()
+# Add columns to datlist for each type of output
+for(i in 1:length(ids)){
+  # preds1 <- data.frame()
+  # preds2 <- data.frame()
+  # for(j in 1:2){# For types = ACi or AQ, stack
+  #   sumDF <- coda.fast(out[[i]][[j]]$predict)[
+  #       grep("pA", row.names(coda.fast(out[[i]][[j]]$predict))), c(1, 3:5)
+  #   ]
+  #   preds1 <- rbind.data.frame(preds1, sumDF)
+  # }  
+  for(j in 1){# For types = Aci and AQ, as is
+    sumDF <- coda.fast(out[[i]][[j]]$predict)[
+      grep("pA", row.names(coda.fast(out[[i]][[j]]$predict))), c(1, 3:5)
+    ]
+    preds2 <- sumDF
+  }
+  
+  # add to existing data as new columns
+  preds[[i]] <- cbind.data.frame(datlist[[i]], preds2)
+  # preds[[i]] <- rbind.data.frame(cbind.data.frame(datlist[[i]], preds1),
+  #                                cbind.data.frame(datlist[[i]], preds2))
+  # preds[[i]]$data <- rep(c("single", "both"), each = nrow(datlist[[i]]))
+}
+```
+
+Plot predicted and empirical ACi and AQ curves. 
+```{r}
+# Create folder to save plots
+if(dir.exists("outputs/Bayesian_parameter_estimation/plots2") == F){
+  dir.create("outputs/Bayesian_parameter_estimation/plots2", recursive = T)
+}
+
+for(i in 1:length(preds)){
+  # preds[[i]]$data <- factor(preds[[i]]$data, levels = c("single", "both"))
+  
+  # ACi plots
+  # aciDF <- subset(preds[[i]], type == "ACi" & data == "single" | data == "both")
+  fig_aci <- ggplot(preds[[i]], aes(x = Pci))+
+  geom_point(aes(y = A, shape = type), color = "black")+
+  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = Qin), alpha = 0.5)+
+  # facet_grid(rep~data)+
+  facet_wrap(~rep) +
+  theme_bw(base_size = 12)+
+  scale_color_gradient(low = "darkgreen", high = "yellowgreen")
+
+  # AQ plots
+  # aqDF <- subset(preds[[i]], type == "AQ" & data == "single" | data == "both")
+  fig_aq <- ggplot(preds[[i]], aes(x = Qin))+
+  geom_point(aes(y = A, shape = type), color = "black")+
+  geom_pointrange(aes(y = mean, ymin = pc2.5, ymax = pc97.5, color = Pci), alpha = 0.5)+
+  # facet_grid(rep~data)+
+  facet_wrap(~rep) +
+  theme_bw(base_size = 12)+
+  scale_color_gradient(low = "lavender", high = "midnightblue")
+
+  # Observed vs. predicted plots
+  # preds[[i]]$data2 <- c(rep("ACi", length(which(preds[[i]]$type=="ACi" & preds[[i]]$data=="single"))),
+  #                     rep("AQ", length(which(preds[[i]]$type=="AQ" & preds[[i]]$data=="single"))),
+  #                     rep("Both", length(which(preds[[i]]$data=="both"))))
+  fig_obs_pred <- ggplot(preds[[i]])+
+  geom_point(aes(x = A, y = mean))+
+  geom_abline(slope = 1, intercept = 0, col = "red", lty = 2)+
+  scale_x_continuous(expression(paste("Observed " ,A[net], " (μmol ", m^-2, s^-1, ")")))+
+  scale_y_continuous(expression(paste("Predicted " ,A[net], " (μmol ", m^-2, s^-1, ")")))+
+  # facet_wrap(~data2)+
+  theme_bw(base_size = 12)+
+  coord_equal()
+
+  # Print out separately
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots2/", ids[i], "_ACi.jpg"),
+       height = 4, width = 6, units = "in", res = 600)
+  print(fig_aci)
+  dev.off()
+  
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots2/", ids[i], "_AQ.jpg"),
+       height = 4, width = 6, units = "in", res = 600)
+  print(fig_aq)
+  dev.off()
+  
+  jpeg(filename = paste0("outputs/Bayesian_parameter_estimation/plots2/", ids[i], "_ObsvsPred.jpg"),
+       height = 4, width = 4, units = "in", res = 600)
+  print(fig_obs_pred)
+  dev.off()
+}
+```
+
+Summarize the posteriors into long format labeled with ID, type, rep, and trait.  
+```{r}
+# types <- c("ACi", "AQ", "both")
+master <- data.frame()
+for(i in 1:length(ids)){
+  for(j in 1){
+    sumDF <- coda.fast(out[[i]][[j]]$params)
+    sumDF$trait2 <- row.names(sumDF)
+    sumDF <- sumDF[c(grep("V[", fixed = T, sumDF$trait),
+                     grep("A[", fixed = T, sumDF$trait),
+                     grep("R[", fixed = T, sumDF$trait),
+                     grep("r0", fixed = T, sumDF$trait)),]
+    sumDF$ID <- rep(ids[i], nrow(sumDF))
+    # sumDF$type <- rep(types[j], nrow(sumDF))
+    sumDF$trait <- c(rep("vmax", 3), rep("AQY", 3),rep("Rd", 3), "r0")
+    sumDF$rep <- c(rep(c("plant_1", "plant_2", "plant_3"), 3), "all")
+    master <- rbind.data.frame(master, sumDF)
+  }
+}
+```
+
+For Rd only, when comparing population vs. plant level parameters.
+```{r}
+params <- read.csv("outputs/parameters_data.csv")
+add <- subset(params, select = c(ID, rep, trait, Value, SE, SD))
+add <- subset(add, trait == "Rd" & ID %in% ids)
+plot(tapply(add$Value, add$ID, mean)[1:10], master$mean[master$trait == "r0"])
+abline(a = 1, b = 0, col = "red")
+```
+
+Plot traits for each experiment. 
+```{r}
+for(i in 1:10){
+sub <- subset(master, ID == ids[i])
+fig1 <- ggplot(sub)+
+  geom_pointrange(aes(x = rep, y = mean, ymin = pc2.5, ymax = pc97.5), position = position_dodge(width = 0.5))+
+  # geom_pointrange(aes(x = type, y = mean, ymin = pc2.5, ymax = pc97.5, color = rep),
+  #                 position = position_dodge(width = 0.5))+
+  facet_wrap(~ trait, scales  = "free_y")+
+  theme_bw(base_size = 12)
+print(fig1)
+
+sub2 <- subset(master, ID == ids[i])
+fig2 <- ggplot(sub2)+
+  geom_pointrange(aes(x = rep, y = mean, ymin = pc2.5, ymax = pc97.5),
+                  position = position_dodge(width = 0.5))+
+  facet_wrap(~ trait, scales  = "free_y")+
+  theme_bw(base_size = 12)
+print(fig2)
+}
+
+```
+
+Add in traits from Tonantzin's workflow. 
+```{r}
+# Select vmax, Rd, and AQY for the relevant experiment IDs
+params <- read.csv("outputs/parameters_data.csv")
+add <- subset(params, select = c(ID, rep, trait, Value, SE, SD))
+add <- subset(add, trait %in% c("vmax", "Rd", "AQY") & ID %in% ids)
+
+# Convert traits in master to the same
+masterDF <- master %>%
+  filter(trait != "k")%>%
+  left_join(add, by = c("ID", "rep", "trait")) %>%
+  select(ID, rep, trait, 
+         Value, SE, SD, # traits estimated from Tonantzin's workflow
+         mean, median, sd, pc2.5, pc97.5) #traits from this analysis
+
+# Create another error columnn that is either SE or SD, for plotting purposes only
+masterDF$S2 <- ifelse(is.na(masterDF$SD), masterDF$SE, masterDF$SD)
+```
+
+Create 1:1 figures for each trait with Tonantzin's estimates as the baseline. For vmax, error bars are +/- 1 SD (Bayesian) on the x-axis. For AQY and Rd, error bars are +/- 1 SE (frequentist) on the x-axis. All vertical error bars are are +/- 1 SD (Bayesian). 
+```{r}
+vmaxDF <- subset(masterDF, trait == "vmax")
+fig1 <- ggplot(vmaxDF)+
+  geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = mean - SD, ymax = mean + SD), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
+  geom_point(aes(x = Value, y = mean))+
+  scale_x_continuous(expression(paste(V[max], " (T)")))+
+  scale_y_continuous(expression(paste(V[max], " (fitA)")))+
+  # facet_wrap(~type)+
+  theme_bw(base_size = 14)+
+  coord_equal()
+print(fig1)
+
+aqyDF <- subset(masterDF, trait == "AQY")
+fig2 <- ggplot(aqyDF)+
+  geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = pc2.5, ymax = pc97.5), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
+  geom_point(aes(x = Value, y = mean))+
+  scale_x_continuous(expression(paste(alpha, " (T)")))+
+  scale_y_continuous(expression(paste(alpha, " (ftA)")))+
+  # facet_wrap(~type, scales = "free_y")+
+  theme_bw(base_size = 14)+
+  coord_equal()
+print(fig2)
+
+rdDF <- subset(masterDF, trait == "Rd")
+fig3 <- ggplot(rdDF)+
+  geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = pc2.5, ymax = pc97.5), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
+  geom_point(aes(x = Value, y = mean))+
+  scale_x_continuous(expression(paste(R[d], " (T)")))+
+  scale_y_continuous(expression(paste(R[d], " (fitA)")))+
+  # facet_wrap(~type, scales = "free_y")+
+  theme_bw(base_size = 14)+
+  coord_equal()
+print(fig3)
+
+jpeg(filename = "outputs/Bayesian_parameter_estimation/comparison_plots.jpg",
+     height = 8, width = 3, units = "in", res = 600)
+multiplot(fig1, fig2, fig3, cols = 1)
+dev.off()
+```
+
+Explore variation in Rd
+```{r}
+rdDF <- subset(masterDF, trait == "Rd")
+
+rdDF2 <- rdDF %>%
+  left_join(expDF, by = "ID")
+fig3b <- ggplot(rdDF2)+
+  geom_abline(slope = 1, intercept = 0, col="red")+
+  geom_errorbar(aes(x = Value, ymin = mean - sd, ymax = mean + sd), col = "gray")+
+  geom_errorbarh(aes(y = mean, xmin = Value - S2, xmax = Value + S2), col = "gray")+
+  geom_point(aes(x = Value, y = mean, col = Treatment))+
+  scale_x_continuous(expression(paste(R[d], " (T)")))+
+  scale_y_continuous(expression(paste(R[d], " (fitA)")))+
+  # facet_wrap(~type, scales = "free_y")+
+  theme_bw(base_size = 14)+
+  coord_equal()
+print(fig3b)
+```
+
+Create ACi vs both for vmax, and AQ vs both for alpha and Rd
+```{r}
+#ACi vs both data sets, compare vmax
+vmaxcomp <- masterDF %>%
+  filter(trait == "vmax" & type %in% c("ACi", "both")) %>%
+  select(-Value, -SD, -SE, -median, -sd, -pc2.5, -pc97.5, -S2) %>%
+  spread(type, mean)
+fig_vmaxcomp <- ggplot(vmaxcomp, aes(x = ACi, y = both))+
+  geom_abline(slope = 1, intercept = 0, col = "red")+
+  geom_point()
+fig_vmaxcomp
+
+#AQ vs both data sets, compare AQY
+aqycomp <- masterDF %>%
+  filter(trait == "AQY" & type %in% c("AQ", "both")) %>%
+  select(-Value, -SD, -SE, -median, -sd, -pc2.5, -pc97.5, -S2) %>%
+  spread(type, mean)
+fig_aqycomp<- ggplot(aqycomp, aes(x = AQ, y = both))+
+  geom_abline(slope = 1, intercept = 0, col = "red")+
+  geom_point()
+fig_aqycomp
+
+#AQ vs both data sets, compare Rd
+rdcomp <- masterDF %>%
+  filter(trait == "Rd" & type %in% c("AQ", "both")) %>%
+  select(-Value, -SD, -SE, -median, -sd, -pc2.5, -pc97.5, -S2) %>%
+  spread(type, mean)
+fig_rdcomp<- ggplot(rdcomp, aes(x = AQ, y = both))+
+  geom_abline(slope = 1, intercept = 0, col = "red")+
+  geom_point()
+fig_rdcomp
+```
+
+#initial test, null model
+flux.data = dat
+pathway = "C4"
+model = NULL
+cov.data = NULL
+
+foo <- fitA(flux.data = dat, pathway = "C4")
+
+#test with RE
+leaf.model <- list(a.fixed = NULL, a.random = "leaf", 
+                V.fixed= NULL, V.random = "leaf",
+                k.fixed = NULL, k.random = "leaf",
+                n.iter = 5000, match = "fname")
+
+foo <- fitA(flux.data = dat, pathway = "C4", model = leaf.model)
+
+
+#test with FE
+cov.data = read.csv(system.file("extdata", "cov.csv", package = "PEcAn.photosynthesis"))
+
+N.model <- list(a.fixed = NULL, a.random = "leaf", 
+                V.fixed= "N", V.random = NULL,
+                n.iter = 5000, match = "fname")
+foo <- fitA(flux.data = dat, pathway = "C4", model = N.model, cov.data = cov.data)
+
+#test with Danforth data
+dat <- read.csv("/home/jessicaguo/sentinel-detection/parameters_pipeline/cleaned_data/ACi/A_Ci_curves_20200304.csv")
+#restrict to a single plant
+dat2 <- subset(dat, rep == "plant_1")
+null.model <- list(V.fixed = NULL, V.random = NULL, 
+                          a.fixed = NULL, a.random = NULL, 
+                          k.fixed = NULL, k.random = NULL, 
+                          n.iter = 5000, match = "rep")
+foo <- fitA(flux.data = dat2, model=null.model, pathway = "C4", licor = "6800")
+
+#check output
+colnames(foo[[1]][[1]])
+s<-summary(foo[[1]])
+s$statistics
