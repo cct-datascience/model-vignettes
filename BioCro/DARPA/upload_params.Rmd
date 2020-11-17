@@ -322,7 +322,7 @@ if(!dir.exists(paste0("upload_params_data/SLA/"))){
 write.csv(sla, file = "upload_params_data/SLA/sla.csv", row.names = FALSE)
 ```
 
-Split dataframe by new data since last  upload. 
+Split dataframe by new data since last upload. 
 ```{r}
 psla <- read.csv("upload_params_data/SLA/sla.csv")
 psla$local_datetime <- as.POSIXct(psla$local_datetime)
