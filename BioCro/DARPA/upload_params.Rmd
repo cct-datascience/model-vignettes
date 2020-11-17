@@ -226,7 +226,7 @@ data_path2 <- "../../../sentinel-detection/data/raw_data/biomass/field_and_green
 sheets_names2 <- excel_sheets(data_path2)
 
 # Biomass and leaf area for greenhouse pots
-leaf_biomass_gh <- read_excel(data_path2, sheets_names2[14]) %>% 
+leaf_biomass_gh <- read_excel(data_path2, sheets_names2[16]) %>% 
   dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
   filter(treatment == "pot") %>% 
   mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
@@ -241,13 +241,13 @@ sla_gh <- left_join(leaf_area_gh, leaf_biomass_gh, by = "plant_id") %>%
          dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
          area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
          SLA = area_m2 / dry_biomass_kg) %>% 
-  mutate(local_datetime = as.Date(`harvested`), 
+  mutate(local_datetime = as.Date(`harvest_time`), 
          treatment = "greenhouse") %>% 
   select(local_datetime, treatment, SLA) %>% 
   mutate(statname = '')
 
 # Biomass and leaf area for 2nd field experiment, 5 cm
-leaf_biomass_5cm <- read_excel(data_path2, sheets_names2[6]) %>% 
+leaf_biomass_5cm <- read_excel(data_path2, sheets_names2[7]) %>% 
   dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
   filter(treatment == "5cm") %>% 
   mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
@@ -262,13 +262,13 @@ sla_5cm <- left_join(leaf_area_5cm, leaf_biomass_5cm, by = "plant_id") %>%
          dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
          area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
          SLA = area_m2 / dry_biomass_kg) %>% 
-  mutate(local_datetime = as.Date(`harvested`), 
+  mutate(local_datetime = as.Date(`harvest_time`), 
          treatment = "outdoor 5 cm density") %>% 
   select(local_datetime, treatment, SLA) %>% 
   mutate(statname = '')
 
 # Biomass and leaf area for 2nd field experiment, JollyG
-leaf_biomass_JollyG <- read_excel(data_path2, sheets_names2[6]) %>% 
+leaf_biomass_JollyG <- read_excel(data_path2, sheets_names2[7]) %>% 
   dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
   filter(treatment == "jolly_pot") %>% 
   mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
@@ -283,7 +283,7 @@ sla_JollyG <- left_join(leaf_area_JollyG, leaf_biomass_JollyG, by = "plant_id") 
          dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
          area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
          SLA = area_m2 / dry_biomass_kg) %>% 
-  mutate(local_datetime = as.Date(`harvested`), 
+  mutate(local_datetime = as.Date(`harvest_time`), 
          treatment = "outdoor JollyG soil") %>% 
   select(local_datetime, treatment, SLA) %>% 
   mutate(statname = '')
@@ -302,12 +302,11 @@ sla <- bind_rows(sla_hightemp, sla_control, sla_gh, sla_5cm, sla_JollyG) %>%
          citation_author = "Zhang, Gehan, LeBauer, Riemer, Tarin, Vargas",
          citation_year = "2018", 
          citation_title = "Unpublished DARPA experimental data",
-         n = 1, 
          access_level = "2",
          SLA = round(SLA, 2)) %>%
   select(citation_author, citation_year, citation_title, 
          species, cultivar, site, treatment, local_datetime, 
-         SLA, n, access_level)
+         SLA, access_level)
 
 write.csv(sla, file = "upload_params_data/SLA/sla.csv", row.names = FALSE)
 ```
