@@ -19,7 +19,7 @@ library(udunits2)
 
 Read in parameters data from [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
 ```{r}
-all_parameters <- read.csv("../../../sentinel-detection/parameters_pipeline/outputs/parameters_data.csv")
+all_parameters <- read.csv("../../../sentinel-detection/data/derived_data/parameters_data.csv")
 ```
 
 Clean up data to have the final columns: 
@@ -90,8 +90,11 @@ upload_parameters$entity <- paste0(upload_parameters$Date, "_", upload_parameter
                                    upload_parameters$rep)
 ```
 
-Save cleaned parameter as a .csv file in `upload_params_data` folder in `model-vignettes/BioCro/DARPA`. 
+Save cleaned physiological parameters as a .csv file in the `phys_params` subfolder of `upload_params_data`. 
 ```{r}
+if(!dir.exists(paste0("upload_params_data/phys_params/"))){
+  dir.create(paste0("upload_params_data/phys_params/"), recursive = T)
+}
 write.csv(upload_parameters, "upload_params_data/phys_params/phys_parameters.csv", row.names = FALSE)
 ```
 
@@ -289,7 +292,7 @@ sla_JollyG <- left_join(leaf_area_JollyG, leaf_biomass_JollyG, by = "plant_id") 
   mutate(statname = '')
 ```
 
-Combine, format, and save SLA data as a .csv. 
+Combineand format all SLA values for upload. 
 ```{r}
 sla <- bind_rows(sla_hightemp, sla_control, sla_gh, sla_5cm, sla_JollyG) %>%
   mutate(site = case_when(treatment == "high light" ~ "Donald Danforth Plant Science Center Growth Chamber", 
@@ -308,10 +311,18 @@ sla <- bind_rows(sla_hightemp, sla_control, sla_gh, sla_5cm, sla_JollyG) %>%
          species, cultivar, site, treatment, local_datetime, 
          SLA, access_level)
 
+```
+
+Save cleaned SLA as a .csv file in the `SLA` subfolder of `upload_params_data`. 
+```{r}
+if(!dir.exists(paste0("upload_params_data/SLA/"))){
+  dir.create(paste0("upload_params_data/SLA/"), recursive = T)
+}
+
 write.csv(sla, file = "upload_params_data/SLA/sla.csv", row.names = FALSE)
 ```
 
-Split dataframe by new data since last  upload. Uploading to BETYdb using the API requires one file per parameter. 
+Split dataframe by new data since last  upload. 
 ```{r}
 psla <- read.csv("upload_params_data/SLA/sla.csv")
 psla$local_datetime <- as.POSIXct(psla$local_datetime)
