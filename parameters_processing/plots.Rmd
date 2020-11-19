@@ -1,0 +1,133 @@
+---
+title: "Plotting relevant parameters between treatments"
+author: "Jessica Guo"
+output: github_document
+urlcolor: blue
+editor_options: 
+chunk_output_type: console
+---
+
+Load necessary packages and functions. 
+```{r}
+library(ggplot2)
+library(data.table)
+library(agricolae)
+library(dplyr)
+library(grid)
+```
+
+Load full parameter data. 
+```{r}
+params <- read.csv("outputs/parameters_data.csv")
+```
+
+Subset to include 5 parameters of interest (included in BETY and used by BioCro). 
+```{r}
+sub <- data.table(subset(params, trait %in% c("vmax", "Rd", "AQY", "theta_lc", "g0BB", "g1BB")))
+```
+
+Summarize mean, sd, se, and n by treatment and trait. 
+```{r}
+sumdf <- sub[,.(mean = mean(Value), 
+                  sd = sd(Value), 
+                  n = length(Value),
+                  se = sd(Value)/sqrt(length(Value))), .(Treatment, trait)]
+```
+
+Plot by treatment and trait, adding the sample size to the points as text. 
+```{r}
+# Order traits by photosynthesis related (top row) and stomatal related (bottom row)
+sumdf$trait <- factor(sumdf$trait, levels=c("vmax", "AQY", "Rd", "theta_lc", "g0BB", "g1BB"))
+# Order treatments by light level
+sumdf$Treatment <- factor(sumdf$Treatment, levels=c("31_22_250","31_31_250", "31_22_450",
+                                                    "greenhouse", "outdoor_JollyG", "outdoor_5cm"))
+# Add a parsed label colum for trait
+sumdf <- sumdf %>% mutate(Trait = case_when(trait == "vmax" ~ "V[max]~(µmol~m^{-2}~s^{-1})",
+                                            trait == "AQY" ~ "alpha", 
+                                            trait == "Rd" ~ "R[dark]~(µmol~m^{-2}~s^{-1})", 
+                                            trait == "theta_lc" ~ "theta", 
+                                            trait == "g0BB" ~ "g[0]~(mol~m^{-2}~s^{-1})", 
+                                            trait == "g1BB" ~ "g[1]"))
+sumdf$Trait <- factor(sumdf$Trait, levels=c("V[max]~(µmol~m^{-2}~s^{-1})", "alpha", "R[dark]~(µmol~m^{-2}~s^{-1})", "theta", "g[0]~(mol~m^{-2}~s^{-1})", "g[1]"))
+
+fig1 <- ggplot(sumdf)+
+  geom_errorbar((aes(x = Treatment, ymin = mean - se, ymax = mean + se)), width = 0)+
+  geom_point(aes(x = Treatment, y = mean), shape = 15, size = 4)+
+  geom_text(aes(x = Treatment, y = mean, label=n), col = "white", size = 3.5, vjust = 0.5, fontface = "bold")+
+  facet_wrap(~Trait,scale = "free_x", labeller = label_parsed)+
+  scale_x_discrete("Treatment")+
+  scale_y_continuous("Mean")+
+  theme_bw(base_size = 14)+
+  theme()+
+  coord_flip()
+print(fig1)
+```
+
+Calculate ANOVAs and Tukey HSD for each trait by treatment. 
+```{r}
+models <- list()
+hsd <- list()
+Traits <- unique(sub$trait)
+for(i in 1:length(Traits)){
+  df <- subset(sub, trait == Traits[i])
+  models[[i]] <- lm(Value ~ Treatment, data = df)
+  hsd[[i]] <- HSD.test(models[[i]], "Treatment")$groups
+}
+
+# Create table of labels
+# Function for last element
+substrR <- function(x, n) {substr(x, nchar(x)-n+1, nchar(x))}
+substrL <- function(x, n) {substr(x, 1, nchar(x)-n)}
+labels <- data.frame(trait = rep(Traits, sub[,.(n = length(unique(Treatment))), by = trait]$n),
+                     labs = Reduce(rbind, hsd)$groups,
+                     Treatment = ifelse(substrR(rownames(Reduce(rbind, hsd)), 1) %in% 1:5,
+                                        substrL(rownames(Reduce(rbind, hsd)), 1),
+                                        rownames(Reduce(rbind, hsd))))
+
+# Order traits by photosynthesis related (top row) and stomatal related (bottom row)
+labels$trait <- factor(labels$trait, levels=c("vmax", "AQY", "Rd", "theta_lc", "g0BB", "g1BB"))
+# Order treatments by light level
+labels$Treatment <- factor(labels$Treatment, levels=c("31_22_250","31_31_250", "31_22_450",
+                                                    "greenhouse", "outdoor_JollyG", "outdoor_5cm"))
+
+# Add location; need to order labels first
+labels <- labels[order(labels$trait, labels$Treatment),]
+sumdf <- sumdf[order(sumdf$trait, sumdf$Treatment),]
+labels$y = sumdf$mean
+#ifelse(is.na(sumdf$se), sumdf$mean, sumdf$mean + sumdf$se)
+
+# Add a parsed label colum for trait
+labels <- labels %>% mutate(Trait = case_when(trait == "vmax" ~ "V[max]~(µmol~m^{-2}~s^{-1})",
+                                              trait == "AQY" ~ "alpha",
+                                              trait == "Rd" ~ "R[dark]~(µmol~m^{-2}~s^{-1})",
+                                              trait == "theta_lc" ~ "theta",
+                                              trait == "g0BB" ~ "g[0]~(mol~m^{-2}~s^{-1})",
+                                              trait == "g1BB" ~ "g[1]"))
+labels$Trait <- factor(labels$Trait, levels=c("V[max]~(µmol~m^{-2}~s^{-1})", "alpha", "R[dark]~(µmol~m^{-2}~s^{-1})", "theta", "g[0]~(mol~m^{-2}~s^{-1})", "g[1]"))
+```
+
+Plot by treatment and trait, label with Tukey HSD results. 
+```{r}
+fig2 <- ggplot()+
+  geom_errorbar(data = sumdf, (aes(x = Treatment, ymin = mean - se, ymax = mean + se)), width = 0)+
+  geom_point(data = sumdf, aes(x = Treatment, y = mean), shape = 15, size = 3)+
+  geom_text(data = labels, aes(x = Treatment, y = y, label=labs), size = 3.5, vjust = 1.4, hjust = 0.5)+
+  facet_wrap(~Trait, scale = "free_x", labeller = label_parsed)+
+  scale_x_discrete("Treatment")+
+  scale_y_continuous("Mean")+
+  theme_bw(base_size = 14)+
+  coord_flip()
+
+#add colors by type (tedious)
+g <- ggplot_gtable(ggplot_build(fig2))
+strip_both <- which(grepl('strip-', g$layout$name))
+fills <- c("darkseagreen", "lightsteelblue1", "lightsteelblue1", "darkseagreen", "darkseagreen", "darkseagreen")
+k <- 1
+for (i in strip_both) {
+  j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+  g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+  k <- k+1
+}
+grid.draw(g)
+print(fig2)
+```
