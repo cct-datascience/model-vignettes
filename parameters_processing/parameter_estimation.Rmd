@@ -19,13 +19,13 @@ When data from a new experiment becomes available, record the experiment metadat
 
 Read in the experiment metadata. 
 ```{r}
-expDF <- read.csv("cleaned_data/experiments.csv",
+expDF <- read.csv("../../sentinel-detection/data/cleaned_data/experiments.csv",
                   colClasses = c("character", "numeric", rep("character",2), rep("numeric",2)))
 ```
 
 Because new experiments are conducted periodically, load the previously estimated parameter sheet. Only new  experiments (without existing parameters data) will be run. 
 ```{r}
-params <- read.csv("outputs/parameters_data.csv")
+params <- read.csv("../../sentinel-detection/data/derived_data/parameters_data.csv")
 ```
 
 First, run the C4_Collatz.R function on ACi data to estimate vmax, or the maximum rate of carboxylation (umol CO2 m^-2 s^-1) for each plant replicate. This function uses a Bayesian estimation routine on a C4 photosynthesis model (Collatz et al. 1992). 
