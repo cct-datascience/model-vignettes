@@ -14,8 +14,8 @@ LRC <- function(fileID){# input is ID column from the experiments dataframe
   head <- c("Plant 1", "Plant 2", "Plant 3")        
 
   # Location of output files
-  if(dir.exists("../../sentinel-detection/data/derived_data/AQ/") == F){
-    dir.create("../../sentinel-detection/data/derived_data/AQ/", recursive = TRUE)
+  if(dir.exists("../../sentinel-detection/data/derived_data/AQ/diagnostic") == F){
+    dir.create("../../sentinel-detection/data/derived_data/AQ/diagnostic", recursive = TRUE)
   }
   loc <- paste0("../../sentinel-detection/data/derived_data/AQ/")
   
