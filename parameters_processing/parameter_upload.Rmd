@@ -19,7 +19,8 @@ library(udunits2)
 
 Read in parameters data from [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
 ```{r}
-all_parameters <- read.csv("../../../sentinel-detection/data/derived_data/parameters_data.csv")
+all_parameters <- read.csv("../../sentinel-detection/data/derived_data/parameters_data.csv",
+                           stringsAsFactors = F)
 ```
 
 Clean up data to have the final columns: 
@@ -92,25 +93,25 @@ upload_parameters$entity <- paste0(upload_parameters$Date, "_", upload_parameter
 
 Save cleaned physiological parameters as a .csv file in the `phys_params` subfolder of `upload_params_data`. 
 ```{r}
-if(!dir.exists(paste0("upload_params_data/phys_params/"))){
-  dir.create(paste0("upload_params_data/phys_params/"), recursive = T)
+if(!dir.exists(paste0("upload/phys_params/"))){
+  dir.create(paste0("upload/phys_params/"), recursive = T)
 }
-write.csv(upload_parameters, "upload_params_data/phys_params/phys_parameters.csv", row.names = FALSE)
+write.csv(upload_parameters, "upload/phys_params/phys_parameters.csv", row.names = FALSE)
 ```
 
 
 Split dataframe, first by new data since last  upload, then by parameter. Uploading to BETYdb using the API requires one file per parameter. 
 ```{r}
 #read in previous data
-pparams <- read.csv("upload_params_data/phys_params/phys_parameters.csv")
+pparams <- read.csv("upload/phys_params/phys_parameters.csv")
 pparams$local_datetime <- as.POSIXct(pparams$local_datetime)
 #create new folder with date
 dname <- gsub('-', '', grep(max(upload_parameters$local_datetime), pattern = "(\\D+)", value = T))
 
-if(!dir.exists(paste0("upload_params_data/phys_params/", dname))){
-  dir.create(paste0("upload_params_data/phys_params/", dname))
+if(!dir.exists(paste0("upload/phys_params/", dname))){
+  dir.create(paste0("upload/phys_params/", dname))
 }
-newdir <- paste0("upload_params_data/phys_params/", dname)
+newdir <- paste0("upload/phys_params/", dname)
 
 #previous maximum date
 prevDate <- max(pparams$local_datetime)
@@ -137,7 +138,7 @@ for(p in params){
 Upload that new parameter data file using the API.
 ```{bash}
 #change to directory of latest date
-x=$(ls -d ~/model-vignettes/BioCro/DARPA/upload_params_data/phys_params/*/ | sort -r | head -n 1)
+x=$(ls -d ~/model-vignettes/parameters_processing/upload/phys_params/*/ | sort -r | head -n 1)
 cd $x
 
 #add all .csv files from this diretory
@@ -167,7 +168,7 @@ These are the final columns:
 First, load in data from the chamber experiments, an Excel sheet entitled "manual-measurements-Darpa_setaria_chambers_experiments.xlsx", which consists of multiple tabs. All leaf areas are avaiable in tab 'total_leaf_area'; biomass for the high night temperature experiment are found in '3rd_Biomass_ME034_GA_Exp' and the biomass for the high light experiment are found in '5th_Biomass_A10&ME034_cycling_t'. Note that because physiological and biomass data were taken on different individual plants, unique filters are applied to each biomass data to obtain the same set of experimental conditions as the physiological data. 
 ```{r}
 # Data from chamber experiments
-data_path <- "../../../sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+data_path <- "../../sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
 
 # Biomass and leaf area for high light treatment, 31_31_250
@@ -225,7 +226,7 @@ Next, load in data from the outdoor and greenhouse experiments, an Excel sheet e
 
 ```{r}
 # Data from chamber experiments
-data_path2 <- "../../../sentinel-detection/data/raw_data/biomass/field_and_greenhouse_experiments.xlsx"
+data_path2 <- "../../sentinel-detection/data/raw_data/biomass/field_and_greenhouse_experiments.xlsx"
 sheets_names2 <- excel_sheets(data_path2)
 
 # Biomass and leaf area for greenhouse pots
@@ -315,24 +316,24 @@ sla <- bind_rows(sla_hightemp, sla_control, sla_gh, sla_5cm, sla_JollyG) %>%
 
 Save cleaned SLA as a .csv file in the `SLA` subfolder of `upload_params_data`. 
 ```{r}
-if(!dir.exists(paste0("upload_params_data/SLA/"))){
-  dir.create(paste0("upload_params_data/SLA/"), recursive = T)
+if(!dir.exists(paste0("upload/SLA/"))){
+  dir.create(paste0("upload/SLA/"), recursive = T)
 }
 
-write.csv(sla, file = "upload_params_data/SLA/sla.csv", row.names = FALSE)
+write.csv(sla, file = "upload/SLA/sla.csv", row.names = FALSE)
 ```
 
 Split dataframe by new data since last upload. 
 ```{r}
-psla <- read.csv("upload_params_data/SLA/sla.csv")
+psla <- read.csv("upload/SLA/sla.csv")
 psla$local_datetime <- as.POSIXct(psla$local_datetime)
 #create new folder with date
 dname <- gsub('-', '', grep(max(sla$local_datetime), pattern = "(\\D+)", value = T))
 
-if(!dir.exists(paste0("upload_params_data/SLA/", dname))){
-  dir.create(paste0("upload_params_data/SLA/", dname))
+if(!dir.exists(paste0("upload/SLA/", dname))){
+  dir.create(paste0("upload/SLA/", dname))
 }
-newdir <- paste0("upload_params_data/SLA/", dname)
+newdir <- paste0("upload/SLA/", dname)
 
 #previous maximum date
 prevDate <- max(psla$local_datetime)
@@ -346,7 +347,7 @@ write.csv(new_sla, paste0(newdir, "/sla.csv"), row.names = FALSE)
 Upload that new parameter data file using the API. 
 ```{bash}
 #change to directory of latest date
-x=$(ls -d ~/model-vignettes/BioCro/DARPA/upload_params_data/SLA/*/ | sort -r | head -n 1)
+x=$(ls -d ~/model-vignettes/parameters_processing/upload/SLA/*/ | sort -r | head -n 1)
 cd $x
 
 #add all .csv files from this diretory
