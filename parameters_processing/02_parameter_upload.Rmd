@@ -1,0 +1,358 @@
+---
+title: "Prepare Parameter Data for Upload to BETYdb"
+author: "Kristina Riemer, University of Arizona"
+output: github_document
+urlcolor: blue
+---
+
+Necessary R libraries. 
+```{r}
+library(dplyr)
+library(stringr)
+library(lubridate)
+library(tidyr)
+library(readxl)
+library(udunits2)
+```
+
+## Physiological parameters Vmax, Rd, AQY, stomatal slope, and cuticular conductance
+
+Read in parameters data from [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
+```{r}
+all_parameters <- read.csv("../../sentinel-detection/data/derived_data/parameters_data.csv",
+                           stringsAsFactors = F)
+```
+
+Clean up data to have the final columns: 
+
+1. `citation_author`, `citation_year`, and `citation_title`: indicate the source of the data using author, year, and title from BETYdb
+2. `species`: Setaria viridis, `cultivar`: ME-034
+3. `site`: one of three sites at Donald Danforth Plant Science Center, either Growth Chamber, Greenhouse, or Outdoor, using BETYdb site names
+4. `treatment`: specifies record's treatment using BETYdb treatment names
+5. `local_datetime`: convert date into machine readable format
+6.  `Vcmax`, `leaf_respiration_rate_m2`, `quantum_efficiency`, `theta`, `stomatal_slope.BB`,  `cuticular_cond`: estimated mean of physiological parameters from parameters_data.csv
+7. `leafT`: leaf temperature, which is required by BETYdb
+8. `n`: sample size, always set to 1
+9. `SE`: estimated standard error of physiological parameters from parameters_data.csv
+10. `notes`: records which row in the parameters_data.csv the record came from
+11. `access_level`: 2, equivalent to Internal & Collaborators
+
+First, manage the chamber experiment parameters:
+```{r}
+upload_parameters <- all_parameters %>% 
+  filter(Genotype == "ME034", 
+         trait %in% c("vmax", "Rd", "AQY", "theta_lc", "g1BB", "g0BB")) %>% 
+  mutate(date = as.POSIXct(as.character(Date), format = "%Y%m%d"), 
+         treatment = case_when(Treatment == "31_22_250" ~ "regular night temperature", 
+                               Treatment == "31_31_250" ~ "high night temperature", 
+                               Treatment == "31_22_450" ~ "high light",
+                               Treatment == "greenhouse" ~ "greenhouse",
+                               Treatment == "outdoor_5cm" ~ "outdoor 5 cm density",
+                               Treatment == "outdoor_JollyG" ~ "outdoor JollyG soil"),
+         site = case_when(Treatment == "31_22_250" ~ "Donald Danforth Plant Science Center Growth Chamber", 
+                               Treatment == "31_31_250" ~ "Donald Danforth Plant Science Center Growth Chamber", 
+                               Treatment == "31_22_450" ~ "Donald Danforth Plant Science Center Growth Chamber",
+                               Treatment == "greenhouse" ~ "Donald Danforth Plant Science Center Greenhouse",
+                               Treatment == "outdoor_5cm" ~ "Donald Danforth Plant Science Center Outdoor",
+                               Treatment == "outdoor_JollyG" ~ "Donald Danforth Plant Science Center Outdoor"),
+         variable = case_when(trait == "vmax" ~ "Vcmax", 
+                           trait == "Rd" ~ "leaf_respiration_rate_m2",
+                           trait == "AQY" ~ "quantum_efficiency",
+                           trait == "theta_lc" ~ "theta", 
+                           trait == "g1BB" ~ "stomatal_slope.BB",
+                           trait == "g0BB" ~ "cuticular_cond"),
+         mean = case_when(trait == "g0BB" ~ round(ud.convert(Value, "mol/m2/s", "umol/m2/s"), 0),
+                          TRUE ~ round(Value, 3)),
+         SE = case_when(trait == "g0BB" ~ round(ud.convert(SE, "mol/m2/s", "umol/m2/s"), 0),
+                          TRUE ~ round(SE, 3))) %>% 
+  select(-ID, -SD, -Date.run, -Genotype, -A_Ci, -A_Qin, -Rd, -Treatment, -Value, -trait) %>% 
+  #spread(Trait, value) %>% 
+  dplyr::rename(local_datetime = date) %>% 
+  mutate(leafT = 25, 
+         n = 1,
+         species = "Setaria viridis",
+         cultivar = "ME-034",
+         citation_author = "Zhang, Gehan, LeBauer, Riemer, Tarin, Vargas",
+         citation_year = "2018", 
+         citation_title = "Unpublished DARPA experimental data",
+         access_level = "2" 
+         ) %>%
+  select(citation_author, citation_year, citation_title, 
+         species, cultivar, site, treatment, local_datetime, Date, rep,
+         #Vcmax, leaf_respiration_rate_m2, quantum_efficiency, stomatal_slope.BB, cuticular_cond,
+         variable, mean, 
+         leafT, n, SE, access_level) %>%
+  replace(., is.na(.), "")
+```
+
+Add a unique entity comprising of date, treatement, and rep
+```{r}
+upload_parameters$entity <- paste0(upload_parameters$Date, "_", upload_parameters$treatment, "_",
+                                   upload_parameters$rep)
+```
+
+Save cleaned physiological parameters as a .csv file in the `phys_params` subfolder of `upload_params_data`. 
+```{r}
+if(!dir.exists(paste0("upload/phys_params/"))){
+  dir.create(paste0("upload/phys_params/"), recursive = T)
+}
+write.csv(upload_parameters, "upload/phys_params/phys_parameters.csv", row.names = FALSE)
+```
+
+
+Split dataframe, first by new data since last  upload, then by parameter. Uploading to BETYdb using the API requires one file per parameter. 
+```{r}
+#read in previous data
+pparams <- read.csv("upload/phys_params/phys_parameters.csv")
+pparams$local_datetime <- as.POSIXct(pparams$local_datetime)
+#create new folder with date
+dname <- gsub('-', '', grep(max(upload_parameters$local_datetime), pattern = "(\\D+)", value = T))
+
+if(!dir.exists(paste0("upload/phys_params/", dname))){
+  dir.create(paste0("upload/phys_params/", dname))
+}
+newdir <- paste0("upload/phys_params/", dname)
+
+#previous maximum date
+prevDate <- max(pparams$local_datetime)
+
+#split dataframe for each parameter type and save each dataframe as a csv 
+params <- c("Vcmax", "leaf_respiration_rate_m2", "quantum_efficiency", "theta", "stomatal_slope.BB", "cuticular_cond")
+for(p in params){
+  trait_df <- upload_parameters %>%
+    filter(variable == p,
+           local_datetime > prevDate) %>%
+    spread(variable, mean)
+  
+  # If Vcmax, rename columns n and SE; if cuticular_cond, convert units; if theta, remove leafT
+  if(p == "Vcmax") {
+    trait_df2 <- trait_df %>% dplyr::rename(Sample.size = n, Std.err = SE)} else if(p == "cuticular_cond")
+    {trait_df2 <- trait_df %>% mutate(cuticular_cond = round(cuticular_cond, 0))} else if(p == "theta")
+      {trait_df2 <- trait_df %>% select(-leafT)} else
+        {trait_df2 <- trait_df}
+  
+  write.csv(trait_df2, paste0(newdir, "/phys_parameters_", p, ".csv"), row.names = FALSE)
+}
+```
+
+Upload that new parameter data file using the API.
+```{bash}
+#change to directory of latest date
+x=$(ls -d ~/model-vignettes/parameters_processing/upload/phys_params/*/ | sort -r | head -n 1)
+cd $x
+
+#add all .csv files from this diretory
+for file in *.csv; do
+  curl -X POST --data-binary @$file    http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
+done
+```
+
+
+## Specific Leaf Area
+
+These SLA values are calculated from leaf area and leaf dry biomass. Below, the data are read in, filtered, and combined to produce specific leaf area in units of m2/kg. 
+
+These are the final columns:
+
+
+1. `citation_author`, `citation_year`, and `citation_title`: indicate the source of the data using author, year, and title from BETYdb
+2. `species`: Setaria viridis, `cultivar`: ME-034
+3. `site`: one of three sites at Donald Danforth Plant Science Center, either Growth Chamber, Greenhouse, or Outdoor, using BETYdb site names
+4. `treatment`: specifies record's treatment using BETYdb treatment names
+5. `local_datetime`: convert date into machine readable format
+6.  `SLA`: Specific Leaf Area calculated from single-sided fresh leaf area divided by leaf dry mass, m2/kg
+8. `n`: sample size, always set to 1
+9. `access_level`: 2, equivalent to Internal & Collaborators
+
+
+First, load in data from the chamber experiments, an Excel sheet entitled "manual-measurements-Darpa_setaria_chambers_experiments.xlsx", which consists of multiple tabs. All leaf areas are avaiable in tab 'total_leaf_area'; biomass for the high night temperature experiment are found in '3rd_Biomass_ME034_GA_Exp' and the biomass for the high light experiment are found in '5th_Biomass_A10&ME034_cycling_t'. Note that because physiological and biomass data were taken on different individual plants, unique filters are applied to each biomass data to obtain the same set of experimental conditions as the physiological data. 
+```{r}
+# Data from chamber experiments
+data_path <- "../../sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+sheets_names <- excel_sheets(data_path)
+
+# Biomass and leaf area for high light treatment, 31_31_250
+leaf_biomass_hightemp <- read_excel(data_path, sheets_names[11]) %>% 
+  dplyr::rename(temperature = 6, 
+                leaf_dry_biomass_mg = 19) %>% 
+  filter(temperature == "31.0", 
+         `light_intensity(umol/m2/s)` == "250.0",
+         !is.na(leaf_dry_biomass_mg), 
+         treatment == "control") %>% 
+  mutate(leaf_dry_biomass_mg == as.numeric(leaf_dry_biomass_mg))
+
+leaf_area_hightemp <- read_excel(data_path, sheets_names[2]) %>% 
+  dplyr::rename(leaf_area_cm2 = 8) %>% 
+  filter(experiment == "3rd_Biomass_ME034_GA", 
+         treatment == "control")
+
+sla_hightemp <- left_join(leaf_biomass_hightemp, leaf_area_hightemp, by = "plantID") %>% 
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
+         dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
+         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = area_m2 / dry_biomass_kg) %>% 
+  mutate(local_datetime = as.Date(`biomas harvested`), 
+         treatment = "high night temperature") %>% 
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(statname = '')
+
+
+# Biomass and leaf area for control treatment, 31_22_450
+leaf_biomass_control <- read_excel(data_path, sheets_names[7]) %>% 
+  dplyr::rename(temperature = 6, 
+         leaf_dry_biomass_mg = 19, 
+         plantID = 1) %>% 
+  filter(temperature == "31/22", 
+         genotype == "ME034V-1", 
+         !is.na(leaf_dry_biomass_mg))
+
+leaf_area_control <- read_excel(data_path, sheets_names[2]) %>% 
+  dplyr::rename(leaf_area_cm2 = 8) %>% 
+  filter(experiment == "5th_Biomass_A10&ME034_cycling_temp")
+
+sla_control <- left_join(leaf_biomass_control, leaf_area_control, by = "plantID") %>% 
+  filter(!is.na(leaf_area_cm2)) %>% 
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
+         dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
+         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = area_m2 / dry_biomass_kg) %>% 
+    mutate(local_datetime = as.Date(`biomass harvested`), 
+         treatment = "high light") %>% 
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(statname = '')
+```
+
+Next, load in data from the outdoor and greenhouse experiments, an Excel sheet entitled "field_and_greenhouse_experiments.xlsx", which consists of multiple tabs. All leaf areas are avaiable in tab 'total_leaf_area'; biomass for the greenhouse experiment and 1st/2nd field experiments are found in '1st_gh_biomass', '1st_field_biomass', and '2nd_field_biomass', respectively. Again, physiological and biomass data were taken on different individual plants. In this case, the greenhouse physiological data came from pots and teh outdoor physiological data came from 5 cm and JollyG pots. Unique filters are applied to each biomass data to obtain the same set of experimental conditions as the physiological data. 
+
+```{r}
+# Data from chamber experiments
+data_path2 <- "../../sentinel-detection/data/raw_data/biomass/field_and_greenhouse_experiments.xlsx"
+sheets_names2 <- excel_sheets(data_path2)
+
+# Biomass and leaf area for greenhouse pots
+leaf_biomass_gh <- read_excel(data_path2, sheets_names2[16]) %>% 
+  dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
+  filter(treatment == "pot") %>% 
+  mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
+
+leaf_area_gh <- read_excel(data_path2, sheets_names2[1]) %>% 
+  dplyr::rename(leaf_area_cm2 = 9) %>% 
+  filter(experiment == "1st_gh_biomass", 
+         treatment == "pot")
+
+sla_gh <- left_join(leaf_area_gh, leaf_biomass_gh, by = "plant_id") %>% 
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_g, 
+         dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
+         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = area_m2 / dry_biomass_kg) %>% 
+  mutate(local_datetime = as.Date(`harvest_time`), 
+         treatment = "greenhouse") %>% 
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(statname = '')
+
+# Biomass and leaf area for 2nd field experiment, 5 cm
+leaf_biomass_5cm <- read_excel(data_path2, sheets_names2[7]) %>% 
+  dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
+  filter(treatment == "5cm") %>% 
+  mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
+
+leaf_area_5cm <- read_excel(data_path2, sheets_names2[1]) %>% 
+  dplyr::rename(leaf_area_cm2 = 9) %>% 
+  filter(experiment == "2nd_field_biomass", 
+         treatment == "5cm")
+
+sla_5cm <- left_join(leaf_area_5cm, leaf_biomass_5cm, by = "plant_id") %>% 
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_g, 
+         dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
+         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = area_m2 / dry_biomass_kg) %>% 
+  mutate(local_datetime = as.Date(`harvest_time`), 
+         treatment = "outdoor 5 cm density") %>% 
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(statname = '')
+
+# Biomass and leaf area for 2nd field experiment, JollyG
+leaf_biomass_JollyG <- read_excel(data_path2, sheets_names2[7]) %>% 
+  dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
+  filter(treatment == "jolly_pot") %>% 
+  mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
+
+leaf_area_JollyG <- read_excel(data_path2, sheets_names2[1]) %>% 
+  dplyr::rename(leaf_area_cm2 = 9) %>% 
+  filter(experiment == "2nd_field_biomass", 
+         treatment == "jolly_p")
+
+sla_JollyG <- left_join(leaf_area_JollyG, leaf_biomass_JollyG, by = "plant_id") %>% 
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_g, 
+         dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
+         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = area_m2 / dry_biomass_kg) %>% 
+  mutate(local_datetime = as.Date(`harvest_time`), 
+         treatment = "outdoor JollyG soil") %>% 
+  select(local_datetime, treatment, SLA) %>% 
+  mutate(statname = '')
+```
+
+Combineand format all SLA values for upload. 
+```{r}
+sla <- bind_rows(sla_hightemp, sla_control, sla_gh, sla_5cm, sla_JollyG) %>%
+  mutate(site = case_when(treatment == "high light" ~ "Donald Danforth Plant Science Center Growth Chamber", 
+                               treatment == "high night temperature" ~ "Donald Danforth Plant Science Center Growth Chamber",
+                               treatment == "greenhouse" ~ "Donald Danforth Plant Science Center Greenhouse",
+                               treatment == "outdoor 5 cm density" ~ "Donald Danforth Plant Science Center Outdoor",
+                               treatment == "outdoor JollyG soil" ~ "Donald Danforth Plant Science Center Outdoor"),
+         species = "Setaria viridis",
+         cultivar = "ME-034",
+         citation_author = "Zhang, Gehan, LeBauer, Riemer, Tarin, Vargas",
+         citation_year = "2018", 
+         citation_title = "Unpublished DARPA experimental data",
+         access_level = "2",
+         SLA = round(SLA, 2)) %>%
+  select(citation_author, citation_year, citation_title, 
+         species, cultivar, site, treatment, local_datetime, 
+         SLA, access_level)
+
+```
+
+Save cleaned SLA as a .csv file in the `SLA` subfolder of `upload_params_data`. 
+```{r}
+if(!dir.exists(paste0("upload/SLA/"))){
+  dir.create(paste0("upload/SLA/"), recursive = T)
+}
+
+write.csv(sla, file = "upload/SLA/sla.csv", row.names = FALSE)
+```
+
+Split dataframe by new data since last upload. 
+```{r}
+psla <- read.csv("upload/SLA/sla.csv")
+psla$local_datetime <- as.POSIXct(psla$local_datetime)
+#create new folder with date
+dname <- gsub('-', '', grep(max(sla$local_datetime), pattern = "(\\D+)", value = T))
+
+if(!dir.exists(paste0("upload/SLA/", dname))){
+  dir.create(paste0("upload/SLA/", dname))
+}
+newdir <- paste0("upload/SLA/", dname)
+
+#previous maximum date
+prevDate <- max(psla$local_datetime)
+
+#subset new SLA values only, to be uploaded
+new_sla <- sla %>%
+    filter(local_datetime > prevDate)
+write.csv(new_sla, paste0(newdir, "/sla.csv"), row.names = FALSE)
+```
+
+Upload that new parameter data file using the API. 
+```{bash}
+#change to directory of latest date
+x=$(ls -d ~/model-vignettes/parameters_processing/upload/SLA/*/ | sort -r | head -n 1)
+cd $x
+
+#add all .csv files from this diretory
+for file in *.csv; do
+  curl -X POST --data-binary @$file    http://welsch.cyverse.org:8000/bety/api/v1/traits.csv?key=uaZWRQT44fQVzDbxOET03EZJGXiEX9yUDEDiDwe4 -H "Content-Type: text/csv"
+done
+```
+
