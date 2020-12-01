@@ -11,7 +11,7 @@ Gs <- function(fileID){# input is ID column from the experiments dataframe
   library(dplyr)
 
   # Read in data
-  fileNames <- dir("cleaned_data/", pattern = as.character(fileID), recursive = T)
+  fileNames <- dir("../../sentinel-detection/data/cleaned_data/", pattern = as.character(fileID), recursive = T)
   
   # Remove if Rd files present (currently, Rd file does not include raw data and cannot be used for stomatal parameter estimation)
   ind <- which(substr(fileNames, 1, 2) == "Rd")
@@ -22,7 +22,7 @@ Gs <- function(fileID){# input is ID column from the experiments dataframe
   df <- data.frame()
   for(i in 1:length(fileNames)){
     # Read in csv
-    temp <- read.csv(paste0("cleaned_data/", fileNames[i]))
+    temp <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/", fileNames[i]))
     
     # Select relevant columns
     temp2 <- subset(temp, select = c(species, rep, obs, time, date, hhmmss, 
@@ -36,7 +36,9 @@ Gs <- function(fileID){# input is ID column from the experiments dataframe
     
     # Filter AQ data for Qin >  LCPT (estimated)
     if(substring(fileNames[i], 1, 2) == "AQ"){
-      lparams <- read.csv(paste0("outputs/AQ/", dir("outputs/AQ/", pattern = as.character(fileID))))
+      lparams <- read.csv(paste0("../../sentinel-detection/data/derived_data/AQ/", 
+                                 dir("../../sentinel-detection/data/derived_data/AQ/", 
+                                     pattern = as.character(fileID))))
       temp3 <- rbind.data.frame(subset(temp2, rep == "plant_1" & Qin >= lparams$Value[lparams$trait == "LCPT" & lparams$rep == "plant_1"]),
                                 subset(temp2, rep == "plant_2" & Qin >= lparams$Value[lparams$trait == "LCPT" & lparams$rep == "plant_2"]),
                                 subset(temp2, rep == "plant_3" & Qin >= lparams$Value[lparams$trait == "LCPT" & lparams$rep == "plant_3"])
@@ -89,10 +91,10 @@ Gs <- function(fileID){# input is ID column from the experiments dataframe
   }
   
   # Location of output files
-  if(dir.exists("outputs/stomatal/") == F){
-    dir.create("outputs/stomatal/", recursive = TRUE)
+  if(dir.exists("../../sentinel-detection/data/derived_data/stomatal/diagnostic") == F){
+    dir.create("../../sentinel-detection/data/derived_data/stomatal/diagnostic", recursive = TRUE)
   }
-  loc <- paste0("outputs/stomatal/")
+  loc <- paste0("../../sentinel-detection/data/derived_data/stomatal/")
   write.csv(out, file = paste0(loc, fileID, "_parameters.csv"), row.names = F)
   
   # Plotting 

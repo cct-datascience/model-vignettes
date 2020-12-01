@@ -1,12 +1,12 @@
 ---
-title: "Compare BETY and upload_params_data"
+title: "Compare parameters uploaded to and downloaded from BETY"
 ---
   
 This script compares the results of what is in BETY to what has been uploaded to it, in an effort to identify mistakes or duplicates. 
 
 Data from BETY is selected with the following SQL query: `select * from traits where treatment_id in (9000000015, 9000000016, 9000000017, 9000000018, 9000000019, 9000000020)`
 
-The results are saved as csv in the upload_params_data/BETY folder, with a name that matches the most recent date in the `updated_at` column. 
+The results are saved as csv in the sentinel-detection/data/derived_data/BETY folder, with a name that matches the most recent date in the `updated_at` column. 
 
 Load libraries and both sets of data
 ```{r}
@@ -18,14 +18,16 @@ library(arsenal)
 
 Import the newest BETY file.  
 ```{r}
-filename <- max(as.numeric(substr(list.files(pattern = "csv"), 1,8)))
-in_bety <- read.csv(paste0(filename, ".csv"), header = T)
+path = "../../sentinel-detection/data/derived_data/BETY"
+filename <- max(as.numeric(substr(list.files(path = path,
+                                             pattern = "csv"), 1,8)))
+in_bety <- read.csv(paste0(path, "/", filename, ".csv"), header = T)
 ```
 
-For comparison, import the full upload_params_data data file for phys_params and SLA.
+For comparison, import the full data file for phys_params and SLA, found in the 'upload' folder.
 ```{r}
-in_phys <- read.csv("../phys_params/phys_parameters.csv",  header = T)
-in_sla <- read.csv("../SLA/sla.csv",  header = T)
+in_phys <- read.csv("upload/phys_params/phys_parameters.csv",  header = T)
+in_sla <- read.csv("upload/SLA/sla.csv",  header = T)
 ```
 
 Convert the treatment and variable ID columns to match upload data format. 
@@ -103,3 +105,5 @@ compare(bety, all)
 ```
 
 If no differences, should return 0 variables and 0 observations not shared, differences found in 0/5 variables, and 0 variables compared have non-identical attributes. 
+
+The exception is "Differences found in 1/6 variables compared", which occurs when C4_Collatz.R model has been re-run for previously existing data. Bayesian MCMC yields slightly different means of vmax. 

@@ -18,7 +18,7 @@ library(grid)
 
 Load full parameter data. 
 ```{r}
-params <- read.csv("outputs/parameters_data.csv")
+params <- read.csv("../../sentinel-detection/data/derived_data/parameters_data.csv")
 ```
 
 Subset to include 5 parameters of interest (included in BETY and used by BioCro). 
