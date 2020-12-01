@@ -4,7 +4,7 @@ Parameter processing pipeline for the DARPA Sentinel project
 
 ## Overview
 
-This public repo contains analysis code for the model runs associated with the DARPA Sentinel project. As a first step, the parameters_pipeline folder contains code that estimates physiological traits that are needed as inputs for crop and ecosystem models
+This public repo contains analysis code for the model runs associated with the DARPA Sentinel project. As a first step, the parameters_pipeline folder contains code that estimates physiological traits that are needed as inputs for crop and ecosystem models.
 
 
 ### Parameter estimation: 'parameters_pipeline'
@@ -15,11 +15,12 @@ Experiment metadata is summarized in "data/cleaned_data/experiments.csv" and is 
 
 #### '01_parameter_estimation.Rmd' 
 
-* Input files: "cleaned_data/experiments.csv", "derived_data/parameters_data.csv", "cleaned_data/ACi", "cleaned_data/AQ", "cleaned_data/Rd"
-* Output files: "derived_data/parameters_data.csv", "derived_data/ACi", "derived_data/AQ", "derived_data/Rd", "derived_data/stomatal"
+* Input files: "cleaned_data/experiments.csv", "derived_data/parameters_data.csv", "cleaned_data/ACi/A_Ci_curves_\*.csv", "cleaned_data/AQ/AQin_curves_\*.csv", "cleaned_data/Rd/Rd_\*.csv"
+* Output files: "derived_data/parameters_data.csv", "derived_data/ACi/\*_parameters.csv", "derived_data/ACi/diagnostic/\*_fit.pdf", "derived_data/ACi/diagnostic/\*_gelman.pdf", "derived_data/AQ/\*_parameters.csv", "derived_data/AQ/diagnostic/\*_LRC.pdf", "derived_data/Rd/\*_parameters.csv", "derived_data/stomatal/\*_parameters.csv", "derived_data/stomatal/diagnostic/\*_stomatal_curves.pdf"
 * Methods: Uses functions "R/C4_Collatz.R", "R/LRC.R", "R/Gs2.R", "R/Rd.R" to estimate all photosynthetic and stomatal parameters as described in the [README.md](https://github.com/danforthcenter/sentinel-detection/blob/master/README.md) for the sentinel-detection repo. Two changes are made: 
-  1. Gs2.R uses all ACi and AQ curve data except extremely low values (PAR < LCPT and CO2  < 45 ppm)
-  2. Full AQ curves could not be taken on the outdoor plants at Danforth. Therefore, Rd was measured via the foil method on two leaf replicates per plant. Rd.R calculates the sample mean, standard error, and standard deviation at the treatment level. 
+  * Notes:
+      1. Gs2.R uses all ACi and AQ curve data except extremely low values (PAR < LCPT and CO2  < 45 ppm)
+      2. Full AQ curves could not be taken on the outdoor plants at Danforth. Therefore, Rd was measured via the foil method on two leaf replicates per plant. Rd.R calculates the sample mean, standard error, and standard deviation at the treatment level. 
   
 #### '02_parameter_upload.Rmd' 
 
@@ -28,7 +29,7 @@ Experiment metadata is summarized in "data/cleaned_data/experiments.csv" and is 
 * Methods: Physiological parameters and SLA are prepared separately. The first section formats and uploads the physiological parameter output from 01_parameter_estimation to BETYdb via the API. The second section calculates and uploads SLA from the raw biomass data to BETYdb via the API. 
 
 #### '03_parameter_comparison.Rmd'
-* Input files: "derived_data/parameters_data.csv", "derived_data/BETY/*.csv"
+* Input files: "derived_data/parameters_data.csv", "derived_data/BETY/\*.csv"
 * Output files: none
 * Methods: Traits uploaded to and downloaded from BETYdb are compared to prevent accidental deletion or duplication. 
 
@@ -54,7 +55,7 @@ GS_all_byplant_50_LCPT.R |All ACi and AQ data where CO2 > 45 ppm and PAR > LCPT,
 
 #### "Bayesian_parameter_estimation.Rmd"
 
-* Input files: "cleaned_data/ACi", "cleaned_data/AQ"
+* Input files: "cleaned_data/ACi/A_Ci_curves_\*.csv", "cleaned_data/AQ/AQin_curves_\*.csv"
 * Output files: none saved
 * Methods: Tests modified version of fitA.R from the PEcAn photosynthesis module that includes C4 photosynthesis on combined ACi and AQ data. WIP
 

@@ -126,10 +126,14 @@ for(p in params){
   
   # If Vcmax, rename columns n and SE; if cuticular_cond, convert units; if theta, remove leafT
   if(p == "Vcmax") {
-    trait_df2 <- trait_df %>% dplyr::rename(Sample.size = n, Std.err = SE)} else if(p == "cuticular_cond")
-    {trait_df2 <- trait_df %>% mutate(cuticular_cond = round(cuticular_cond, 0))} else if(p == "theta")
-      {trait_df2 <- trait_df %>% select(-leafT)} else
-        {trait_df2 <- trait_df}
+    trait_df2 <- trait_df %>% dplyr::rename(Sample.size = n, Std.err = SE)
+    } else if(p == "cuticular_cond"){
+      trait_df2 <- trait_df %>% mutate(cuticular_cond = round(cuticular_cond, 0))
+    } else if(p == "theta"){
+      trait_df2 <- trait_df %>% select(-leafT)
+    } else {
+      trait_df2 <- trait_df
+    }
   
   write.csv(trait_df2, paste0(newdir, "/phys_parameters_", p, ".csv"), row.names = FALSE)
 }
@@ -314,7 +318,7 @@ sla <- bind_rows(sla_hightemp, sla_control, sla_gh, sla_5cm, sla_JollyG) %>%
 
 ```
 
-Save cleaned SLA as a .csv file in the `SLA` subfolder of `upload_params_data`. 
+Save cleaned SLA as a .csv file in the `SLA` subfolder of `upload`. 
 ```{r}
 if(!dir.exists(paste0("upload/SLA/"))){
   dir.create(paste0("upload/SLA/"), recursive = T)
