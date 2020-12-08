@@ -6,10 +6,10 @@ plot.MA <- function(settings){
   library(ggridges)
   
   #load prior.distns, jagged.data, trait.mcmc (new), and trt.match
-  load(paste0(settings$outdir, "pft/SetariaWT_ME034/prior.distns.Rdata"))
-  load(paste0(settings$outdir, "pft/SetariaWT_ME034/jagged.data.Rdata"))
-  load(paste0(settings$outdir, "pft/SetariaWT_ME034/trait.mcmc.Rdata"))
-  load(paste0(settings$outdir, "pft/SetariaWT_ME034/trt.match.Rdata"))
+  load(paste0(settings$outdir, "/pft/SetariaWT_ME034/prior.distns.Rdata"))
+  load(paste0(settings$outdir, "/pft/SetariaWT_ME034/jagged.data.Rdata"))
+  load(paste0(settings$outdir, "/pft/SetariaWT_ME034/trait.mcmc.Rdata"))
+  load(paste0(settings$outdir, "/pft/SetariaWT_ME034/trt.match.Rdata"))
   
   #turn all into lists of length n objects so plot.prior.posterior() will run evenly
   traits <- names(trt.match) # not all jagged data was processed
@@ -30,7 +30,7 @@ plot.MA <- function(settings){
                    SIMPLIFY = F)
   
   #print out each plot
-  lapply(names(MAfigs), function(x) ggsave(filename = paste0(x, ".jpeg"),
+  lapply(names(MAfigs), function(x) ggsave(filename = paste0(settings$outdir, "/pft/SetariaWT_ME034/", x, ".jpeg"),
                                     plot = MAfigs[[x]]))
 
 }
