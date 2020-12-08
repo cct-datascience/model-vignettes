@@ -17,7 +17,7 @@ set.MA.trt <- function(settings){
   #save trt.match
   save(trt.match, file = paste0(settings$outdir, "/pft/SetariaWT_ME034/trt.match.Rdata"))
   
-  #save existing trait.mcmc
+  #save existing trait.mcmc with different name
   save(trait.mcmc, file = paste0(settings$outdir, "/pft/SetariaWT_ME034/trait.mcmc.original.Rdata"))
   
   #create new trait.mcmc of combined random effects
@@ -60,8 +60,9 @@ RE.combine <- function(mc, trt){
   #fill col_ind with the column index of the matching column names
   for(i in 1:nrow(trt)){
     for(j in 1:ncol(trt)){
-      col_ind[i,j] <- if(length(which(cnames == paste0("beta.", colnames(trt)[j], "[", trt[i,j], "]"))) == 1){
-        which(cnames == paste0("beta.", colnames(trt)[j], "[", trt[i,j], "]"))
+      index <- which(cnames == paste0("beta.", colnames(trt)[j], "[", trt[i,j], "]"))
+      col_ind[i,j] <- if(length(index) == 1){
+        index
       } else {
           NA
         }
