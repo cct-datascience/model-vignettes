@@ -13,7 +13,10 @@ set.MA.trt <- function(settings){
 
   #convert jagged.data into match table, only return traits for which there is an associated mcmc output
   trt.match <- lapply(jagged.data, collapse)[names(trait.mcmc)]
-
+  
+  #save trt.match
+  save(trt.match, file = paste0(settings$outdir, "pft/SetariaWT_ME034/trt.match.Rdata"))
+  
   #save existing trait.mcmc
   save(trait.mcmc, file = paste0(settings$outdir, "pft/SetariaWT_ME034/trait.mcmc.original.Rdata"))
   
