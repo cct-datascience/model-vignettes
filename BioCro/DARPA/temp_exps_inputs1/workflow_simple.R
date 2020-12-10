@@ -5,11 +5,11 @@ library(PEcAn.all)
 library(PEcAn.utils)
 library(RCurl)
 
+
 #Manually load, until PR is merged
 devtools::load_all("~/pecan/base/utils")
 devtools::load_all("~/pecan/base/db")
 devtools::load_all("~/pecan/modules/meta.analysis")
-
 
 # Add function for setting MA treatments
 source("../set_MA_trt.R")
