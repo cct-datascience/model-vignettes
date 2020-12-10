@@ -35,7 +35,6 @@ PEcAn.MA::runModule.run.meta.analysis(settings)
 set_MA_trt(settings)
 
 # If treatment specific plots desired, plot MA priors vs. posteriors
-debugonce(plot_MA)
 plot_MA(settings)
 
 # Write model specific configs

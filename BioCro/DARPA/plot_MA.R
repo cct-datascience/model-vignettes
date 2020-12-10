@@ -3,6 +3,8 @@
 plot_MA <- function(settings){
   
   library(ggplot2)
+  library(tidyr)
+  library(dplyr)
 
   #load prior.distns, jagged.data, trait.mcmc (new), and trt.match
   load(file.path(settings$pfts$pft$outdir, "prior.distns.Rdata"))
@@ -62,7 +64,9 @@ plot_prior_posterior <- function(prior, jag, mc, trt){
     facet_wrap(~trt_name, ncol = 1, scales = "free_y") +
     theme_bw(base_size = 10) +
     theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank()) +
+          panel.grid.minor = element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank()) +
     scale_color_manual(values = cols[1:2]) +
     guides(color = FALSE)
   
