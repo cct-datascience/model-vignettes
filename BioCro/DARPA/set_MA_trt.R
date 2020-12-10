@@ -26,11 +26,11 @@ set_MA_trt <- function(settings){
 
   
   #save existing trait.mcmc with different name, 2 places
-  save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.original.Rdata"))
-  save(trt.match, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.original.Rdata"))
+  save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.original.Rdata"))
+  save(trait.mcmc, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.original.Rdata"))
 
   #create new trait.mcmc of combined random effects
-  new.trait.mcmc <- mapply(FUN = RE.combine, mc = trait.mcmc, trt = trt.match, 
+  new.trait.mcmc <- mapply(FUN = RE_combine, mc = trait.mcmc, trt = trt.match, 
                            SIMPLIFY = FALSE)
   
   #identify target site and treatment
@@ -38,14 +38,14 @@ set_MA_trt <- function(settings){
   target.trt <- settings$meta.analysis$treatment
 
   #label target site/treatment "beta.o"
-  final.trait.mcmc <- mapply(FUN = rename.cols, trait.mcmc = new.trait.mcmc, trt = trt.match,
+  final.trait.mcmc <- mapply(FUN = rename_cols, trait.mcmc = new.trait.mcmc, trt = trt.match,
                              MoreArgs = list(target.site = target.site, target.trt = target.trt),
                              SIMPLIFY = FALSE)
   
   #rename as trait.mcmc and save as "trait.mcmc.Rdata", 2 places
   trait.mcmc <- final.trait.mcmc
-  save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata"))
-  save(trt.match, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.Rdata"))
+  save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata"))
+  save(trait.mcmc, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.Rdata"))
 }
 
 #Returns unique combination of site, trt, and ghs for matching purposes
@@ -60,7 +60,7 @@ collapse <- function(jagged){
 
 
 #Combines correct columns of RE for each treatment
-RE.combine <- function(mc, trt){
+RE_combine <- function(mc, trt){
   #create table of relevant RE for each treatment (row)
   trt <- trt[, c("ghs", "site", "trt")]
   #empty matrix of column indices for matching column names
@@ -94,7 +94,7 @@ RE.combine <- function(mc, trt){
 }
 
 #Renames target treatment column with "beta.o"
-rename.cols <- function(trait.mcmc, trt, target.site, target.trt){
+rename_cols <- function(trait.mcmc, trt, target.site, target.trt){
   #index of target treatment
   ind <- which(trt$site_id == target.site & trt$trt_name == target.trt)
   

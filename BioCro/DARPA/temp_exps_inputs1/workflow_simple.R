@@ -5,6 +5,10 @@ library(PEcAn.all)
 library(PEcAn.utils)
 library(RCurl)
 
+devtools::load_all("~/pecan/base/utils")
+devtools::load_all("~/pecan/base/db")
+devtools::load_all("~/pecan/modules/meta.analysis")
+
 # Add function for setting MA treatments
 source("../set_MA_trt.R")
 # ----------------------------------------------------------------------
@@ -23,7 +27,6 @@ settings <- PEcAn.workflow::runModule.get.trait.data(settings)
 PEcAn.MA::runModule.run.meta.analysis(settings)
 
 # If treatment specific, set meta.analysis treatments
-debugonce(set_MA_trt)
 set_MA_trt(settings)
 
 # If treatment specific plots desired, plot MA priors vs. posteriors
