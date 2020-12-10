@@ -5,8 +5,17 @@ library(PEcAn.all)
 library(PEcAn.utils)
 library(RCurl)
 
+#Manually load, until PR is merged
+devtools::load_all("~/pecan/base/utils")
+devtools::load_all("~/pecan/base/db")
+devtools::load_all("~/pecan/modules/meta.analysis")
+
+
 # Add function for setting MA treatments
 source("../set_MA_trt.R")
+
+# Add function for plotting MA by treatment and trait
+source("../plot_MA.R")
 # ----------------------------------------------------------------------
 # PEcAn Workflow
 # ----------------------------------------------------------------------
@@ -23,11 +32,11 @@ settings <- PEcAn.workflow::runModule.get.trait.data(settings)
 PEcAn.MA::runModule.run.meta.analysis(settings)
 
 # If treatment specific, set meta.analysis treatments
-debugonce(set_MA_trt)
 set_MA_trt(settings)
 
 # If treatment specific plots desired, plot MA priors vs. posteriors
-
+debugonce(plot_MA)
+plot_MA(settings)
 
 # Write model specific configs
 settings <- PEcAn.workflow::runModule.run.write.configs(settings)
