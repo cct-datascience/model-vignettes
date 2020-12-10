@@ -3,26 +3,35 @@
 ## Target site/treatment is re-labeled "beta.o" so additional PEcAn functions will work 
 
 
-set.MA.trt <- function(settings){
+set_MA_trt <- function(settings){
   
   library(coda)
   
+  #obtain dbfiles path
+  con <- PEcAn.DB::db.open(settings$database$bety)
+  postid <- settings$pfts$pft$posteriorid
+  fname <- PEcAn.DB::dbfile.file(type = "Posterior", id = postid, con = con)
+  fpath <- gsub(paste0(postid, "\\/.*"), postid, fname)
+
   #load jagged.data and trait.mcmc
-  load(paste0(settings$outdir, "pft/SetariaWT_ME034/jagged.data.Rdata"))
-  load(paste0(settings$outdir, "pft/SetariaWT_ME034/trait.mcmc.Rdata"))
+  load(file.path(fpath, "jagged.data.Rdata"))
+  load(file.path(fpath, "trait.mcmc.Rdata"))
 
   #convert jagged.data into match table, only return traits for which there is an associated mcmc output
   trt.match <- lapply(jagged.data, collapse)[names(trait.mcmc)]
   
-  #save trt.match
-  save(trt.match, file = paste0(settings$outdir, "pft/SetariaWT_ME034/trt.match.Rdata"))
+  #save trt.match, 2 places
+  save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trt.match.Rdata"))
+  save(trt.match, file = file.path(settings$pfts$pft$outdir, "trt.match.Rdata"))
+
   
-  #save existing trait.mcmc
-  save(trait.mcmc, file = paste0(settings$outdir, "pft/SetariaWT_ME034/trait.mcmc.original.Rdata"))
-  
+  #save existing trait.mcmc with different name, 2 places
+  save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.original.Rdata"))
+  save(trt.match, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.original.Rdata"))
+
   #create new trait.mcmc of combined random effects
   new.trait.mcmc <- mapply(FUN = RE.combine, mc = trait.mcmc, trt = trt.match, 
-                           SIMPLIFY = F)
+                           SIMPLIFY = FALSE)
   
   #identify target site and treatment
   target.site <- settings$run$site$id
@@ -31,11 +40,12 @@ set.MA.trt <- function(settings){
   #label target site/treatment "beta.o"
   final.trait.mcmc <- mapply(FUN = rename.cols, trait.mcmc = new.trait.mcmc, trt = trt.match,
                              MoreArgs = list(target.site = target.site, target.trt = target.trt),
-                             SIMPLIFY = F)
+                             SIMPLIFY = FALSE)
   
-  #rename as trait.mcmc and save as "trait.mcmc.Rdata"
+  #rename as trait.mcmc and save as "trait.mcmc.Rdata", 2 places
   trait.mcmc <- final.trait.mcmc
-  save(trait.mcmc, file = paste0(settings$outdir, "pft/SetariaWT_ME034/trait.mcmc.Rdata"))
+  save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata.Rdata"))
+  save(trt.match, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.Rdata"))
 }
 
 #Returns unique combination of site, trt, and ghs for matching purposes
@@ -53,21 +63,28 @@ collapse <- function(jagged){
 RE.combine <- function(mc, trt){
   #create table of relevant RE for each treatment (row)
   trt <- trt[, c("ghs", "site", "trt")]
+  #empty matrix of column indices for matching column names
   col_ind <- matrix(NA, nrow = nrow(trt), ncol = ncol(trt))
+  #existing column names
   cnames <- colnames(mc[[1]])
+  #fill col_ind with the column index of the matching column names
   for(i in 1:nrow(trt)){
     for(j in 1:ncol(trt)){
-      col_ind[i,j] <- if(length(which(cnames == paste0("beta.", colnames(trt)[j], "[", trt[i,j], "]"))) == 1){
-        which(cnames == paste0("beta.", colnames(trt)[j], "[", trt[i,j], "]"))
+      index <- which(cnames == paste0("beta.", colnames(trt)[j], "[", trt[i,j], "]"))
+      col_ind[i,j] <- if(length(index) == 1){
+        index
       } else {
           NA
         }
     }
   }
+  #add index for "beta.o", which is universal across treatments
   col_ind <- cbind(col_ind, rep(which(cnames == "beta.o"), nrow(col_ind)))
   
+  #create empty mcmc.list object
   chain <- list(mcmc(matrix(NA, nrow = nrow(mc[[1]]), ncol = nrow(trt))))
   out <- rep(chain, length(mc))
+  #for each chain and treatment, combine the relevant posterior RE from trait.mcmc
   for(c in 1:length(mc)){
     for(t in 1:nrow(trt)){ # number of treatments
       out[[c]][,t] <- rowSums(mc[[c]][ ,col_ind[t,]], na.rm = T)
@@ -81,6 +98,7 @@ rename.cols <- function(trait.mcmc, trt, target.site, target.trt){
   #index of target treatment
   ind <- which(trt$site_id == target.site & trt$trt_name == target.trt)
   
+  #for each chain, add trt_name as column names; then sub out the traget treatment column name with "beta.o"
   for(c in 1:length(trait.mcmc)){
     colnames(trait.mcmc[[c]]) <- trt$trt_name
     colnames(trait.mcmc[[c]])[ind] <- "beta.o"
