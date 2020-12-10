@@ -10,7 +10,7 @@ plot_MA <- function(settings){
   load(file.path(settings$pfts$pft$outdir, "trait.mcmc.Rdata"))
   load(file.path(settings$pfts$pft$outdir, "trt.match.Rdata"))
   
-  #turn all into lists of length n objects so plot.prior.posterior() will run evenly
+  #turn all into lists of length n objects so plot_prior_posterior() will run evenly
   traits <- names(trt.match) # not all jagged data was processed
   
   #convert prior.distns
@@ -21,7 +21,7 @@ plot_MA <- function(settings){
   jagged <- jagged.data[traits]
 
   #apply  across set of list objects
-  MAfigs <- mapply(FUN = plot.prior.posterior, 
+  MAfigs <- mapply(FUN = plot_prior_posterior, 
                    prior = priors, 
                    jag = jagged,
                    mc = trait.mcmc,
@@ -35,7 +35,7 @@ plot_MA <- function(settings){
 }
 
 #Plot comparing prior, data, and posterior by treatment; function can be included in mapply()
-plot.prior.posterior <- function(prior, jag, mc, trt){
+plot_prior_posterior <- function(prior, jag, mc, trt){
   
   library(tidyr)
   library(RColorBrewer)
