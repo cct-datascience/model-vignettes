@@ -44,7 +44,7 @@ set_MA_trt <- function(settings){
   
   #rename as trait.mcmc and save as "trait.mcmc.Rdata", 2 places
   trait.mcmc <- final.trait.mcmc
-  save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata.Rdata"))
+  save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata"))
   save(trt.match, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.Rdata"))
 }
 
