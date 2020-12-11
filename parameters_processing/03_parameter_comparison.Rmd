@@ -62,6 +62,9 @@ bety <- bety %>%
 
 #reorder
 bety <- bety[order(bety$site, bety$treatment, bety$variable, bety$mean),]
+
+#remove row names
+rownames(bety) <- c()
 ```
 
 Create matching version of uploaded phys_params. 
@@ -80,11 +83,10 @@ Create matching version of uploaded sla
 sla <- in_sla %>%
   tidyr::gather(SLA, key = "variable", value = "mean") %>%
   mutate(entity = NA, 
-         SE = NA)%>%
-  select(site, treatment, variable, mean, SE, entity) %>%
+         SE = NA, 
+         n = 1) %>%
+  select(site, treatment, variable, mean, n, SE, entity) %>%
   arrange(site, treatment, variable, entity) %>%
-  mutate(n = case_when(!is.na(SE) ~ 1,
-                       is.na(SE) ~ NA_real_)) %>%
   select(-entity) %>%
   select(site, treatment, variable, mean, n, SE)
 ```
@@ -95,8 +97,14 @@ all <- rbind.data.frame(phys, sla)
 all$variable <- factor(all$variable, 
                        levels = unique(all$variable)[c(1,2,3,7,4,5,6)])
 
+all <- all %>%
+  mutate_if(sapply(all, is.character), as.factor)
+
 #reorder
 all <- all[order(all$site, all$treatment, all$variable, all$mean),]
+
+#remove row names
+rownames(all) <- c()
 ```
 
 Compare both data versions. 
@@ -104,6 +112,6 @@ Compare both data versions.
 compare(bety, all)
 ```
 
-If no differences, should return 0 variables and 0 observations not shared, differences found in 0/5 variables, and 0 variables compared have non-identical attributes. 
+If no differences, should return "Equal". 
 
-The exception is "Differences found in 1/6 variables compared", which occurs when C4_Collatz.R model has been re-run for previously existing data. Bayesian MCMC yields slightly different means of vmax. 
+The exception is when C4_Collatz.R model has been re-run for previously existing data. Bayesian MCMC yields slightly different means of vmax. 
