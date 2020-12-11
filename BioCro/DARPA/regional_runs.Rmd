@@ -35,13 +35,13 @@ We also read in a soil file, which is not necessary but is useful. These data ar
 ```{r}
 genotypes <- c("wt", "ss", "ca")
 
-soil_nc <- nc_open("regional_runs_inputs/hwsd.nc")
+soil_nc <- nc_open("/data/dbfiles/soil/hwsd.nc")
 
-met_stlew <- nc_open("regional_runs_inputs/weather_subsets/stlew.nc")
+met_stlew <- nc_open("/data/dbfiles/narr_subsets/stlew.nc")
 latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
                       lon = ncvar_get(met_stlew, "longitude"))
 
-dir.create("regional_runs_inputs/results")
+dir.create("/data/output/biocro_regional_runs", recursive = TRUE, showWarnings = FALSE)
 ```
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
@@ -56,7 +56,7 @@ estimate_biomass <- function(genotype){
   config <- read.biocro.config(config_path)
   regional_run_results <- c()
   for(point in 1:nrow(latlon)){ 
-    biocro_met_path <- paste0("regional_runs_inputs/biocro_met_stlew/stlew-",
+    biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
                             latlon$lat[point], "-", latlon$lon[point])
     regional_run_result <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
@@ -68,7 +68,7 @@ estimate_biomass <- function(genotype){
     regional_run_results <- rbind(regional_run_results, regional_run_result_daily)
     print(point)
   }
-  results_path <- paste0("regional_runs_inputs/results/stlew_", genotype, ".csv")
+  results_path <- paste0("/data/output/biocro_regional_runs/stlew_", genotype, ".csv")
   write.csv(regional_run_results, results_path)
 }
 lapply(genotypes, estimate_biomass)
@@ -79,7 +79,7 @@ The csv files are read in, combined, and cleaned/modified for later plotting.
 ```{r}
 rr_results <- c()
 for(genotype in genotypes){
-  biomass_path <- paste0("regional_runs_inputs/results/stlew_", genotype, ".csv")
+  biomass_path <- paste0("/data/output/biocro_regional_runs/stlew_", genotype, ".csv")
   rr_single <- read.csv(biomass_path)
   rr_single$genotype <- genotype
   rr_results <- rbind(rr_results, rr_single)
@@ -141,7 +141,7 @@ biomass_animation <- ggplot() +
 
 animate(biomass_animation, fps = 100, height = 400, width = 400)
 anim_save("stlew_biomass.gif", animation = biomass_animation, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 400, width = 400)
+          path = "/data/output/biocro_regional_runs", fps = 100, height = 400, width = 400)
 ```
 
 ## Comparisons
@@ -237,7 +237,7 @@ transpiration_animation <- ggplot() +
 
 animate(transpiration_animation, fps = 100, height = 400, width = 400)
 anim_save("stlew_transpiration.gif", animation = transpiration_animation, 
-          path = "regional_runs_inputs/results/", fps = 100, height = 400, width = 400)
+          path = "/data/output/biocro_regional_runs/", fps = 100, height = 400, width = 400)
 
 ggplot() +
   geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
