@@ -23,6 +23,12 @@ all_parameters <- read.csv("../../sentinel-detection/data/derived_data/parameter
                            stringsAsFactors = F)
 ```
 
+Read in previous set of parameters. 
+```{r}
+#read in previous data
+pparams <- read.csv("upload/phys_params/phys_parameters.csv")
+pparams$local_datetime <- as.POSIXct(pparams$local_datetime)
+```
 Clean up data to have the final columns: 
 
 1. `citation_author`, `citation_year`, and `citation_title`: indicate the source of the data using author, year, and title from BETYdb
@@ -102,9 +108,6 @@ write.csv(upload_parameters, "upload/phys_params/phys_parameters.csv", row.names
 
 Split dataframe, first by new data since last  upload, then by parameter. Uploading to BETYdb using the API requires one file per parameter. 
 ```{r}
-#read in previous data
-pparams <- read.csv("upload/phys_params/phys_parameters.csv")
-pparams$local_datetime <- as.POSIXct(pparams$local_datetime)
 #create new folder with date
 dname <- gsub('-', '', grep(max(upload_parameters$local_datetime), pattern = "(\\D+)", value = T))
 
@@ -120,16 +123,15 @@ prevDate <- max(pparams$local_datetime)
 params <- c("Vcmax", "leaf_respiration_rate_m2", "quantum_efficiency", "theta", "stomatal_slope.BB", "cuticular_cond")
 for(p in params){
   trait_df <- upload_parameters %>%
-    filter(variable == p,
-           local_datetime > prevDate) %>%
+    filter(variable == p) %>%
+    # filter(variable == p,
+    #        local_datetime > prevDate) %>%
     spread(variable, mean)
   
-  # If Vcmax, rename columns n and SE; if cuticular_cond, convert units; if theta, remove leafT
-  if(p == "Vcmax") {
-    trait_df2 <- trait_df %>% dplyr::rename(Sample.size = n, Std.err = SE)
-    } else if(p == "cuticular_cond"){
+  # If cuticular_cond, convert units; if theta, remove leafT
+  if (p == "cuticular_cond") {
       trait_df2 <- trait_df %>% mutate(cuticular_cond = round(cuticular_cond, 0))
-    } else if(p == "theta"){
+    } else if (p == "theta") {
       trait_df2 <- trait_df %>% select(-leafT)
     } else {
       trait_df2 <- trait_df
