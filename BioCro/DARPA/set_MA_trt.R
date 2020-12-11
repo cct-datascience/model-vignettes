@@ -98,7 +98,7 @@ rename_cols <- function(trait.mcmc, trt, target.site, target.trt){
   #index of target treatment
   ind <- which(trt$site_id == target.site & trt$trt_name == target.trt)
   
-  #for each chain, add trt_name as column names; then sub out the traget treatment column name with "beta.o"
+  #for each chain, add treatment names as column names; then sub out the target treatment column name with "beta.o"
   for(c in 1:length(trait.mcmc)){
     colnames(trait.mcmc[[c]]) <- trt$trt_name
     colnames(trait.mcmc[[c]])[ind] <- "beta.o"
