@@ -1,0 +1,281 @@
+---
+title: "Light and CO2 responses of gas exchange and NPQ"
+author: "Jessica Guo"
+date: "12/14/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+Two sets of figures comparing light and CO2 responses of Setaria under high night and regular night temperatures. 
+
+```{r library}
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(cowplot)
+library(wesanderson)
+experiments <- read.csv("../../sentinel-detection/data/cleaned_data/experiments.csv")
+```
+
+## Light and CO2 responses
+
+Obtain ACi and AQ data from the sentinel-detection [repo](https://github.com/danforthcenter/sentinel-detection) for the relevant select treatments and combine with appropriate labels. 
+
+```{r}
+# Read in high night temp
+hn_id <- experiments$ID[which(experiments$Treatment == "31_31_250")]
+hn_aci <-  vector("list", length = length(hn_id))
+hn_aq <-  vector("list", length = length(hn_id))
+for(i in 1:length(hn_id)){
+  aci <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", hn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  hn_aci[[i]] <-cbind.data.frame(ID = rep(hn_id[i], nrow(aci)), aci)
+  aq <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/AQ/AQin_curves_", hn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  hn_aq[[i]] <-cbind.data.frame(ID = rep(hn_id[i], nrow(aq)), aq)
+}
+
+# Read in regular night temp
+rn_id <- experiments$ID[which(experiments$Treatment == "31_22_250")]
+rn_aci <-  vector("list", length = length(rn_id))
+rn_aq <-  vector("list", length = length(rn_id))
+for(i in 1:length(rn_id)){
+  aci <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", rn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  rn_aci[[i]] <-cbind.data.frame(ID = rep(rn_id[i], nrow(aci)), aci)
+  aq <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/AQ/AQin_curves_", rn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  rn_aq[[i]] <-cbind.data.frame(ID = rep(rn_id[i], nrow(aq)), aq)
+}
+
+# Only preserve identical column names
+cnames <- Reduce(intersect, c(lapply(hn_aci, colnames), 
+                                   lapply(rn_aci, colnames),
+                                   lapply(hn_aq, colnames), 
+                                   lapply(rn_aq, colnames)))
+keep_match <- function(x) {x[, colnames(x) %in% cnames]}
+hn_aci <- lapply(hn_aci, keep_match)
+rn_aci <- lapply(rn_aci, keep_match)
+hn_aq <- lapply(hn_aq, keep_match)
+rn_aq <- lapply(rn_aq, keep_match)
+
+# Bind with treatment identifier
+aci_df <- rbind.data.frame(data.frame(Treatment = "31_31_250", do.call(rbind, hn_aci)),
+                           data.frame(Treatment = "31_22_250", do.call(rbind, rn_aci)))
+aq_df <- rbind.data.frame(data.frame(Treatment = "31_31_250", do.call(rbind, hn_aq)),
+                           data.frame(Treatment = "31_22_250", do.call(rbind, rn_aq)))
+# Keep relevant columns
+aci <- aci_df %>%
+  select(Treatment, ID, species, rep, obs, date, E, A, Ca, Ci, Pci, Pca) %>%
+  mutate(trt = case_when(Treatment == "31_22_250" ~ "Control",
+                         Treatment == "31_31_250" ~ "High night T"))
+
+aq <- aq_df %>%
+  select(Treatment, ID, species, rep, obs, date, E, A, Ca, Ci, Pci, Pca, Qin) %>%
+  mutate(trt = case_when(Treatment == "31_22_250" ~ "Control",
+                         Treatment == "31_31_250" ~ "High night T"))
+```
+
+To plot as Aci and AQ curves, summarize across replicates and for each Ci or Qin level. 
+
+```{r}
+# Set CO2 chamber conditions, match to actual Ca
+clevels <- c(400, 300, 200, 100, 50, 20, 10, 
+             500, 600, 700, 800, 900, 1000, 1200, 1500)
+nearest_clevel <- function(x) {clevels[which.min(abs(x - clevels))]}
+aci$roundCa <- c()
+for(i in 1:nrow(aci)) {
+  aci$roundCa[i] <- nearest_clevel(aci$Ca[i])
+}
+
+# set Qin chamber conditions, match to actual Qin
+qlevels <- c(0, 50, 100, 200, 400, 
+             600, 800, 1200, 1500)
+nearest_qlevel <- function(x) {qlevels[which.min(abs(x - qlevels))]}
+aq$roundQin <- c()
+for(i in 1:nrow(aq)) {
+  aq$roundQin[i] <- nearest_qlevel(aq$Qin[i])
+}
+
+# Functions to summarize
+SE <- function(x) {sd(x, na.rm = T)/sqrt(sum(!is.na(x)))}
+num <- function(x) {sum(!is.na(x))}
+
+# Summarize Ci and A by roundCa
+aci <- as.data.table(aci)
+aci_sum <- aci[, .(Ci.m = mean(Ci,  na.rm = T),
+                   Ci.se = SE(Ci),
+                   A.m = mean(A, na.rm = T),
+                   A.se = SE(A),
+                   n = num(A)), by = .(trt, roundCa)]
+
+# Summarize Qin and A by roundQin
+aq <- as.data.table(aq)
+aq_sum <- aq[, .(Qin.m = mean(Qin,  na.rm = T),
+                 Qin.se = SE(Qin),
+                 A.m = mean(A, na.rm = T),
+                 A.se = SE(A),
+                 n = num(A)), by = .(trt, roundQin)]
+
+# Plot
+cols <- wes_palette("GrandBudapest1")
+fig1a <- ggplot(aci_sum, aes(x = Ci.m, y = A.m, color = trt)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = A.m - A.se, ymax = A.m + A.se)) +
+  geom_errorbarh(aes(xmin = Ci.m - Ci.se, xmax = Ci.m + Ci.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste(C[i], " (", mu, "mol ", mol^-1, ")"))) +
+  scale_y_continuous(expression(paste(A[n], " (", mu, "mol ", m^-2, " ", s^-1, ")"))) +
+  scale_color_manual(values = cols) +
+  theme(legend.position = c(0.7, 0.2),
+        legend.title = element_blank())
+
+fig1b <- ggplot(aq_sum, aes(x = Qin.m, y = A.m, color = trt)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = A.m - A.se, ymax = A.m + A.se)) +
+  geom_errorbarh(aes(xmin = Qin.m - Qin.se, xmax = Qin.m + Qin.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste(A[n], " (", mu, "mol ", m^-2, " ", s^-1, ")"))) +
+  scale_color_manual(values = cols) +
+  guides(color = FALSE)
+
+jpeg(filename = "plots/Fig1_gas_ex_curves.jpg", height = 3, width = 8, units = "in", res = 600)
+plot_grid(fig1a, fig1b, labels = c('A', 'B'), label_size = 12)
+dev.off()
+```
+
+
+## NPQ plots
+
+From the aq_df, extract relevant NPQ parameters and perform calculations for the C4 pathway. Adaptation of Tonantzin's original processing code. 
+
+```{r}
+# Include additional columns related to NPQ
+npq <- aq_df %>%
+  select(Treatment, ID, species, rep, obs, date, TIME,
+         E, A, Ca, Ci, Pci, Pca, Qin,
+         Fo, Fs, Fm, Fm., Fo., PhiPS2, Qabs_fs, Fv., PhiCO2,
+         qP, qN) %>%
+  mutate(trt = case_when(Treatment == "31_22_250" ~ "Control",
+                         Treatment == "31_31_250" ~ "High night T"))
+
+# Split by ID and rep (individual plant) to perform corrections
+npq$entity <- paste0(npq$ID, "_", npq$rep)
+npq_list <- split(npq, f = npq$entity)
+for(i in 1:length(npq_list)) {
+  # Corrected values
+  npq_list[[i]] <- npq_list[[i]] %>%
+    mutate(Fs_c = Fs - Fo, # Fs steady state fluorescence,  Fo in dark-adapted leaves
+           Fm._c = Fm. - Fo, # Fm' (Fm.) maximal fluorescence from light-adapted leaves
+           Fo._c = Fo. - Fo, # Minimum fluorescence intensity in the light-acclimated state
+           PhiPS2_c = 1 - (Fs_c /Fm._c),
+           ETR_c = PhiPS2_c * 0.5 * Qabs_fs,
+           NPQ_c = (Fm - Fm._c) / Fm._c, # Non-photochemical quenching
+           Fv._Fm. = Fv. / Fm._c,
+           PhiPS2max = 1 - (Fo._c / Fm._c), # Maximum efficiency of PSII in light if all centers were open
+           seconds = TIME - first(TIME)) # Seconds elapsed since first measurement
+  
+  #Remove outliers
+  npq_list[[i]] $NPQ_c[which(npq_list[[i]] $NPQ_c < 0)] = NA
+  npq_list[[i]] $PhiPS2max[which(npq_list[[i]] $PhiPS2max  < 0.1)] = NA
+  npq_list[[i]] $PhiCO2[which(npq_list[[i]] $PhiCO2  < 0)] = NA
+}
+
+npq <- as.data.table(do.call(rbind, npq_list))
+```
+
+
+To plot as Aci and AQ curves, summarize across replicates and for each Ci or Qin level. 
+```{r}
+# Round light levels
+for(i in 1:nrow(npq)) {
+  npq$roundQin[i] <- nearest_qlevel(npq$Qin[i])
+}
+
+# Summarize
+npq_sum <- npq[roundQin !=0 , .(A.m = mean(A, na.rm = T), A.se = SE(A),
+                   Qin.m = mean(Qin,  na.rm = T), Qin.se = SE(Qin),
+                   NPQ.m = mean(NPQ_c, na.rm = T), NPQ.se = SE(NPQ_c),
+                   ETR.m = mean(ETR_c, na.rm = T), ETR.se = SE(ETR_c),
+                   PhiPS2.m = mean(PhiPS2_c, na.rm = T), PhiPS2.se = SE(PhiPS2_c),
+                   PhiPS2max.m = mean(PhiPS2max, na.rm = T), PhiPS2max.se = SE(PhiPS2max),
+                   qP.m =  mean(qP, na.rm = T), qP.se = SE(qP),
+                   qN.m = mean(qN, na.rm = T), qN.se = SE(qN)),  by = .(trt, roundQin)]
+
+# Panel of 6 plots
+fig2a <- ggplot(npq_sum, aes(x = Qin.m, y = NPQ.m, color = trt, group = trt)) +
+  geom_point(size = 2) +
+  geom_line(lty = 2) +
+  geom_errorbar(aes(ymin = NPQ.m - NPQ.se, ymax = NPQ.m + NPQ.se)) +
+  geom_errorbarh(aes(xmin = Qin.m - Qin.se, xmax = Qin.m + Qin.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste("NPQ"))) +
+  scale_color_manual(values = cols)  +
+  theme(legend.position = c(0.65, 0.2),
+        legend.title = element_blank())
+fig2b <- ggplot(npq_sum, aes(x = Qin.m, y = ETR.m, color = trt, group = trt)) +
+  geom_point(size = 2) +
+  geom_line(lty = 2) +
+  geom_errorbar(aes(ymin = ETR.m - ETR.se, ymax = ETR.m + ETR.se)) +
+  geom_errorbarh(aes(xmin = Qin.m - Qin.se, xmax = Qin.m + Qin.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste("ETR"))) +
+  scale_color_manual(values = cols)  +
+  guides(color = FALSE)
+fig2c <- ggplot(npq_sum, aes(x = Qin.m, y = PhiPS2.m, color = trt, group = trt)) +
+  geom_point(size = 2) +
+  geom_line(lty = 2) +
+  geom_errorbar(aes(ymin = PhiPS2.m - PhiPS2.se, ymax = PhiPS2.m + PhiPS2.se)) +
+  geom_errorbarh(aes(xmin = Qin.m - Qin.se, xmax = Qin.m + Qin.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste(Phi[PSII]))) +
+  scale_color_manual(values = cols)  +
+  guides(color = FALSE)
+fig2d <- ggplot(npq_sum, aes(x = Qin.m, y = PhiPS2max.m, color = trt, group = trt)) +
+  geom_point(size = 2) +
+  geom_line(lty = 2) +
+  geom_errorbar(aes(ymin = PhiPS2max.m - PhiPS2max.se, ymax = PhiPS2max.m + PhiPS2max.se)) +
+  geom_errorbarh(aes(xmin = Qin.m - Qin.se, xmax = Qin.m + Qin.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste(Phi[PSII[max]]))) +
+  scale_color_manual(values = cols)  +
+  guides(color = FALSE)
+fig2e <- ggplot(npq_sum, aes(x = Qin.m, y = qP.m, color = trt, group = trt)) +
+  geom_point(size = 2) +
+  geom_line(lty = 2) +
+  geom_errorbar(aes(ymin = qP.m - qP.se, ymax = qP.m + qP.se)) +
+  geom_errorbarh(aes(xmin = Qin.m - Qin.se, xmax = Qin.m + Qin.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste("qP"))) +
+  scale_color_manual(values = cols)  +
+  guides(color = FALSE)
+fig2f <- ggplot(npq_sum, aes(x = Qin.m, y = qN.m, color = trt, group = trt)) +
+  geom_point(size = 2) +
+  geom_line(lty = 2) +
+  geom_errorbar(aes(ymin = qN.m - qN.se, ymax = qN.m + qN.se)) +
+  geom_errorbarh(aes(xmin = Qin.m - Qin.se, xmax = Qin.m + Qin.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste("qN"))) +
+  scale_color_manual(values = cols)  +
+  guides(color = FALSE)
+
+jpeg(filename = "plots/Fig2_NPQ.jpg", height = 8, width = 6, units = "in", res = 600)
+plot_grid(fig2a, fig2b, fig2c, fig2d, fig2e, fig2f, ncol = 2, labels = LETTERS[1:6], label_size = 12)
+dev.off()
+```
+
+
