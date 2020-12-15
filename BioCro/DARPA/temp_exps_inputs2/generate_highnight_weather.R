@@ -1,7 +1,7 @@
 hightempchamber_weather <- data.frame(year = rep(2019, 8760), 
                                       doy = rep(1:365, each = 24), 
                                       hour = rep(seq(0, 23), 365), 
-                                      SolarR = rep(c(rep(0, each = 8), rep(936, each = 12), rep(0, each = 4)), times = 365),
+                                      SolarR = rep(c(rep(0, each = 8), rep(250, each = 12), rep(0, each = 4)), times = 365),
                                       Temp = rep(31, times = 365 * 24), 
                                       RH = rep(55.5 / 100,  times = 365 * 24), 
                                       WS = rep(0, times = 365 * 24), 

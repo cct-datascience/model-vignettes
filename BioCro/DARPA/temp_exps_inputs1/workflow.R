@@ -92,6 +92,9 @@ if(!is.null(settings$meta.analysis)) {
   }
 }
 
+source("/home/kristinariemer/model-vignettes/BioCro/DARPA/set_MA_trt.R")
+set_MA_trt(settings)
+
 # Write model specific configs
 if (PEcAn.utils::status.check("CONFIG") == 0){
   PEcAn.utils::status.start("CONFIG")

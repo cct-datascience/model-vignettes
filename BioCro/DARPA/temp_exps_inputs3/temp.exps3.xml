@@ -18,7 +18,7 @@
       <name>SetariaWT_ME034</name>
       <outdir>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_results3/pft/SetariaWT_ME034</outdir>
       <constants>
-        <file>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_inputs3/setaria.constants.xml</file>
+        <file>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_inputs1/setaria.constants.xml</file>
       </constants>
     </pft>
   </pfts>
@@ -30,10 +30,11 @@
   </ensemble>
 
   <meta.analysis>
-    <iter>100000</iter>
+    <iter>30000</iter>
     <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
-    <update>AUTO</update>
+    <update>FALSE</update>
+    <treatment>high night temperature</treatment>
   </meta.analysis>
 
   <sensitivity.analysis>

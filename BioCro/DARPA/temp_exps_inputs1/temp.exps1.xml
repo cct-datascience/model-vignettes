@@ -24,19 +24,22 @@
   </pfts>
 
   <ensemble>
-    <size>10</size>
+    <size>100</size>
     <variable>TotLivBiom</variable>
+    <variable>TVeg</variable>
   </ensemble>
 
   <meta.analysis>
-    <iter>3000</iter>
+    <iter>30000</iter>
     <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
-    <update>AUTO</update>
+    <update>TRUE</update>
+    <treatment>regular night temperature</treatment>
   </meta.analysis>
 
   <sensitivity.analysis>
     <variable>TotLivBiom</variable>
+    <variable>TVeg</variable>
   </sensitivity.analysis>
 
   <model>
