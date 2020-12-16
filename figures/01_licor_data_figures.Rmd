@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Overview
 
-Two sets of figures comparing light and CO2 responses of Setaria under high night and regular night temperatures. 
+Two sets of figures for the manuscript comparing regular and high night temperature for Setaria. The first figure is a set of standard light and CO2 response curves, while the second shows a selection of NPQ parameters in response to light. 
 
 ```{r library}
 library(dplyr)
@@ -105,22 +105,22 @@ for(i in 1:nrow(aq)) {
 }
 
 # Functions to summarize
-SE <- function(x) {sd(x, na.rm = T)/sqrt(sum(!is.na(x)))}
+SE <- function(x) {sd(x, na.rm = TRUE)/sqrt(sum(!is.na(x)))}
 num <- function(x) {sum(!is.na(x))}
 
 # Summarize Ci and A by roundCa
 aci <- as.data.table(aci)
-aci_sum <- aci[, .(Ci.m = mean(Ci,  na.rm = T),
+aci_sum <- aci[, .(Ci.m = mean(Ci,  na.rm = TRUE),
                    Ci.se = SE(Ci),
-                   A.m = mean(A, na.rm = T),
+                   A.m = mean(A, na.rm = TRUE),
                    A.se = SE(A),
                    n = num(A)), by = .(trt, roundCa)]
 
 # Summarize Qin and A by roundQin
 aq <- as.data.table(aq)
-aq_sum <- aq[, .(Qin.m = mean(Qin,  na.rm = T),
+aq_sum <- aq[, .(Qin.m = mean(Qin,  na.rm = TRUE),
                  Qin.se = SE(Qin),
-                 A.m = mean(A, na.rm = T),
+                 A.m = mean(A, na.rm = TRUE),
                  A.se = SE(A),
                  n = num(A)), by = .(trt, roundQin)]
 
@@ -201,14 +201,14 @@ for(i in 1:nrow(npq)) {
 }
 
 # Summarize
-npq_sum <- npq[roundQin !=0 , .(A.m = mean(A, na.rm = T), A.se = SE(A),
-                   Qin.m = mean(Qin,  na.rm = T), Qin.se = SE(Qin),
-                   NPQ.m = mean(NPQ_c, na.rm = T), NPQ.se = SE(NPQ_c),
-                   ETR.m = mean(ETR_c, na.rm = T), ETR.se = SE(ETR_c),
-                   PhiPS2.m = mean(PhiPS2_c, na.rm = T), PhiPS2.se = SE(PhiPS2_c),
-                   PhiPS2max.m = mean(PhiPS2max, na.rm = T), PhiPS2max.se = SE(PhiPS2max),
-                   qP.m =  mean(qP, na.rm = T), qP.se = SE(qP),
-                   qN.m = mean(qN, na.rm = T), qN.se = SE(qN)),  by = .(trt, roundQin)]
+npq_sum <- npq[roundQin !=0 , .(A.m = mean(A, na.rm = TRUE), A.se = SE(A),
+                   Qin.m = mean(Qin,  na.rm = TRUE), Qin.se = SE(Qin),
+                   NPQ.m = mean(NPQ_c, na.rm = TRUE), NPQ.se = SE(NPQ_c),
+                   ETR.m = mean(ETR_c, na.rm = TRUE), ETR.se = SE(ETR_c),
+                   PhiPS2.m = mean(PhiPS2_c, na.rm = TRUE), PhiPS2.se = SE(PhiPS2_c),
+                   PhiPS2max.m = mean(PhiPS2max, na.rm = TRUE), PhiPS2max.se = SE(PhiPS2max),
+                   qP.m =  mean(qP, na.rm = TRUE), qP.se = SE(qP),
+                   qN.m = mean(qN, na.rm = TRUE), qN.se = SE(qN)),  by = .(trt, roundQin)]
 
 # Panel of 6 plots
 fig2a <- ggplot(npq_sum, aes(x = Qin.m, y = NPQ.m, color = trt, group = trt)) +

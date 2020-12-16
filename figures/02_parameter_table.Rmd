@@ -1,0 +1,193 @@
+---
+title: "Light and CO2 responses of gas exchange and NPQ"
+author: "Jessica Guo"
+date: "12/14/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+This code produces parameter tables with separate columns for control and high night temperature. Parameter means and SE will be reported in a summary table for photosynthetic and stomatal parameters
+
+```{r library}
+library(dplyr)
+library(data.table)
+library(tidyr)
+library(gt)
+```
+
+## Summarize parameter data
+
+Obtain ACi and AQ data from the sentinel-detection [repo](https://github.com/danforthcenter/sentinel-detection) and calculate A and gs at average conditions. In this case, combine ACi and AQ data into single dataframe and seek data from standard CO2 and light conditions of 400 ppm and PAR = 1500. 
+
+```{r}
+# List of experiments
+experiments <- read.csv("../../sentinel-detection/data/cleaned_data/experiments.csv")
+
+#
+# Read in high night temp
+hn_id <- experiments$ID[which(experiments$Treatment == "31_31_250")]
+hn <-  vector("list", length = length(hn_id))
+for(i in 1:length(hn_id)){
+  aci <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", hn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  aq <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/AQ/AQin_curves_", hn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  
+  dat <- rbind.data.frame(aci[, intersect(colnames(aci), colnames(aq))], 
+                          aq[, intersect(colnames(aci), colnames(aq))])
+  dat$ID = rep(hn_id[i], nrow(dat))
+  dat$Treatment <- rep("31_31_250", nrow(dat))
+  dat$trt <- rep("High night T", nrow(dat))
+  hn[[i]] <- dat
+}
+
+# Read in regular night temp
+rn_id <- experiments$ID[which(experiments$Treatment == "31_22_250")]
+rn <-  vector("list", length = length(rn_id))
+for(i in 1:length(rn_id)){
+  aci <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", rn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  aq <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/AQ/AQin_curves_", rn_id[i], ".csv"), 
+                  na.strings = "#DIV/0!")
+  
+  dat <- rbind.data.frame(aci[, intersect(colnames(aci), colnames(aq))], 
+                          aq[, intersect(colnames(aci), colnames(aq))])
+  dat$ID <- rep(rn_id[i], nrow(dat))
+  dat$Treatment <- rep("31_22_250", nrow(dat))
+  dat$trt <- rep("Control", nrow(dat))
+  rn[[i]] <- dat
+}
+
+# Column names still uneven
+cnames <- Reduce(intersect, c(lapply(hn, colnames), 
+                              lapply(rn, colnames)))
+keep_match <- function(x) {x[, colnames(x) %in% cnames]}
+hn <- lapply(hn, keep_match)
+rn <- lapply(rn, keep_match)
+all_df <- rbind.data.frame(do.call(rbind, hn), do.call(rbind, rn))
+
+# Set CO2 chamber conditions, match to actual Ca
+clevels <- c(400, 300, 200, 100, 50, 20, 10, 
+             500, 600, 700, 800, 900, 1000, 1200, 1500)
+nearest_clevel <- Vectorize(function(x) {clevels[which.min(abs(x - clevels))]})
+
+# set Qin chamber conditions, match to actual Qin
+qlevels <- c(0, 50, 100, 200, 400, 
+             600, 800, 1200, 1500)
+nearest_qlevel <- Vectorize(function(x) {qlevels[which.min(abs(x - qlevels))]})
+
+# Keep relevant columns
+all <- all_df %>%
+  select(Treatment, trt, ID, species, rep, obs, date, E, A, Ca, Ci, Pci, Pca, Qin, gsw) %>%
+  mutate(roundCa = nearest_clevel(Ca),
+         roundQin = nearest_qlevel(Qin))
+
+all <- as.data.table(all)
+
+# Functions to summarize
+SE <- function(x) {sd(x, na.rm = T)/sqrt(sum(!is.na(x)))}
+num <- function(x) {sum(!is.na(x))}
+
+# Summarize A and gs for only when Ca = 400 and Qin = 1500, first by plant, then by treatment
+all_sum <- all[roundCa == 400 & roundQin == 1500,
+               .(A.m = mean(A,  na.rm = TRUE), A.s = SE(A), A.n = num(A),
+                 gsw.m = mean(gsw, na.rm = TRUE), gsw.s = SE(gsw), gsw.n = num(gsw)),
+               by = .(trt, ID, rep)]
+all_sum2 <- all_sum[,.(A.m = mean(A.m,  na.rm = TRUE), A.s = SE(A.m), A.n = num(A.m),
+                      gsw.m = mean(gsw.m, na.rm = TRUE), gsw.s = SE(gsw.m), gsw.n = num(gsw.m)),
+                    by = .(trt)]
+
+# Reformat from wide to narrow to wide again
+ag_sum <- all_sum2 %>%
+  pivot_longer(!trt, names_to = c("trait", "value."), names_pattern = "(.*).(.)") %>%
+  pivot_wider(names_from = c("value."), values_from = c("value")) %>%
+  rename(p.mean = m, p.se = s, p.n = n) %>%
+  pivot_wider(names_from = trt, values_from = c(p.mean, p.se, p.n), names_sep = ".") 
+  
+```
+
+Import parameters for all experiments and summarize. 
+
+```{r}
+in_params <- as.data.table(read.csv("../../sentinel-detection/data/derived_data/parameters_data.csv"))
+
+params_sum <- in_params[Treatment %in% c("31_22_250", "31_31_250"), .(p.mean = mean(Value, na.rm = T), 
+                            p.se = SE(Value),
+                            p.n = num(Value)), by = .(Treatment, trait)]
+p_sum <- params_sum %>%
+  mutate(trt = case_when(Treatment == "31_22_250" ~ "Control",
+                         Treatment == "31_31_250" ~ "High night T")) %>%
+  select(-Treatment) %>%
+  pivot_wider(names_from = trt, values_from = c(p.mean, p.se, p.n), names_sep = ".") %>%
+  filter(trait != "g0M", trait != "g1M") %>%
+  bind_rows(ag_sum) %>%
+  mutate(across(2:5, round, 3))
+```
+
+
+## Create table
+
+Format into pleasant output table using the 'gt' package. 
+
+```{r}
+p_gt <- p_sum[,1:5] %>%
+  mutate(group = case_when(trait == "vmax" ~ "Photosynthetic",
+                           trait == "LCPT" ~ "Photosynthetic",
+                           trait == "LSP" ~ "Photosynthetic",
+                           trait == "Am" ~ "Photosynthetic",
+                           trait == "AQY" ~ "Photosynthetic",
+                           trait == "Rd" ~ "Photosynthetic",
+                           trait == "theta_lc" ~ "Photosynthetic",
+                           trait == "A" ~ "Photosynthetic",
+                           trait == "g0BB" ~ "Stomatal",
+                           trait == "g1BB" ~ "Stomatal",
+                           trait == "gsw" ~ "Stomatal",
+                           )) %>%
+  arrange(group, trait) %>%
+  rename(Trait = "trait",
+         mean.h = "p.mean.High night T",
+         mean.c = "p.mean.Control",
+         se.h = "p.se.High night T",
+         se.c = "p.se.Control") %>%
+  select(Trait, mean.c, se.c, mean.h, se.h)
+
+tab1 <- gt(p_gt) %>%
+  tab_spanner(
+    label = md("**Control**"),
+    columns = vars(mean.c, se.c)
+  ) %>%
+  tab_spanner(
+    label = md("**High night T**"),
+    columns = vars(mean.h, se.h)
+  ) %>%
+   tab_row_group(
+    group = "Stomatal",
+    rows = 9:11
+  )  %>%
+  tab_row_group(
+    group = "Photosynthetic",
+    row = 1:8
+  ) %>%
+  cols_label(
+    mean.c = md("mean"),
+    se.c = md("SE"),
+    mean.h = md("mean"),
+    se.h = md("SE")
+  ) %>%
+  tab_style(
+    style = list(cell_text(style = "italic")
+    ),
+    locations = cells_row_groups()
+  )
+print(tab1)
+gtsave(tab1, filename = "Table1.pdf", path = "/plots")
+```
+
+
