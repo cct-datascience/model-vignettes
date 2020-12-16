@@ -173,9 +173,9 @@ npq_list <- split(npq, f = npq$entity)
 for(i in 1:length(npq_list)) {
   # Corrected values
   npq_list[[i]] <- npq_list[[i]] %>%
-    mutate(Fs_c = Fs - Fo, # Fs steady state fluorescence,  Fo in dark-adapted leaves
-           Fm._c = Fm. - Fo, # Fm' (Fm.) maximal fluorescence from light-adapted leaves
-           Fo._c = Fo. - Fo, # Minimum fluorescence intensity in the light-acclimated state
+    mutate(Fs_c = Fs - Fo/2, # Fs steady state fluorescence,  Fo in dark-adapted leaves
+           Fm._c = Fm. - Fo/2, # Fm' (Fm.) maximal fluorescence from light-adapted leaves
+           Fo._c = Fo. - Fo/2, # Minimum fluorescence intensity in the light-acclimated state
            PhiPS2_c = 1 - (Fs_c /Fm._c),
            ETR_c = PhiPS2_c * 0.5 * Qabs_fs,
            NPQ_c = (Fm - Fm._c) / Fm._c, # Non-photochemical quenching
@@ -208,7 +208,8 @@ npq_sum <- npq[roundQin !=0 , .(A.m = mean(A, na.rm = TRUE), A.se = SE(A),
                    PhiPS2.m = mean(PhiPS2_c, na.rm = TRUE), PhiPS2.se = SE(PhiPS2_c),
                    PhiPS2max.m = mean(PhiPS2max, na.rm = TRUE), PhiPS2max.se = SE(PhiPS2max),
                    qP.m =  mean(qP, na.rm = TRUE), qP.se = SE(qP),
-                   qN.m = mean(qN, na.rm = TRUE), qN.se = SE(qN)),  by = .(trt, roundQin)]
+                   qN.m = mean(qN, na.rm = TRUE), qN.se = SE(qN),
+                   FvFm.m = mean(Fv._Fm., na.rm = TRUE), FvFm.se = SE(Fv._Fm.)),  by = .(trt, roundQin)]
 
 # Panel of 6 plots
 fig2a <- ggplot(npq_sum, aes(x = Qin.m, y = NPQ.m, color = trt, group = trt)) +
@@ -276,6 +277,18 @@ fig2f <- ggplot(npq_sum, aes(x = Qin.m, y = qN.m, color = trt, group = trt)) +
 jpeg(filename = "plots/Fig2_NPQ.jpg", height = 8, width = 6, units = "in", res = 600)
 plot_grid(fig2a, fig2b, fig2c, fig2d, fig2e, fig2f, ncol = 2, labels = LETTERS[1:6], label_size = 12)
 dev.off()
+
+# Bonus plot of Fv/Fm
+fig2e <- ggplot(npq_sum, aes(x = FvFm.m, y = qN.m, color = trt, group = trt)) +
+  geom_point(size = 2) +
+  geom_line(lty = 2) +
+  geom_errorbar(aes(ymin = qN.m - qN.se, ymax = qN.m + qN.se)) +
+  geom_errorbarh(aes(xmin = FvFm.m - FvFm.se, xmax = FvFm.m + FvFm.se)) +
+  theme_cowplot(11) +
+  scale_x_continuous(expression(paste("PPFD (", mu, "mol ",  m^-2, " ", s^-1, ")"))) +
+  scale_y_continuous(expression(paste("Fv/Fm"))) +
+  scale_color_manual(values = cols)  +
+  guides(color = FALSE)
 ```
 
 
