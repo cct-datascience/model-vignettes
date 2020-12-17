@@ -53,3 +53,5 @@ docs/
 *_results/
 *.html
 *.nc
+*.gif
+ecoregions*
