@@ -123,9 +123,7 @@ prevDate <- max(pparams$local_datetime)
 params <- c("Vcmax", "leaf_respiration_rate_m2", "quantum_efficiency", "theta", "stomatal_slope.BB", "cuticular_cond")
 for(p in params){
   trait_df <- upload_parameters %>%
-    filter(variable == p) %>%
-    # filter(variable == p,
-    #        local_datetime > prevDate) %>%
+    filter(variable == p, local_datetime > prevDate) %>%
     spread(variable, mean)
   
   # If cuticular_cond, convert units; if theta, remove leafT

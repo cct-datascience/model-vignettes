@@ -109,7 +109,7 @@ rownames(all) <- c()
 
 Compare both data versions. 
 ```{r}
-compare(bety, all)
+comparedf(bety, all)
 ```
 
 If no differences, should return "Equal". 
