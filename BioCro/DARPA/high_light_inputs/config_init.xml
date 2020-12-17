@@ -1,0 +1,66 @@
+<pecan>
+  <outdir>/home/kristinariemer/model-vignettes/BioCro/DARPA/high_light_results</outdir>
+
+  <database>
+    <bety>
+      <driver>PostgreSQL</driver>
+      <user>bety</user>
+      <password>bety</password>
+      <host>postgres</host>
+      <dbname>bety</dbname>
+      <write>FALSE</write>
+    </bety>
+    <dbfiles>/home/kristinariemer/model-vignettes/BioCro/DARPA/high_light_results/dbfiles</dbfiles>
+  </database>
+
+  <pfts>
+    <pft>
+      <name>SetariaWT_ME034</name>
+      <outdir>/home/kristinariemer/model-vignettes/BioCro/DARPA/high_light_results/pft/SetariaWT_ME034</outdir>
+      <constants>
+        <file>/home/kristinariemer/model-vignettes/BioCro/DARPA/high_light_inputs/constants_init.xml</file>
+      </constants>
+    </pft>
+  </pfts>
+
+  <ensemble>
+    <size>100</size>
+    <variable>TotLivBiom</variable>
+    <variable>TVeg</variable>
+  </ensemble>
+
+  <meta.analysis>
+    <iter>100000</iter>
+    <random.effects>TRUE</random.effects>
+    <threshold>1.2</threshold>
+    <update>AUTO</update>
+  </meta.analysis>
+
+  <sensitivity.analysis>
+    <variable>TotLivBiom</variable>
+    <variable>TVeg</variable>
+  </sensitivity.analysis>
+
+  <model>
+    <type>BIOCRO</type>
+    <binary>~/pecan/models/biocro/inst/biocro.Rscript</binary>
+    <revision>0.95</revision>
+  </model>
+
+  <run>
+    <site>
+      <id>9000000004</id>
+    </site>
+    <inputs>
+      <met>
+        <output>BIOCRO</output>
+        <path>/home/kristinariemer/model-vignettes/BioCro/DARPA/high_light_inputs/weather_init</path>
+      </met>
+    </inputs>
+      <start.date>2019/01/01</start.date>
+      <end.date>2019/12/30</end.date>
+    <host>
+      <name>localhost</name>
+    </host>
+  </run>
+</pecan>
