@@ -27,7 +27,8 @@ Vignettes and inputs/outputs:
 5. `temp_exps_biomass` does three runs of BioCro and creates plots of biomass estimates against measured biomass values
 	* Inputs: for each run in `temp_exps_inputs*` folder, there are `temp_exps*.xml`, `workflow.R`, `setaria.constants.xml`, and `generate_*_weather.R`
 	* Outputs: BioCro results are all in `temp_exps_results` folder, and outputs in `temp_exps_inputs*` folder are `danforth-*-chamber.2019.csv`, `biomass_ests*.csv`, and `*_biomass_measu.csv`
-6. (needs to be updated) `pecan_runs` shows how to do BioCro runs for two *Setaria* cultivars
-7. `regional_runs` creates gif of BiCro runs across a large regional extent
-  * Inputs: (see `regional_runs_inputs` folder for these) `config.xml`, `hwsd.nc`, `biocro_met_chiruss/chiruss-*` (which are generated with `convert_weather_chiruss.Rmd`), `ecoregions/ecoregions_chiruss.csv` (generated from `convert_ecoregions.Rmd` and `convert_weather_chiruss.Rmd`)
-  * Outputs: (see `results` folder for these) `high_light_chiruss.gif`, `high_light_chiruss_results.csv`, and `high_light_chiruss/daily-*`
+6. `high_light` does biomass partitioning and biomass/transpiration estimates from BioCro for high light condition
+   * Inputs: in `high_light_inputs` are `workflow_*.R`, `config_*.xml`, and `constants_*.xml`
+   * Outputs: BioCro results are in `high_light_results` folder
+7. (needs to be updated) `pecan_runs` shows how to do BioCro runs for two *Setaria* cultivars
+8. (needs to be updated) `regional_runs` creates gif of BiCro runs across a large regional extent
