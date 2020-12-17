@@ -103,7 +103,8 @@ C4_Collatz <- function(fileID){# input is ID column from the experiments datafra
   }
   out$id <- rep.list
   colnames(out) <- c("trait", "Value", "SD", "SE.n", "SE.ts", "rep")
-  out$SE <- NA
+  # Assume n = 2 and calculate SE from SD
+  out$SE <- out$SD / sqrt(2)
   out$ID <- rep(fileID, nrow(out))
   out$Date.run <- rep(as.Date(Sys.time()), nrow(out))
   out2 <- subset(out, select = c(ID, rep, trait, Value, SE, SD, Date.run))
