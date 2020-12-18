@@ -51,3 +51,7 @@ docs/
 *.csv
 *.RData
 *_results/
+*.html
+*.nc
+*.gif
+ecoregions*

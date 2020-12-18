@@ -1,5 +1,5 @@
 ---
-title: "How to Subset Large netCDF Weather Data Files"
+title: "How to Subset Large Weather Data Files"
 author: "Author: Kristina Riemer"
 output: github_document
 urlcolor: blue
@@ -7,12 +7,12 @@ urlcolor: blue
 
 ## Data file information
 
-These instructions walk through how to subset the NARR `all.nc` file. This data file is on Globus [in the UA Field Scanner collection](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fnarr%2Fthreehourly%2F). The file is ~650GB. These data do not have global coverage, but are rather restricted to the northern hemisphere as below: 
+This is for how to subset the NARR `all.nc` file. It is on Globus in the UA Field Scanner collection [here](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fnarr%2Fthreehourly%2F). The file is ~650GB. This is not global, it is restricted to the northern hemisphere as below: 
 
  * Latitudinal range: 10.125 - 83.875 
  * Longitudinal range: -169.875 to -50.125
 
-The entire global file is the CRUNCEP `all.nc`, which is ~1.3TB and in the same Globus collection [in a different location](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fcruncep%2F). We will need more data space on the HPC to subset this global data file because the upper limit for HPC data storage is currently 1TB. 
+The entire global file is the CRUNCEP `all.nc`, which is ~1.3TB and in the same Globus collection [here](https://app.globus.org/file-manager?origin_id=cbae3a96-d081-4951-bd1e-a8fda974cefa&origin_path=%2Fmet%2Fcruncep%2F). We will need more data space on the HPC to subset this because the upper limit is currently 1TB. 
 
 ## Subsetting process
 
@@ -36,13 +36,16 @@ library(ggplot2)
 The first example shows the four corners of a long latitudinal slice that includes area in both China and Russia. Change out the `lat` and `lon` values in the data frame and the filtered region in the `background_map` as desired. 
 
 ```{r}
-chiruss_corners = expand.grid(lat = c(44.9, 55.1), 
-                             lon = c(123.9, 127.1))
-background_map <- map_data("world") %>% 
+chiruss_corners = expand.grid(lat = c(30.1, 70.1),
+                              lon = c(87.1, 87.6))
+background_map <- map_data("world") %>%
   filter(region == "China" | region == "Russia")
-ggplot() +
-  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), fill = "white", color = "black") +
-  geom_point(data = chiruss_corners, aes(x = lon, y = lat), color = "red")
+ggplot()  +
+  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_point(data = chiruss_corners, aes(x = lon, y = lat), color = "red") +
+  geom_path(color = "white") +
+  coord_equal() +
+  theme(legend.position = "none")
 ```
 
 This plot shows the limits of the NARR `all.nc` file. 
@@ -56,21 +59,45 @@ ggplot() +
   geom_point(data = narr_all_corners, aes(x = lon, y = lat), color = "red")
 ```
 
-### 3. Use nco to subset file
+### 3. Subset file on HPC
 
-Navigate in the HPC web interface to `/xdisk/username/`. The .nc files should be there now. You can see the subsetting command by looking at the first line under history after running this: 
+In local command line, log onto UA HPC by executing `ssh username@hpc.arizona.edu`, then entering password and two factor authentication info. Choose the ocelote machine. 
+
+Now on login node, where no analysis should occur. Code can be run either using a PBS script or in an interactive session. We'll use the latter for subsetting, as shown below. 
+
+Here we are subsetting the North American NARR all.nc into a wide longitudinal range across the United States that includes St. Louis. 
+
+1. Start interactive session with an hour of time
 
 ```{shell}
-ncdump -h champaign.nc | grep ':history'
+qsub -I -N stl_subset -W group_list=dlebauer -q standard -l select=1:ncpus=1:mem=6gb -l walltime=1:0:0
 ```
 
-The command is below. This is what was used to generate `champaign.nc` from `all.nc`, and will be the basis for creating new subsets. The `ncks` arguments -O is for overwrite, and -d is for dimensions for specified variables. 
+2. Navigate to David's xdisk space where the original file is stored
 
+```{shell}
+cd /xdisk/dlebauer/mig2020/xdisk/kristinariemer/narr/
+```
+
+3. Do subsetting steps using NCO tools, for both space and time
+
+```{shell}
+ncks -O -d longitude,-110.9,-80.9 -d latitude,37.5,39.5 all.nc stl_space.nc
+ncea -d time,112494.4,113589.9 stl_space.nc stl_space_time.nc
+```
+
+4. Once done, check for final file and end session
+
+```{shell}
+exit
+```
+
+The relevant NCO commands for other weather subsets are shown here: 
+
+Champaign: 
 ```{shell}
 ncks -O -d longitude,-88.9,-87.5 -d latitude,39.8,40.5 all.nc champaign.nc
 ```
-
-The following are modified commands for different weather subsets, including new file names. 
 
 Eastern Illinois: 
 ```{shell}
@@ -82,15 +109,15 @@ USA/Canada:
 ncks -O -d longitude,-108.5,-105.5 -d latitude,45.5,55.5 all.nc usca.nc
 ```
 
-Russia/China (*this will only work with CRUNCEP all.nc data file*):
+Russia/China (*this will only work with the CRUNCEP all.nc*):
 
 ```{shell}
-ncks -O -d longitude,123.9,127.1 -d latitude,44.9,55.1 all.nc chiruss.nc
+ncks -O -d longitude,87.1,87.9 -d latitude,30.1,70.1 all.nc chiruss.nc
 ```
 
 ### 4. Copy to local machine using Globus
 
-Once the desired subset has been generated, you will need to transfer the file from the HPC collection `arizona#sdmz-dtn` on Globus to your own endpoint. This will require downloading Globus Connect Personal. From the [Globus Connect Personal website](https://www.globus.org/globus-connect-personal), select the link for your operating system and follow the instructions on that page to create an endpoint on your machine. 
+Once the desired subset has been generated, you will need to transfer the file from the HPC collection `arizona#sdmz-dtn` on Globus to your own endpoint. This will require downloading Globus Connect Personal and following [these instructions](https://www.globus.org/globus-connect-personal) to create an endpoint on your machine. 
 
 Once this is ready, select the file on the HPC collection and click the "Start" button to transfer to your local selected location. This can take an hour for for files 3-4GB in size. 
 

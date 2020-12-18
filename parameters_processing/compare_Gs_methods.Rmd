@@ -1,0 +1,149 @@
+---
+title: "Comparison of Gs modeling with full and partial Licor data"
+author: "Jessica Guo, Tonantzin Tarin"
+output: github_document
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---
+
+Load necessary packages and functions. 
+```{r}
+library(ggplot2)
+source("R/Gs.R")
+source("R/Gs_all.R")
+source("R/Gs_all_byplant.R")
+source("R/Gs_all_byplant_50.R")
+source("R/Gs_all_byplant_50_LCPT.R")
+```
+
+
+Stomatal parameters are important to estimate for crop and ecosystem models (e.g., BioCro, ED2), but there is lack of certainty on the best sets of data to include for stomatal parameter estimation. Two prominent methods have been identified: 1) survey measurements of gas exchange under ambient environmental conditions (Lin et al. 2015) and 2) controlled measurements across varying CO2 and light conditions (Ball et al. 1987, Wolz et al. 2017). 
+
+Given that the DARPA-Sentinel project primarily grows Setaria genotypes in controlled chamber conditions, gas exchange data have been AQ and ACi curves. However, the previously designed Gs.R function only includes a narrow range of CO2 and light conditions, which makes slope and intercept estimation unstable and occasionally negative. Furthermore, Gs.R contains an additional cleaning step that may or may not be fully justifiable. 
+
+Therefore, this script will run Gs_all.R, a version of stomatal parameter estimation that uses the entire ACi and AQ curve, Gs_all_byplant.R, a version that separately estimates parameters for each plant replicate, and Gs_all_byplant_50.R, a version that excludes gas exchange measurements at CO2 < 45 ppm. 
+
+Read in experiment metadata. 
+```{r}
+expDF <- read.csv("cleaned_data/experiments.csv",
+                  colClasses = c("character", "numeric", rep("character",2), rep("numeric",2)))
+```
+
+Run the Gs_all.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) across the plant replicates. Here, the data from both types of curves are restricted to 390 ppm < CO2 < 410 ppm and PAR > 1200 umol photons m^-2 s^-1 and fit to the Ball-Berry (1987) and Medlyn (2011) models using the package 'plantecophys'. 
+```{r}
+ID <- unique(expDF$ID)
+for(i in 1:length(ID)){
+  Gs_all(fileID = ID[i])
+  print(paste0(ID[i], " completed"))
+}
+```
+
+Run the Gs_all_byplant.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) for each plant replicate. 
+```{r}
+ID <- unique(expDF$ID)
+for(i in 1:length(ID)){
+  Gs_all_byplant(fileID = ID[i])
+  print(paste0(ID[i], " completed"))
+}
+```
+
+Run the Gs_all_byplant_50.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) for each plant replicate after excluding CO2 < 45 ppm. 
+```{r}
+ID <- unique(expDF$ID)
+for(i in 1:length(ID)){
+  Gs_all_byplant_50(fileID = ID[i])
+  print(paste0(ID[i], " completed"))
+}
+```
+
+Run the Gs_all_byplant_50_LCPT.R function on both the ACi and AQ data to obtain the stomatal sensitivity (g1BB & g1M) and cuticular conductance (g0BB & g0M, mol H2O m^-2 s^-1) for each plant replicate after excluding CO2 < 45 ppm and restricting AQ data to values taken above the light compensation point. 
+```{r}
+ID <- unique(expDF$ID)
+for(i in 1:length(ID)){
+  Gs_all_byplant_50_LCPT(fileID = ID[i])
+  print(paste0(ID[i], " completed"))
+}
+```
+
+Compare stomatal parameters for Gs, Gs_all, and Gs_all_byplant
+```{r}
+# Declare empty dataframe
+params <- data.frame()
+
+# Add Gs parameters
+gs <- list.files("outputs/stomatal", pattern = "csv")
+for(i in 1:length(gs)){
+  temp <- read.csv(paste0("outputs/stomatal/", gs[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Add Gs_all parameters
+gs_all <- list.files("outputs/stomatal/all", pattern = "csv")
+for(i in 1:length(gs_all)){
+  temp <- read.csv(paste0("outputs/stomatal/all/", gs_all[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Add Gs_all_byplant parameters
+gs_all_byplant <- list.files("outputs/stomatal/all_byplant", pattern = "csv")
+for(i in 1:length(gs_all_byplant)){
+  temp <- read.csv(paste0("outputs/stomatal/all_byplant/", gs_all_byplant[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Add Gs_all_byplant_50 parameters
+gs_all_byplant_50 <- list.files("outputs/stomatal/all_byplant_50", pattern = "csv")
+for(i in 1:length(gs_all_byplant_50)){
+  temp <- read.csv(paste0("outputs/stomatal/all_byplant_50/", gs_all_byplant_50[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Add Gs_all_byplant_50_LCPT parameters
+gs_all_byplant_50_lcpt <- list.files("outputs/stomatal/all_byplant_50_LCPT", pattern = "csv")
+for(i in 1:length(gs_all_byplant_50)){
+  temp <- read.csv(paste0("outputs/stomatal/all_byplant_50_LCPT/", gs_all_byplant_50_lcpt[i]),
+                   colClasses = c(rep("character", 3), rep("numeric",3), "character"))
+  params <- rbind.data.frame(params, temp)
+}
+
+# Add column identifying which function used
+params$method <- c(rep("Gs", length(gs)*4), 
+                   rep("Gs_all", length(gs_all)*4),
+                   rep("Gs_all_byplant", length(gs_all_byplant)*12),
+                   rep("Gs_all_byplant_50", length(gs_all_byplant_50)*12),
+                   rep("Gs_all_byplant_50_LCPT", length(gs_all_byplant_50_lcpt)*12))
+
+# Combine parameters with experiment metadata
+gs_params <- left_join(params, expDF, by = "ID")
+```
+
+Create plots to compare each trait between experiments. 
+```{r}
+# Add column combining method and rep
+gs_params$type <- ifelse(is.na(gs_params$rep)==T, "all", gs_params$rep)
+ggplot(subset(gs_params, method == "Gs_all_byplant" | method == "Gs_all_byplant_50"), 
+       aes(x = ID, y = Value, col = method, shape = type))+
+  geom_pointrange(aes(ymin = Value - SE, ymax = Value + SE), position = position_dodge(width = 1))+
+  geom_hline(yintercept = 0, lwd = 1)+
+  facet_wrap( ~ trait, scale = "free_y")+
+  theme_bw(base_size = 14)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  scale_shape_manual(values = c(15, 16, 17))+
+  scale_color_manual(values = c("#619CFF", "goldenrod"))
+
+ggplot(subset(gs_params, method == "Gs_all_byplant_50" | method == "Gs_all_byplant_50_LCPT"), 
+       aes(x = ID, y = Value, col = method, shape = type))+
+  geom_pointrange(aes(ymin = Value - SE, ymax = Value + SE), position = position_dodge(width = 1))+
+  geom_hline(yintercept = 0, lwd = 1)+
+  facet_wrap( ~ trait, scale = "free_y")+
+  theme_bw(base_size = 14)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  scale_shape_manual(values = c(15, 16, 17))+
+  scale_color_manual(values = c("goldenrod", "purple4"))
+  
+```

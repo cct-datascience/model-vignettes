@@ -1,5 +1,5 @@
 <pecan>
-  <outdir>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_results1</outdir>
+  <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1d</outdir>
 
   <database>
     <bety>
@@ -10,15 +10,15 @@
       <dbname>bety</dbname>
       <write>FALSE</write>
     </bety>
-    <dbfiles>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_results1/dbfiles</dbfiles>
+    <dbfiles>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1d/dbfiles</dbfiles>
   </database>
 
   <pfts>
     <pft>
       <name>SetariaWT_ME034</name>
-      <outdir>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_results1/pft/SetariaWT_ME034</outdir>
+      <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1d/pft/SetariaWT_ME034</outdir>
       <constants>
-        <file>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_inputs1/setaria.constants.xml</file>
+        <file>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_inputs1/setaria.constants.xml</file>
       </constants>
     </pft>
   </pfts>
@@ -55,7 +55,7 @@
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/kristinariemer/model-vignettes/BioCro/DARPA/temp_exps_inputs1/danforth-control-chamber</path>
+        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_inputs1/danforth-control-chamber</path>
       </met>
     </inputs>
       <start.date>2019/01/01</start.date>

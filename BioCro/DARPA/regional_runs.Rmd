@@ -8,155 +8,284 @@ urlcolor: blue
 ## Read in libraries
 
 ```{r}
+library(PEcAn.BIOCRO)
 library(ncdf4)
 library(PEcAn.all)
-library(PEcAn.BIOCRO)
 library(dplyr)
-library(ncdf.tools)
+library(purrr)
+library(udunits2)
 library(ggplot2)
-library(maps)
 library(gganimate)
 ```
 
-## Read in input files
+Decreased Stomatal Slope Regional Runs
 
-The config file here is based on [the default *Setaria* file](https://github.com/PecanProject/pecan/blob/ac5aef2e755a8961591196428753eb184fb4c6cb/models/biocro/inst/extdata/defaults/setaria.xml) used for PEcAn. This one was generated from a run on the Sentinel project data. 
-```{r}
-config <- read.biocro.config("regional_runs_inputs/config.xml")
-```
+This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
 
-A weather data file, such as that read in below, is required to run BioCro. The weather data comes from [the North American Regional Reanalysis (NARR)](https://www.esrl.noaa.gov/psd/data/gridded/data.narr.html) global gridded dataset provided by NOAA. We are using a subset of NARR in the eastern part of Illinois, near Chapaign. This subset is in the Pecan standard format, which is a netCDF file. The dimensions are latitude x longitude x time (3 x 6 x 93,504). These time steps are every three hours from 1979 through 2010. There are 10 weather variables, including temperature, precipitation flux, and solar radiation. 
+Changed Carbon Allocation Regional Runs
+
+This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` 
+
+# Estimate biomass & transpiration
+
+The three genotypes are 1) high light chamber treatment, 2) decreased stomatal slope values, and 3) modified carbon allocation to represent the dwarf plants. The first genotype's config file here comes from [the high light treatment BioCro run](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. The second has the stomatal slope value changed from 4.86 to 3.36. The third has the values of all `kStem` halved, with the remaining half split evenly between the other plant parts by stage. 
 
 We also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
+
 ```{r}
-metfile <- "regional_runs_inputs/champaign.nc"
-met_champaign <- nc_open(metfile)
-soil_nc <- nc_open("regional_runs_inputs/hwsd.nc")
+genotypes <- c("wt", "ss", "ca")
+
+soil_nc <- nc_open("/data/dbfiles/soil/hwsd.nc")
+
+met_stlew <- nc_open("/data/dbfiles/narr_subsets/stlew.nc")
+latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
+                      lon = ncvar_get(met_stlew, "longitude"))
+
+dir.create("/data/output/biocro_regional_runs", recursive = TRUE, showWarnings = FALSE)
 ```
 
-## Convert weather data
+The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
 
-The weather dataset has to be converted from netCDF file format to the format required for BioCro. Data for each of the locations (unique latitude and longitude combinations) is turned into a flat csv file, with one row per hour for the time range of the weather dataset (approximately 32 years). 
+ The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_stlew.Rmd). This data is specifically for an extended longitudinal range across North America that includes the city of St. Louis.  
+
+The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. These are saved as csv files. 
+
 ```{r}
-# Get all locations
-lat <- ncvar_get(met_champaign, "latitude")
-lon <- ncvar_get(met_champaign, "longitude")
-latlon <- expand.grid(lat = lat, lon = lon)
-
-# Get met conversion inputs that apply across all locations
-time_vec <- ncvar_get(met_champaign, "time")
-time_origin1 <- ncatt_get(met_champaign, "time", "units")
-time_origin2 <- gsub( ".*(\\d{4}-\\d{2}-\\d{2}).*", "\\1", time_origin1$value)
-start_date <- as.Date(time_origin2) + time_vec[1]
-end_date <- as.Date(time_origin2) + time_vec[length(time_vec)] - 1
-
-# Convert met from Pecan to BioCro format for all locations
-dir.create("regional_runs_inputs/biocro_met_by_location/")
-met_nc <- ncdf4::nc_open(metfile)
-point <- 1
-biocro_met_locations <- c()
-for(point in 1:nrow(latlon)){
-  met <- load.cfmet(met_nc, lat = latlon$lat[point], lon = latlon$lon[point],
-                    start.date = start_date, end.date = end_date)
-  met_hourly <- cfmet.downscale.time(met, output.dt = 1)
-  biocro_met <- cf2biocro(met_hourly)
-  biocro_met <- biocro_met %>%
-    mutate(RH = case_when(RH >= 1 ~ 0.99999999999999,
-                          RH < 1 ~ RH))
-  biocro_met_location <- biocro_met %>% 
-    mutate(latitude = latlon$lat[point], 
-           longitude = latlon$lon[point])
-  biocro_met_locations <- rbind(biocro_met_locations, biocro_met_location)
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
-                            latlon$lat[point], "-", latlon$lon[point], ".2010.csv")
-  write.csv(biocro_met, biocro_met_path, row.names = FALSE)
-}
-```
-
-We plot the first day of all the weather data variables to examine the daily patterns in them. 
-```{r}
-biocro_met_plot <- biocro_met_locations %>% 
-  tidyr::unite(latitudelongitude, latitude:longitude) %>% 
-  mutate(date = as.Date(paste0(year, "-01-01")) - 1 + doy, 
-         time = case_when(
-           hour < 10 ~ paste0("0", hour, ":00"), 
-           hour >= 10 ~ paste0(hour, ":00")
-         ), 
-         datetime_gmt = as.POSIXct(paste(date, time), tz = "GMT"), 
-         datetime = as.POSIXct(format(datetime_gmt, tz = "America/Chicago")), 
-         date = as.Date(datetime, tz = "America/Chicago"), 
-         year_plot = format(date, "%Y"), 
-         latitudelongitude = as.factor(latitudelongitude)) 
-
-biocro_met_plot_year <- biocro_met_plot %>% 
-  filter(year_plot == 1995 & latitudelongitude == "40.375_-87.875") %>%
-  select(datetime, latitudelongitude, solar:precip) %>% 
-  tidyr::gather(weather_var, weather_value, solar:precip)
-  
-ggplot(biocro_met_plot_year, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
-  geom_line() +
-  facet_wrap(~weather_var, scales = "free_y")
-
-biocro_met_plot_day <- biocro_met_plot %>% 
-  filter(date == as.Date("1979-06-01")) %>% 
-  select(datetime, latitudelongitude, solar:precip) %>% 
-  tidyr::gather(weather_var, weather_value, solar:precip)
-
-ggplot(biocro_met_plot_day, aes(x = datetime, y = weather_value, color = latitudelongitude)) +
-  geom_line() +
-  facet_wrap(~weather_var, scales = "free_y")
-```
-
-## Run BioCro on each location
-
-The BioCro model is then run on weather and soil data for each of the locations, using *Setaria* input data. This produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values. 
-```{r}
-dir.create("regional_runs_inputs/results_by_location/")
-biocro_results <- c()
-for(point in 1:nrow(latlon)){
-  biocro_met_path <- paste0("regional_runs_inputs/biocro_met_by_location/biocromet-", 
+estimate_biomass <- function(genotype){
+  config_path <- paste0("regional_runs_inputs/config_", genotype, ".xml")
+  config <- read.biocro.config(config_path)
+  regional_run_results <- c()
+  for(point in 1:nrow(latlon)){ 
+    biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
                             latlon$lat[point], "-", latlon$lon[point])
-  biocro_results_all <- run.biocro(latlon$lat[point], latlon$lon[point],
+    regional_run_result <- run.biocro(latlon$lat[point], latlon$lon[point],
                                metpath = biocro_met_path,
                                soil.nc = soil_nc,
                                config = config)
-  biocro_results_daily <- biocro_results_all$daily
-  write.csv(biocro_results_daily, paste0("regional_runs_inputs/results_by_location/daily-", 
-                                         latlon$lat[point], "-", latlon$lon[point], ".csv"))
-  biocro_results_daily$lat <- latlon$lat[point]
-  biocro_results_daily$lon <- latlon$lon[point]
-  biocro_results <- rbind(biocro_results, biocro_results_daily)
-  write.csv(biocro_results, "regional_runs_inputs/all_biocro_results.csv")
+    regional_run_result_daily <- regional_run_result$daily
+    regional_run_result_daily$lat <- latlon$lat[point]
+    regional_run_result_daily$lon <- latlon$lon[point]
+    regional_run_results <- rbind(regional_run_results, regional_run_result_daily)
+    print(point)
+  }
+  results_path <- paste0("/data/output/biocro_regional_runs/stlew_", genotype, ".csv")
+  write.csv(regional_run_results, results_path)
 }
+lapply(genotypes, estimate_biomass)
 ```
 
-## Plot estimated biomass
+The csv files are read in, combined, and cleaned/modified for later plotting. 
 
-The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) are then visualized. The code below plots these values across the 18 locations on a map of the state of Illinois, and then runs through these plots for each day of the year as a .gif. 
 ```{r}
-biocro_results <- biocro_results %>% 
+rr_results <- c()
+for(genotype in genotypes){
+  biomass_path <- paste0("/data/output/biocro_regional_runs/stlew_", genotype, ".csv")
+  rr_single <- read.csv(biomass_path)
+  rr_single$genotype <- genotype
+  rr_results <- rbind(rr_results, rr_single)
+}
+
+rr_results <- rr_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
-         total_biomass = Stem + Leaf + Root + Rhizome + Grain)
+         total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
+                                    "Mg/ha", "kg/m2"), 
+         total_biomass = ifelse(total_biomass < 0, 0, total_biomass), 
+         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"), 
+         genotype_formal = case_when(
+           genotype == "wt" ~ "Wild type", 
+           genotype == "ss" ~ "Reduced stomatal conductance", 
+           genotype == "ca" ~ "Dwarf" 
+         ), 
+         genotype_formal = factor(genotype_formal, levels = c("Wild type", "Reduced stomatal conductance", "Dwarf")))
+```
 
-ggplot(biocro_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
+# Plot biomass 
+
+## By genotype
+
+The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
+
+```{r}
+ggplot(rr_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
   geom_line() +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  facet_wrap(~genotype_formal)
+```
 
-background_map <- map_data("state") %>% 
-  filter(region == "illinois")
+The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
 
-colfunc <- colorRampPalette(c("yellow", "darkgreen"))
+```{r}
+gif_background <- map_data("state")
+city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
+
 biomass_animation <- ggplot() +
-  geom_polygon(data = background_map, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
-  geom_raster(data = biocro_results, aes(x = lon, y = lat, fill = total_biomass)) +
-  coord_quickmap() +
-  scale_fill_gradientn(colors = colfunc(10)) +
+  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = total_biomass), 
+              alpha = 0.9) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
+                       midpoint = 1, 
+                       breaks = seq(-10, 10, 0.4), 
+                       limits = c(0, 2)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  facet_wrap(~genotype_formal, ncol = 1) +
+  theme_classic(base_size = 20) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
-animate(biomass_animation, fps = 100)
-anim_save("biomass_animation_champaign.gif", animation = biomass_animation, 
-          path = "regional_runs_inputs/", fps = 100)
+animate(biomass_animation, fps = 100, height = 400, width = 400)
+anim_save("stlew_biomass.gif", animation = biomass_animation, 
+          path = "/data/output/biocro_regional_runs", fps = 100, height = 400, width = 400)
+```
+
+## Comparisons
+
+Calculating biomass and transpiration summaries by day for each genotype. 
+
+```{r}
+rr <- rr_results %>% 
+  mutate(date = as.POSIXct(date)) %>% 
+  select(date, lat, lon, latlon, total_biomass, transpiration, genotype_formal) %>% 
+  group_by(genotype_formal, date) %>% 
+  summarize(mean_total_biomass = mean(total_biomass), 
+            var_total_biomass = sd(total_biomass), 
+            mean_transpiration = mean(transpiration), 
+            var_transpiration = sd(transpiration))
+```
+
+Comparison of time series of mean and variation of total biomass by date, between two modified genotypes with the wild type. 
+
+```{r}
+bio_comp_1 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
+            aes(x = date, y = mean_total_biomass, 
+                group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
+              aes(x = date, ymin = mean_total_biomass - var_total_biomass, 
+                  ymax = mean_total_biomass + var_total_biomass, 
+                  group = stringr::str_wrap(genotype_formal, 12), 
+                  fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  scale_color_manual(values = c("red", "black")) +
+  scale_fill_manual(values = c("red", "black")) +
+  labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
+  theme_classic() +
+  lims(y = c(0, 2))
+
+bio_comp_2 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
+            aes(x = date, y = mean_total_biomass, 
+                group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
+              aes(x = date, ymin = mean_total_biomass - var_total_biomass, 
+                  ymax = mean_total_biomass + var_total_biomass,
+                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  scale_color_manual(values = c("orange", "black")) +
+  scale_fill_manual(values = c("orange", "black")) +
+  labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
+  theme_classic() +
+  lims(y = c(0, 2))
+
+cowplot::plot_grid(bio_comp_1, bio_comp_2, ncol = 1)
+```
+
+# Plot transpiration
+
+## By genotype
+
+The results for evapotranspiration for each location across the year of 2010 are visualized. 
+
+```{r}
+ggplot(rr_results, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
+  geom_line(alpha = 0.2) +
+  labs(y = "Transpiration (kg/m2/hr)") +
+  theme(legend.position = "none") +
+  facet_wrap(~genotype_formal)
+```
+
+The final map plots estimated transpiration values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
+
+```{r}
+transpiration_animation <- ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = transpiration), 
+              alpha = 0.9) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
+                       midpoint = 7.5, 
+                       breaks = seq(0, 20, 5), 
+                       limits = c(0, 15)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  facet_wrap(~genotype_formal, ncol = 1) +
+  theme_classic(base_size = 20) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+animate(transpiration_animation, fps = 100, height = 400, width = 400)
+anim_save("stlew_transpiration.gif", animation = transpiration_animation, 
+          path = "/data/output/biocro_regional_runs/", fps = 100, height = 400, width = 400)
+
+ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_segment(aes(x = -114, y = 40.5, xend = -78, yend = 40.5), size = 3) +
+  geom_segment(aes(x = -114, y = 36, xend = -78, yend = 36), size = 3) +
+  geom_segment(aes(x = -114, y = 40.5, xend = -114, yend = 36), size = 3) +
+  geom_segment(aes(x = -78, y = 40.5, xend = -78, yend = 36), size = 3) +
+  theme_nothing()
+```
+
+## Comparisons
+
+Comparison of time series of mean and variation of total biomass by date, between two modified genotypes with the wild type. 
+
+```{r}
+trans_comp_1 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
+            aes(x = date, y = mean_transpiration, 
+                group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
+              aes(x = date, ymin = mean_transpiration - var_transpiration, 
+                  ymax = mean_transpiration + var_transpiration, 
+                  group = stringr::str_wrap(genotype_formal, 12), 
+                  fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  scale_color_manual(values = c("red", "black")) +
+  scale_fill_manual(values = c("red", "black")) +
+  labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
+  theme_classic() +
+  lims(y = c(0, 15))
+
+trans_comp_2 <- ggplot() +
+  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
+            aes(x = date, y = mean_transpiration, 
+                group = stringr::str_wrap(genotype_formal, 12), 
+                color = stringr::str_wrap(genotype_formal, 12))) +
+  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
+              aes(x = date, ymin = mean_transpiration - var_transpiration, 
+                  ymax = mean_transpiration + var_transpiration,
+                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  scale_color_manual(values = c("orange", "black")) +
+  scale_fill_manual(values = c("orange", "black")) +
+  labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
+  theme_classic() +
+  lims(y = c(0, 15))
+
+cowplot::plot_grid(trans_comp_1, trans_comp_2, ncol = 1)
 ```

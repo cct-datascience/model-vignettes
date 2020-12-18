@@ -1,0 +1,510 @@
+---
+title: "Regional Runs for High Light Treatment of Setaria"
+author: "Kristina Riemer, University of Arizona"
+output: html_document
+urlcolor: blue
+---
+
+### Description of treatment and data 
+
+
+### Initial run of BioCro for biomass & transpiration estimates
+
+This is based off of the working run for the high night temperature low light treatment, which is run 3 in [temp_exps_biomass.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/temp_exps_biomass.Rmd). 
+
+The weather data are created below, currently for the high night temperature condition. 
+
+```{r}
+weather_init <- data.frame(year = rep(2019, 8760), 
+                                      doy = rep(1:365, each = 24), 
+                                      hour = rep(seq(0, 23), 365), 
+                                      SolarR = rep(c(rep(0, each = 8), rep(936, each = 12), rep(0, each = 4)), times = 365),
+                                      Temp = rep(c(rep(22, each = 8), rep(31, each = 12), rep(22, each = 4)), times = 365),
+                                      RH = rep(55.5 / 100,  times = 365 * 24), 
+                                      WS = rep(0, times = 365 * 24), 
+                                      precip = rep(c(0.000462963, rep(0, 23)), 365))
+
+write.csv(weather_init, "high_light_inputs/weather_init.2019.csv", row.names = FALSE)
+```
+
+Run Pecan workflow script (only if results don't already exist) with pecan and constants xmls for input. 
+
+```{bash}
+if [ ! -f high_light_results/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
+then 
+  high_light_inputs/workflow_init.R high_light_inputs/config_init.xml
+else
+  echo "high light run done"
+fi
+```
+
+Plot daily biomass estimates from the high light treatment. 
+
+```{r}
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readxl)
+library(udunits2)
+
+load('high_light_results/out/SA-median/biocro_output.RData')
+timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
+rm(biocro_result)
+load("high_light_results/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+convert_biomass <- function(x) x / 0.4
+daily_biomass_estimates <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
+  gather(ensemble, biomass, X1:X100) %>% 
+  mutate_at(vars(biomass), convert_biomass) %>% 
+  filter(hour == 12) %>% 
+  group_by(day) %>% 
+  summarise(mean = mean(biomass, na.rm = TRUE), 
+            median = median(biomass, na.rm = TRUE), 
+            sd = sd(biomass, na.rm = TRUE), 
+            lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
+rm(ensemble.ts)
+
+biomass_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+biomass_tabs <- excel_sheets(biomass_path)
+area_cm2 <- 64
+area_ha <- ud.convert(area_cm2, "cm2", "ha")
+biomass_measurements <- read_excel(biomass_path, biomass_tabs[7]) %>% 
+      rename(temperature...C..day.night = 6, 
+             light.intensity = 7, 
+             sowing.date = 8, 
+             biomass.harvested = 11, 
+             panicles.DW..mg. = 17, 
+             stemDW.mg. = 18,
+             leaf.DW.mg. = 19, 
+             roots.DW..mg. = 20) %>% 
+  filter(genotype == "ME034V-1", 
+         temperature...C..day.night == "31/22", 
+         light.intensity == 430, 
+         sample_for == "biomass", 
+         !is.na(roots.DW..mg.)) %>% 
+  mutate(days_grown = biomass.harvested - sowing.date, 
+         total_biomass_mg = panicles.DW..mg. + stemDW.mg. + leaf.DW.mg. + roots.DW..mg., 
+         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
+         total_biomass_kgm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "kg/m2"))
+
+plot_daily_biomass <- ggplot(data = daily_biomass_estimates) + 
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
+  #geom_point(data = biomass_measurements, aes(x = days_grown, y = total_biomass_kgm2)) +
+  xlim(x = c(0, 65)) +
+  xlab("") + 
+  ylab("Total Biomass (kg/m2)") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(), 
+        plot.margin=unit(c(1, 1, 0, 1), "cm"))
+plot_daily_biomass
+```
+
+Plot daily transpiration estimates from the high light treatment. 
+
+```{r}
+load('high_light_results/out/SA-median/biocro_output.RData')
+timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
+rm(biocro_result)
+load("high_light_results/ensemble.ts.NOENSEMBLEID.TVeg.2019.2019.Rdata")
+convert_transp <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/h")
+
+daily_transp <- data.frame(timescale, t(ensemble.ts[["TVeg"]])) %>% 
+  gather(ensemble, transpiration, X1:X100) %>% 
+  mutate_at(vars(transpiration), convert_transp) %>% 
+  group_by(day, hour) %>% 
+  summarise(mean = mean(transpiration, na.rm = TRUE), 
+            median = median(transpiration, na.rm = TRUE), 
+            sd = sd(transpiration, na.rm = TRUE), 
+            lcl_50 = quantile(transpiration, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(transpiration, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(transpiration, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(transpiration, probs = c(0.975), na.rm = TRUE)) %>% 
+  group_by(day) %>% 
+  summarise(mean = sum(mean), 
+            median = sum(median), 
+            sd = sqrt(sum(sd^2)), 
+            lcl_50 = sum(lcl_50), 
+            ucl_50 = sum(ucl_50), 
+            lcl_95 = sum(lcl_95), 
+            ucl_95 = sum(ucl_95))
+rm(ensemble.ts)
+
+plot_daily_transp <- ggplot(data = daily_transp) + 
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
+  xlim(x = c(0, 65)) +
+  xlab("Day of Experiment") + 
+  ylab("Transpiration (kg/m2/day)") +
+  theme_classic() + 
+  theme(plot.margin=unit(c(-0.5, 1, 1, 1), "cm"))
+```
+
+Plot biomass and transpiration together. 
+
+```{r}
+gridExtra::grid.arrange(plot_daily_biomass, plot_daily_transp, ncol = 1)
+```
+
+Sensitivity analysis and variance decomposition plots for high light biomass results. 
+
+```{r}
+load("high_light_results/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+sa_df1_biomass <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+sa_df2_biomass <- data.frame(trait = names(sa_df1_biomass$coef.vars), data.frame(sa_df1_biomass))
+sa_df3_biomass <- sa_df2_biomass %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_biomass)
+rm(sensitivity.results)
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+cv_biomass <- ggplot(data = sa_df3_biomass) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+el_biomass <- ggplot(data = sa_df3_biomass) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+vd_biomass <- ggplot(data = sa_df3_biomass) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (kg/m2)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3_biomass$sd, n = 3))
+cowplot::plot_grid(cv_biomass, el_biomass, vd_biomass, nrow = 1, rel_widths = c(2, 1, 1))
+```
+
+Sensitivity analysis and variance decomposition plots for high light transpiration results. 
+
+```{r}
+load("high_light_results/sensitivity.results.NOENSEMBLEID.TVeg.2019.2019.Rdata")
+sa_df1_transp <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+sa_df2_transp <- data.frame(trait = names(sa_df1_transp$coef.vars), data.frame(sa_df1_transp))
+convert_transp_sd <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/d")
+sa_df3_transp <- sa_df2_transp %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_transp_sd)
+rm(sensitivity.results)
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+cv_transp <- ggplot(data = sa_df3_transp) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+el_transp <- ggplot(data = sa_df3_transp) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+vd_transp <- ggplot(data = sa_df3_transp) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (kg/m2/d)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3_transp$sd, n = 3))
+cowplot::plot_grid(cv_transp, el_transp, vd_transp, nrow = 1, rel_widths = c(2, 1, 1))
+```
+
+### Calculate biomass coefficients
+
+The coefficients are the amount of carbon going to each plant part (root, stem, leaf, rhizome, grain) at each stage. These are determined using biomass data and are input to BioCro. 
+
+#### Create chamber weather data frame
+
+This weather data file approximates the conditions in the chamber, which are recorded in the "Environmental_data_chambers_5th_Biomass" tab of [manual-measurements-Darpa_setaria_chambers_experiments.xlsx](https://github.com/az-digitalag/model-vignettes-data/blob/master/manual-measurements-Darpa_setaria_chambers_experiments.xlsx). 
+```{r, eval=FALSE}
+if (!file.exists("high_light_inputs/weather.csv")) {
+  weather <- data.frame(year = rep(2019, 8760), 
+                        doy = rep(1:365, each = 24), 
+                        hour = rep(seq(0, 23), 365), 
+                        SolarR = rep(c(rep(0, each = 8), rep(420, each = 12), 
+                                       rep(0, each = 4)), times = 365),
+                        Temp = rep(c(rep(22, each = 8), rep(31, each = 12), 
+                                     rep(22, each = 4)), times = 365),
+                        RH = rep(55.5 / 100,  times = 365 * 24), 
+                        WS = rep(0, times = 365 * 24), 
+                        precip = rep(c(0.000462963, rep(0, 23)), 365))
+  write.csv(weather, "high_light_inputs/weather.csv", row.names = FALSE)
+}
+weather <- read.csv("high_light_inputs/weather.csv")
+```
+
+#### Get biomass data into correct format
+
+Biomass data is isolated to only the desired experimental conditions, converted to the correct units for BioCro, thermal times are calculated, and grain biomass are added to the stem portion. 
+
+```{r, eval=FALSE}
+library(BioCro)
+if(packageVersion(pkg = 'BioCro') >= 1.0){
+  warning("need to use BioCro v0.9x")
+} else {
+  devtools::install_github('ebimodeling/biocro')  
+}
+
+if (!file.exists("high_light_inputs/biomass.csv")) {
+  thermal_times <- as.data.frame(unclass(BioGro(weather, day1 = 1, 
+                                                dayn = 365))[1:11]) %>%
+    filter(Hour == 0) %>% 
+    select(DayofYear, ThermalT)
+  
+  biomass_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+  biomass_tabs <- excel_sheets(biomass_path)
+  
+  area_cm2 <- 64
+  area_ha <- ud.convert(area_cm2, "cm2", "ha")
+  convert_biomass <- function(x) ud.convert(x, "mg", "Mg") / area_ha
+  
+  biomass <- read_excel(biomass_path, biomass_tabs[7]) %>% 
+    rename(temp = `temperature (°C) day/night`, 
+           light = `light_intensity(umol/m2/s)`, 
+           sowing_date = `sowing date T°31Cday/22Cnight`, 
+           harvest_date = `biomass harvested`) %>% 
+    filter(genotype == "ME034V-1", 
+           temp == "31/22", 
+           light == 430, 
+           !is.na(roots_DW_mg)) %>% 
+    mutate_at(vars(panicle_DW_mg:roots_DW_mg), convert_biomass) %>% 
+    rename_at(vars(panicle_DW_mg:roots_DW_mg), funs(stringr::str_replace(., "DW_mg", "Mgha"))) %>% 
+    mutate(days_grown = harvest_date - sowing_date) %>% 
+    left_join(., thermal_times, by = c("days_grown" = "DayofYear")) %>% 
+    select(ThermalT, Stem = stem_Mgha, Leaf = leaf_Mgha, Root = roots_Mgha, 
+           Grain = panicle_Mgha) %>% 
+    mutate(Stem = Stem + Grain, 
+           Grain = rep(0, nrow(.)), 
+           Rhizome = rep(0, nrow(.))) %>% 
+    group_by(ThermalT) %>% 
+    summarise_all(mean)
+  write.csv(biomass, "high_light_inputs/biomass.csv", row.names = FALSE)
+}
+
+biomass <- read.csv("high_light_inputs/biomass.csv")
+```
+
+#### Optimize biomass coefficients
+
+config.xml has mean parameter values from database for high light treatment for SLA, Vcmax, leaf respiration rate, and stomatal slope; set tp values to equal increments up until last two which use thermal times from data
+
+```{r, eval=FALSE}
+library(BioCro)
+
+config <- PEcAn.BIOCRO::read.biocro.config("high_light_inputs/config.xml")
+l2n <- function(x) lapply(x, as.numeric)
+
+opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){ 
+  optimizingParms[1:3] <- optimizingParms[1:3]/sum(optimizingParms[1:3])
+  optimizingParms[4:6] <- optimizingParms[4:6]/sum(optimizingParms[4:6])
+  optimizingParms[7:9] <- optimizingParms[7:9]/sum(optimizingParms[7:9])
+  optimizingParms[10:12] <- optimizingParms[10:12]/sum(optimizingParms[10:12])
+  optimizingParms[13:15] <- optimizingParms[13:15]/sum(optimizingParms[13:15])
+  optimizingParms[16:19] <- optimizingParms[16:19]/sum(optimizingParms[16:19])
+  params_list <- phenoParms(tp1 = thermaltimeParms[1], 
+                           tp2 = thermaltimeParms[2], 
+                           tp3 = thermaltimeParms[3], 
+                           tp4 = thermaltimeParms[4], 
+                           tp5 = thermaltimeParms[5], 
+                           tp6 = thermaltimeParms[6], 
+                           kStem1 = optimizingParms[1], 
+                           kStem2 = optimizingParms[4], 
+                           kStem3 = optimizingParms[7], 
+                           kStem4 = optimizingParms[10], 
+                           kStem5 = optimizingParms[13], 
+                           kStem6 = optimizingParms[16], 
+                           kLeaf1 = optimizingParms[2], 
+                           kLeaf2 = optimizingParms[5], 
+                           kLeaf3 = optimizingParms[8], 
+                           kLeaf4 = optimizingParms[11], 
+                           kLeaf5 = optimizingParms[14], 
+                           kLeaf6 = optimizingParms[17], 
+                           kRoot1 = optimizingParms[3], 
+                           kRoot2 = optimizingParms[6], 
+                           kRoot3 = optimizingParms[9], 
+                           kRoot4 = optimizingParms[12], 
+                           kRoot5 = optimizingParms[15], 
+                           kRoot6 = optimizingParms[18], 
+                           kRhizome1 = rhizomeParms[1], 
+                           kRhizome2 = rhizomeParms[2], 
+                           kRhizome3 = rhizomeParms[3], 
+                           kRhizome4 = rhizomeParms[4], 
+                           kRhizome5 = rhizomeParms[5], 
+                           kRhizome6 = rhizomeParms[6], 
+                           kGrain6 = optimizingParms[19])
+  
+  t <- BioCro::BioGro(
+    WetDat = weather,
+    day1 = 1,
+    dayn = 70,
+    iRhizome = 0.001, 
+    iLeaf = 0.001, 
+    iStem = 0.001, 
+    iRoot = 0.001, 
+    soilControl = l2n(config$pft$soilControl),
+    canopyControl = l2n(config$pft$canopyControl),
+    phenoControl = l2n(params_list),
+    seneControl = l2n(config$pft$seneControl),
+    photoControl = l2n(config$pft$photoParms))
+
+  tt <- data.frame(ThermalT = t$ThermalT, 
+                   Stem = t$Stem,
+                   Leaf = t$Leaf,
+                   Root = t$Root,
+                   Rhizome = t$Rhizome,
+                   Grain = t$Grain)
+  ttt <- tt %>% 
+    slice(as.numeric(match(round(biomass$ThermalT), round(tt$ThermalT))))
+  bio_ests <- select(ttt, -ThermalT)
+  bio_meas <- select(biomass, -ThermalT)
+  diff <- abs(bio_ests - bio_meas)
+  
+  return(sum(diff))
+}
+
+optimizingParms_check <- c(rep(c(0.2, 0.3, 0.5), 6), 0)
+thermaltimeParms_check <- c(config$pft$phenoParms$tp1, config$pft$phenoParms$tp2,
+                      config$pft$phenoParms$tp3, config$pft$phenoParms$tp4,
+                      config$pft$phenoParms$tp5, config$pft$phenoParms$tp6)
+rhizomeParms_check <- rep(0, 6)
+opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
+```
+
+```{r, eval=FALSE}
+library(DEoptim)
+
+thermaltimevals <- c(config$pft$phenoParms$tp1, config$pft$phenoParms$tp2, 
+                     config$pft$phenoParms$tp3, config$pft$phenoParms$tp4, 
+                     config$pft$phenoParms$tp5, config$pft$phenoParms$tp6)
+rhizomevals <- rep(0, 6)
+
+opt_results <- DEoptim(fn = opfn, lower = c(rep(0, 2), rep(0.6, 4), 0.3, 0.1, rep(0, 11)), upper = c(rep(1, 8), rep(0.1, 4), rep(1, 7)), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 5))
+```
+
+```{r, eval=FALSE}
+library(ggplot2)
+
+parms_results <- as.vector(opt_results$optim$bestmem)
+parms_results[1:3] <- parms_results[1:3]/sum(parms_results[1:3])
+parms_results[4:6] <- parms_results[4:6]/sum(parms_results[4:6])
+parms_results[7:9] <- parms_results[7:9]/sum(parms_results[7:9])
+parms_results[10:12] <- parms_results[10:12]/sum(parms_results[10:12])
+parms_results[13:15] <- parms_results[13:15]/sum(parms_results[13:15])
+parms_results[16:19] <- parms_results[16:19]/sum(parms_results[16:19])
+optimalParms <- phenoParms(tp1 = thermaltimevals[1], 
+                                 tp2 = thermaltimevals[2], 
+                                 tp3 = thermaltimevals[3], 
+                                 tp4 = thermaltimevals[4], 
+                                 tp5 = thermaltimevals[5], 
+                                 tp6 = thermaltimevals[6], 
+                                 kStem1 = parms_results[1], 
+                                 kStem2 = parms_results[4], 
+                                 kStem3 = parms_results[7], 
+                                 kStem4 = parms_results[10], 
+                                 kStem5 = parms_results[13], 
+                                 kStem6 = parms_results[16], 
+                                 kLeaf1 = parms_results[2], 
+                                 kLeaf2 = parms_results[5], 
+                                 kLeaf3 = parms_results[8], 
+                                 kLeaf4 = parms_results[11], 
+                                 kLeaf5 = parms_results[14], 
+                                 kLeaf6 = parms_results[17], 
+                                 kRoot1 = parms_results[3], 
+                                 kRoot2 = parms_results[6], 
+                                 kRoot3 = parms_results[9], 
+                                 kRoot4 = parms_results[12], 
+                                 kRoot5 = parms_results[15], 
+                                 kRoot6 = parms_results[18], 
+                                 kRhizome1 = rhizomevals[1], 
+                                 kRhizome2 = rhizomevals[2], 
+                                 kRhizome3 = rhizomevals[3], 
+                                 kRhizome4 = rhizomevals[4], 
+                                 kRhizome5 = rhizomevals[5], 
+                                 kRhizome6 = rhizomevals[6], 
+                                 kGrain6 = parms_results[19])
+
+results_test <- BioCro::BioGro(
+    WetDat = weather,
+    day1 = 1,
+    dayn = 70,
+    iRhizome = 0.001, 
+    iLeaf = 0.001, 
+    iStem = 0.001, 
+    iRoot = 0.001, 
+    soilControl = l2n(config$pft$soilControl),
+    canopyControl = l2n(config$pft$canopyControl),
+    phenoControl = l2n(optimalParms),
+    seneControl = l2n(config$pft$seneControl),
+    photoControl = l2n(config$pft$photoParms))
+
+results_test2 <- data.frame(ThermalT = results_test$ThermalT, 
+                 Stem = results_test$Stem,
+                 Leaf = results_test$Leaf,
+                 Root = results_test$Root,
+                 Rhizome = results_test$Rhizome,
+                 Grain = results_test$Grain)
+results_test3 <- results_test2 %>% 
+  slice(as.numeric(match(round(biomass$ThermalT), round(results_test2$ThermalT))))
+diff <- sum(abs(results_test3 - biomass))
+
+biomass_meas_plot <- biomass %>% 
+  tidyr::gather(plant_part, mass, Stem:Rhizome) %>% 
+  mutate(data = "measurements")
+biomass_ests_plot <- results_test2 %>% 
+  tidyr::gather(plant_part, mass, Stem:Grain) %>% 
+  mutate(data = "estimates")
+biomass_plot <- bind_rows(biomass_meas_plot, biomass_ests_plot) %>%
+  mutate(mass = ud.convert(mass, "Mg/ha", "kg/m2"))
+
+ggplot() +
+  #geom_point(filter(biomass_plot, data == "measurements"), mapping = aes(x = ThermalT, y = mass, color = plant_part)) +
+  geom_line(filter(biomass_plot, data == "estimates"), mapping = aes(x = ThermalT, y = mass, color = plant_part)) +
+  xlim(c(0, 1800)) +
+  labs(x = "Thermal Time", y = "Biomass (kg/m2)", color = "Plant Part") +
+  theme_classic() +
+  facet_wrap(~plant_part)
+```
+
+
+### Compare BioCro biomass estimates with measurements
+
+### Plot regional runs of biomass
+
