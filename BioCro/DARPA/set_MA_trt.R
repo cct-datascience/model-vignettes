@@ -96,8 +96,13 @@ RE_combine <- function(mc, trt){
 #Renames target treatment column with "beta.o"
 rename_cols <- function(trait.mcmc, trt, target.site, target.trt){
   #index of target treatment
-  ind <- which(trt$site_id == target.site & trt$trt_name == target.trt)
-  
+  if (any(trt$trt_name %in% target.trt)) {
+    ind <- which(trt$site_id == target.site & trt$trt_name == target.trt)
+  } else if (any(trt$site_id == target.site)){
+   ind <- which(trt$site_id == target.site & trt$trt_control == "control")
+  } else {
+    stop("No matching treatment and site for parameter")
+  }
   #for each chain, add treatment names as column names; then sub out the target treatment column name with "beta.o"
   for(c in 1:length(trait.mcmc)){
     colnames(trait.mcmc[[c]]) <- trt$trt_name
