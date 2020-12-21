@@ -21,6 +21,7 @@ plot_MA <- function(settings){
   
   #convert jagged.data
   jagged <- jagged.data[traits]
+  
 
   #apply  across set of list objects
   MAfigs <- mapply(FUN = plot_prior_posterior, 
@@ -36,6 +37,11 @@ plot_MA <- function(settings){
 
 }
 
+i = 2
+prior = priors[[i]]
+jag = jagged[[i]]
+mc = trait.mcmc[[i]]
+trt = trt.match[[i]]
 #Plot comparing prior, data, and posterior by treatment; function can be included in mapply()
 plot_prior_posterior <- function(prior, jag, mc, trt){
   
@@ -44,6 +50,8 @@ plot_prior_posterior <- function(prior, jag, mc, trt){
   
   #convert mcmc.list into dataframe for plotting
   dat <- data.frame(do.call(rbind, mc)) 
+  #remove global
+  dat <- dat[,which(colnames(dat) != "global")]
   colnames(dat) <- trt$treatment_id
   level <- as.character(trt$trt_name[order(trt$site_id, trt$treatment_id)])
   mc.out <- dat %>% 
@@ -55,12 +63,18 @@ plot_prior_posterior <- function(prior, jag, mc, trt){
   #add prior
   mc.out$prior <- rep(do.call(paste0("r", prior$distn), list(nrow(dat), prior$parama, prior$paramb)),
                       ncol(dat))
-
+  #calculate central 99% of prior
+  ci <- quantile(mc.out$prior, probs = c(0.005, 0.995))
+  
+  #add factor with levels to jag
+  jag$trt_name <- factor(jag$trt_name, levels = level)
+  
   cols <- brewer.pal(3, name = "Dark2")
   fig <- ggplot() +
     stat_density(data = mc.out, aes(x = value, color = "posterior"), geom = "line") +
     stat_density(data = mc.out, aes(x = prior, color = "prior"), geom = "line") +
     geom_rug(data = jag, aes(x = Y), color = "red", length = unit(0.07, "npc")) +
+    scale_x_continuous(limits = ci) +
     facet_wrap(~trt_name, ncol = 1, scales = "free_y") +
     theme_bw(base_size = 10) +
     theme(panel.grid.major = element_blank(),
