@@ -55,3 +55,6 @@ docs/
 *.nc
 *.gif
 ecoregions*
+
+# Figures until publication ready
+figures/plots
