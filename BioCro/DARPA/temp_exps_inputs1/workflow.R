@@ -83,16 +83,6 @@ if (PEcAn.utils::status.check("TRAIT") == 0){
   settings <- PEcAn.settings::read.settings(file.path(settings$outdir, 'pecan.TRAIT.xml'))
 }
 
-library(dplyr)
-trait <- read.csv("temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv") %>%
-  filter(mean < 25)
-write.csv(trait, "temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv")
-
-load("temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
-file.remove("temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
-trait.data$Vcmax <- trait.data$Vcmax[4:15,]
-save(trait.data, file = "temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
-
 # Run the PEcAn meta.analysis
 if(!is.null(settings$meta.analysis)) {
   if (PEcAn.utils::status.check("META") == 0){
@@ -101,6 +91,9 @@ if(!is.null(settings$meta.analysis)) {
     PEcAn.utils::status.end()
   }
 }
+
+source("/home/kristinariemer/model-vignettes/BioCro/DARPA/set_MA_trt.R")
+set_MA_trt(settings)
 
 # Write model specific configs
 if (PEcAn.utils::status.check("CONFIG") == 0){

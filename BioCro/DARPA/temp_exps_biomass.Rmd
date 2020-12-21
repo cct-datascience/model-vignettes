@@ -56,57 +56,36 @@ library(data.table)
 library(tidyr)
 library(ggplot2)
 
-# Clean up biomass data
-data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
-sheets_names <- excel_sheets(data_path)
-area_cm2 <- 103
-area_ha <- ud.convert(area_cm2, "cm2", "ha")
-
-control_biomass <- read_excel(data_path, sheets_names[6]) %>% 
-  rename(temperature...C..day.night = 6, 
-         biomass.harvested = 11, 
-         treatment.started = 9) %>% 
-  filter(genotype == "ME034V-1", temperature...C..day.night == "31/22", 
-         sample_for == "biomass") %>% 
-  mutate(days_grown = as.integer(as.Date(as.character(biomass.harvested), format = "%Y-%m-%d") - 
-                                   as.integer(as.Date(as.character(treatment.started), format = "%Y-%m-%d"))), 
-         total_biomass_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg + roots_DW_mg, 
-         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha) %>% 
-  filter(!is.na(total_biomass_Mgha))
-write.csv(control_biomass, "temp_exps_inputs1/control_biomass_meas.csv")
-
 # Clean up biomass estimates
 load('temp_exps_results/temp_exps_results1/out/SA-median/biocro_output.RData')
 timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
 load("temp_exps_results/temp_exps_results1/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+convert_biomass <- function(x) x / 0.4
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X10) %>% 
-  group_by(day, hour) %>% 
+  mutate_at(vars(biomass), convert_biomass) %>% 
+  filter(hour == 12) %>% 
+  group_by(day) %>% 
   summarise(mean = mean(biomass, na.rm = TRUE), 
             median = median(biomass, na.rm = TRUE), 
             sd = sd(biomass, na.rm = TRUE), 
-            lcl = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
-            ucl = quantile(biomass, probs = c(0.975), na.rm = TRUE)) %>% 
-  group_by(day) %>% 
-  summarise(mean = sum(mean), 
-            median = sum(median), 
-            sd = sqrt(sum(sd^2)), 
-            lcl = sum(lcl), 
-            ucl = sum(ucl))
+            lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
 write.csv(daily_biomass, "temp_exps_inputs1/biomass_ests1.csv")
 rm(ensemble.ts)
 
 # Plot measured biomass against biomass estimates
-sd_scale <- 5
 ggplot(data = daily_biomass) + 
-  geom_line(aes(day, y = mean)) +
-  geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd), alpha = 0.1) +
-  geom_ribbon(aes(day, ymin = lcl, ymax = ucl), alpha = 0.1) +
-  #geom_point(data = control_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
   xlab("Day of Year") + 
-  ylab("Total Biomass Mg/ha") +
+  ylab("Total Biomass (kg/m2)") +
+  xlim(c(0, 50)) +
   theme_classic()
 ```
 
@@ -125,7 +104,7 @@ Then run the model for this experimental setup.
 ```{bash}
 if [ ! -f temp_exps_results/temp_exps_results2/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
 then
-  temp_exps_inputs2/workflow.R --settings temp_exps_inputs2/temp.exps2.xml
+  temp_exps_inputs1/workflow.R --settings temp_exps_inputs2/temp.exps2.xml
 else
   echo "run 2 done"
 fi
@@ -146,31 +125,30 @@ timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
 load("temp_exps_results/temp_exps_results2/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+convert_biomass <- function(x) x / 0.4
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X10) %>% 
-  group_by(day, hour) %>% 
+  mutate_at(vars(biomass), convert_biomass) %>% 
+  filter(hour == 12) %>% 
+  group_by(day) %>% 
   summarise(mean = mean(biomass, na.rm = TRUE), 
             median = median(biomass, na.rm = TRUE), 
             sd = sd(biomass, na.rm = TRUE), 
-            lcl = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
-            ucl = quantile(biomass, probs = c(0.975), na.rm = TRUE)) %>% 
-  group_by(day) %>% 
-  summarise(mean = sum(mean), 
-            median = sum(median), 
-            sd = sqrt(sum(sd^2)), 
-            lcl = sum(lcl), 
-            ucl = sum(ucl))
+            lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
 write.csv(daily_biomass, "temp_exps_inputs2/biomass_ests2.csv")
 rm(ensemble.ts)
 
 # Plot measured biomass against biomass estimates
-sd_scale <- 5
 ggplot(data = daily_biomass) + 
-  geom_line(aes(day, y = mean)) +
-  geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd), alpha = 0.1) +
-  geom_ribbon(aes(day, ymin = lcl, ymax = ucl), alpha = 0.1) +
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
   xlab("Day of Year") + 
-  ylab("Total Biomass Mg/ha") +
+  ylab("Total Biomass (kg/m2)") +
+  xlim(c(0, 50)) +
   theme_classic()
 ```
 
@@ -189,7 +167,7 @@ Then run the model for the high night temperature treatment.
 ```{bash}
 if [ ! -f temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata ]
 then
-  temp_exps_inputs3/workflow.R --settings temp_exps_inputs3/temp.exps3.xml
+  temp_exps_inputs1/workflow.R --settings temp_exps_inputs3/temp.exps3.xml
 else
   echo "run 3 done"
 fi
@@ -205,26 +183,47 @@ Plot biomass results. Create a script called `plot_results3.R`, which will conta
 
 ```{r}
 # Clean up biomass data
-data_path <- "../../../model-vignettes-data/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+data_path <- "../../../sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
 area_cm2 <- 103
 area_ha <- ud.convert(area_cm2, "cm2", "ha")
 
-highnight_biomass <- read_excel(data_path, sheets_names[10]) %>% 
+highnight_biomass1 <- read_excel(data_path, sheets_names[11]) %>% 
       rename(temperature...C..day.night = 6, 
-         biomass.harvested = 12, 
-         panicles.DW..mg. = 21, 
-         stemDW.mg. = 18,
-         leaf.DW.mg. = 19, 
-         roots.DW..mg. = 20) %>% 
-  filter(genotype == "ME034V-1", temperature...C..day.night == 31, 
+             light.intensity = 7, 
+             sowing.date = 8, 
+             biomass.harvested = 12, 
+             panicles.DW..mg. = 21, 
+             stemDW.mg. = 18,
+             leaf.DW.mg. = 19, 
+             roots.DW..mg. = 20) %>% 
+  filter(genotype == "ME034V-1", temperature...C..day.night == "31.0", 
+         light.intensity == "250.0", 
          treatment == "control", sample_for == "biomass") %>% 
   mutate(days_grown = as.integer(as.Date(as.character(biomass.harvested), format = "%Y-%m-%d") - 
-                                   as.integer(as.Date(as.character(temperature_treatment_started), 
-                                                      format = "%Y-%m-%d"))), 
+                                   as.Date(as.numeric(sowing.date), origin = "1899-12-30")),
          total_biomass_mg = panicles.DW..mg. + stemDW.mg. + leaf.DW.mg. + roots.DW..mg., 
-         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha) %>% 
-  filter(!is.na(total_biomass_Mgha))
+         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
+         total_biomass_kgm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "kg/m2")) %>% 
+  filter(!is.na(total_biomass_Mgha)) %>% 
+  select(days_grown, total_biomass_kgm2)
+
+highnight_biomass2 <- read_excel(data_path, sheets_names[6]) %>% 
+  rename(temperature_C = 6, 
+         sowing_date = 8) %>% 
+  filter(genotype == "ME034V-1", temperature_C == "31.0", 
+         light_intensity == "250.0") %>% 
+  mutate(days_grown = as.integer(as.Date(as.character(biomass_harvest), format = "%Y-%m-%d") - 
+                                   as.Date(as.numeric(sowing_date), origin = "1899-12-30")),
+         total_biomass_mg = as.numeric(panicle_dry_weight_mg) + 
+           as.numeric(stem_dry_weight_mg) + as.numeric(leaf_dry_weight_mg) + 
+           as.numeric(roots_dry_weight_mg), 
+         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
+         total_biomass_kgm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "kg/m2")) %>% 
+  filter(!is.na(total_biomass_Mgha)) %>% 
+  select(days_grown, total_biomass_kgm2)
+
+highnight_biomass <- bind_rows(highnight_biomass1, highnight_biomass2)
 write.csv(highnight_biomass, "temp_exps_inputs3/highnight_biomass_meas.csv")
 
 # Clean up biomass estimates
@@ -232,50 +231,203 @@ load('temp_exps_results/temp_exps_results3/out/SA-median/biocro_output.RData')
 timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
-load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata") #these data are in kg/m2 carbon
+convert_biomass <- function(x) x / 0.4
 daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
   gather(ensemble, biomass, X1:X10) %>% 
-  group_by(day, hour) %>% 
+  mutate_at(vars(biomass), convert_biomass) %>% 
+  filter(hour == 12) %>% 
+  group_by(day) %>% 
   summarise(mean = mean(biomass, na.rm = TRUE), 
             median = median(biomass, na.rm = TRUE), 
             sd = sd(biomass, na.rm = TRUE), 
-            lcl = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
-            ucl = quantile(biomass, probs = c(0.975), na.rm = TRUE)) %>% 
-  group_by(day) %>% 
-  summarise(mean = sum(mean), 
-            median = sum(median), 
-            sd = sqrt(sum(sd^2)), 
-            lcl = sum(lcl), 
-            ucl = sum(ucl))
+            lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
 write.csv(daily_biomass, "temp_exps_inputs3/biomass_ests3.csv")
 rm(ensemble.ts)
 
 # Plot measured biomass against biomass estimates
-sd_scale <- 5
-ggplot(data = daily_biomass) + 
-  geom_line(aes(day, y = mean)) +
-  geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd), alpha = 0.1) +
-  geom_ribbon(aes(day, ymin = lcl, ymax = ucl), alpha = 0.1) +
-  #geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_Mgha)) +
-  xlab("Day of Year") + 
-  ylab("Total Biomass Mg/ha") +
-  theme_classic()
+plot_daily_biomass <- ggplot(data = daily_biomass) + 
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
+  geom_point(data = highnight_biomass, aes(x = days_grown, y = total_biomass_kgm2)) +
+  xlim(x = c(0, 50)) +
+  xlab("") + 
+  ylab("Total Biomass (kg/m2)") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(), 
+        plot.margin=unit(c(1, 1, 0, 1), "cm"))
 ```
 
-# Section 4: Plot Three Runs
+Plot transpiration results.
+
+```{r}
+# Clean up transpiration estimates
+load('temp_exps_results/temp_exps_results3/out/SA-median/biocro_output.RData')
+timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
+rm(biocro_result)
+
+load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TVeg.2019.2019.Rdata")
+convert_transp <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/h")
+daily_transp <- data.frame(timescale, t(ensemble.ts[["TVeg"]])) %>% 
+  gather(ensemble, transpiration, X1:X100) %>% 
+  mutate_at(vars(transpiration), convert_transp) %>% 
+  group_by(day, hour) %>% 
+  summarise(mean = mean(transpiration, na.rm = TRUE), 
+            median = median(transpiration, na.rm = TRUE), 
+            sd = sd(transpiration, na.rm = TRUE), 
+            lcl_50 = quantile(transpiration, probs = c(0.25), na.rm = TRUE), 
+            ucl_50 = quantile(transpiration, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(transpiration, probs = c(0.025), na.rm = TRUE), 
+            ucl_95 = quantile(transpiration, probs = c(0.975), na.rm = TRUE)) %>% 
+  group_by(day) %>% 
+  summarise(mean = sum(mean), 
+            median = sum(median), 
+            sd = sqrt(sum(sd^2)), 
+            lcl_50 = sum(lcl_50), 
+            ucl_50 = sum(ucl_50), 
+            lcl_95 = sum(lcl_95), 
+            ucl_95 = sum(ucl_95))
+write.csv(daily_transp, "temp_exps_inputs3/transpiration_ests3.csv")
+rm(ensemble.ts)
+
+# Plot transpiration estimates
+plot_daily_transp <- ggplot(data = daily_transp) + 
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
+  xlim(x = c(0, 50)) +
+  xlab("Day of Experiment") + 
+  ylab("Transpiration (kg/m2/day)") +
+  theme_classic() + 
+  scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +
+  theme(plot.margin=unit(c(-0.5, 1, 1, 1), "cm"))
+```
+
+Plot biomass and transpiration together. 
+
+```{r}
+gridExtra::grid.arrange(plot_daily_biomass, plot_daily_transp, ncol = 1)
+```
+
+Sensitivity analysis and variance decomposition plots for high night temperature biomass results. 
+```{r}
+load("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TotLivBiom.2019.2019.Rdata")
+
+sa_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), data.frame(sa_df1))
+sa_df3 <- sa_df2 %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_biomass)
+rm(sensitivity.results)
+
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+
+cv <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+
+el <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+vd <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (kg/m2)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
+
+cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1))
+```
+
+Sensitivity analysis and variance decomposition plots for high night temperature transpiration results. 
+```{r}
+load("temp_exps_results/temp_exps_results3/sensitivity.results.NOENSEMBLEID.TVeg.2019.2019.Rdata")
+
+sa_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), data.frame(sa_df1))
+convert_transp_sd <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/d")
+sa_df3 <- sa_df2 %>% 
+    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+           units = PEcAn.utils::trait.lookup(trait)$units, 
+           coef.vars = coef.vars * 100, 
+           sd = sqrt(variances)) %>% 
+    mutate_at(vars(sd), convert_transp_sd)
+rm(sensitivity.results)
+
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() + 
+            theme(axis.text.x = 
+                    element_text(
+                      size = fontsize$axis, 
+                                 vjust = -1), 
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(), 
+                  axis.line = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  panel.grid.minor = element_blank(), 
+                  panel.border = element_blank()))
+
+cv <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+
+el <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+vd <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained (kg/m2/d)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
+
+cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1))
+```
+
+# Section 5: Plot Three Runs
 
 Code to plot the biomass estimates from the first two runs together, along with the control data. 
 
 ```{r}
 # Read in and combine biomass measurements data
-biomass_meas_control <- read.csv("temp_exps_inputs1/control_biomass_meas.csv") %>% 
-  mutate(txt = "control") %>% 
-  select(days_grown, total_biomass_Mgha, txt)
 biomass_meas_highnight <- read.csv("temp_exps_inputs3/highnight_biomass_meas.csv") %>% 
   mutate(txt = "highnight") %>% 
-  select(days_grown, total_biomass_Mgha, txt)
-
-biomass_meas <- bind_rows(biomass_meas_control, biomass_meas_highnight)
+  select(days_grown, total_biomass_kgm2, txt)
 
 # Read in and combine biomass estimates data
 biomass_ests1 <- read.csv("temp_exps_inputs1/biomass_ests1.csv") %>% 
@@ -286,7 +438,10 @@ biomass_ests3 <- read.csv("temp_exps_inputs3/biomass_ests3.csv") %>%
   mutate(run = 3)
 
 biomass_ests <- bind_rows(biomass_ests1, biomass_ests2, biomass_ests3) %>% 
-  mutate(run = as.factor(run))
+  mutate(run = as.factor(run), 
+         `Inputs: parameters / weather` = case_when(run == "1" ~ "control / control", 
+                            run == "2" ~ "control / high night temp", 
+                            run == "3" ~ "high night temp / high night temp"))
 
 # Plot measured biomass against biomass estimates
 sd_scale <- 5
@@ -294,27 +449,37 @@ sd_scale <- 5
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
   scale_color_manual(values=c("red", "black", "blue")) +
-  xlim(x = c(0, 60)) +
+  lims(x = c(0, 60), y = c(0, 0.2)) +
   xlab("Day of Year") + 
-  ylab("Total Biomass Mg/ha") +
+  ylab("Total Biomass (kg/m2)") +
   theme_classic()
 
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
   geom_ribbon(aes(day, ymin = mean - sd_scale * sd, ymax = mean + sd_scale * sd, fill = run), alpha = 0.1) +
   scale_color_manual(values=c("red", "black", "blue", "red", "black", "blue")) +
-  xlim(x = c(0, 60)) +
+  lims(x = c(0, 60), y = c(0, 0.2)) +
   xlab("Day of Year") + 
-  ylab("Total Biomass Mg/ha") +
+  ylab("Total Biomass (kg/m2)") +
   theme_classic()
 
 ggplot(data = biomass_ests) +
   geom_line(aes(day, mean, color = run)) +
-  geom_point(data = biomass_meas, aes(x = days_grown, y = total_biomass_Mgha, color = txt)) +
+  geom_point(data = biomass_meas_highnight, aes(x = days_grown, y = total_biomass_kgm2, color = txt)) +
   scale_color_manual(values=c("red", "black", "blue", "red", "blue")) +
-  xlim(x = c(0, 60)) +
+  lims(x = c(0, 60), y = c(0, 0.15)) +
   xlab("Day of Year") + 
-  ylab("Total Biomass Mg/ha") +
+  ylab("Total Biomass (kg/m2)") +
+  theme_classic()
+
+ggplot(data = biomass_ests) +
+  geom_line(aes(day, mean, color = `Inputs: parameters / weather`)) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50, fill = `Inputs: parameters / weather`), alpha = 0.1) +
+  scale_color_manual(values=c("red", "purple", "orange", "red", "purple", "orange")) +
+  scale_fill_manual(values=c("red", "purple", "orange", "red", "purple", "orange")) +
+  lims(x = c(0, 60), y = c(0, 0.15)) +
+  xlab("Day of Year") + 
+  ylab("Total Biomass (kg/m2)") +
   theme_classic()
 ```
 

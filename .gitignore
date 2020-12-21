@@ -53,6 +53,8 @@ docs/
 *_results/
 *.html
 *.nc
+*.gif
+ecoregions*
 
 # Figures until publication ready
 figures/plots
