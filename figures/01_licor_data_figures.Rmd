@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Two sets of figures for the manuscript comparing regular and high night temperature for Setaria. The first figure is a set of standard light and CO2 response curves, while the second shows a selection of NPQ parameters in response to light. 
 
-```{r library}
+```{r library, warning=FALSE, warning=FALSE}
 library(dplyr)
 library(data.table)
 library(ggplot2)
@@ -136,6 +136,7 @@ fig1a <- ggplot(aci_sum, aes(x = Ci.m, y = A.m, color = trt)) +
   scale_color_manual(values = cols) +
   theme(legend.position = c(0.7, 0.2),
         legend.title = element_blank())
+print(fig1a)
 
 fig1b <- ggplot(aq_sum, aes(x = Qin.m, y = A.m, color = trt)) +
   geom_point(size = 2) +
@@ -146,6 +147,7 @@ fig1b <- ggplot(aq_sum, aes(x = Qin.m, y = A.m, color = trt)) +
   scale_y_continuous(expression(paste(A[n], " (", mu, "mol ", m^-2, " ", s^-1, ")"))) +
   scale_color_manual(values = cols) +
   guides(color = FALSE)
+print(fig1b)
 
 jpeg(filename = "plots/Fig1_gas_ex_curves.jpg", height = 3, width = 8, units = "in", res = 600)
 plot_grid(fig1a, fig1b, labels = c('A', 'B'), label_size = 12)

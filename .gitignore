@@ -53,3 +53,6 @@ docs/
 *_results/
 *.html
 *.nc
+
+# Figures until publication ready
+figures/plots
