@@ -82,7 +82,7 @@ RE_combine <- function(mc, trt){
   col_ind <- cbind(col_ind, rep(which(cnames == "beta.o"), nrow(col_ind)))
   
   #add index for only "beta.o", to preserve the global treatment
-  col_ind <- rbind(c(NA, NA, NA, 2), col_ind)
+  col_ind <- rbind(c(NA, NA, NA, which(cnames == "beta.o")), col_ind)
   
   #create empty mcmc.list object
   chain <- list(mcmc(matrix(NA, nrow = nrow(mc[[1]]), ncol = nrow(col_ind))))
