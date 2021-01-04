@@ -81,12 +81,15 @@ RE_combine <- function(mc, trt){
   #add index for "beta.o", which is universal across treatments
   col_ind <- cbind(col_ind, rep(which(cnames == "beta.o"), nrow(col_ind)))
   
+  #add index for only "beta.o", to preserve the global treatment
+  col_ind <- rbind(c(NA, NA, NA, which(cnames == "beta.o")), col_ind)
+  
   #create empty mcmc.list object
-  chain <- list(mcmc(matrix(NA, nrow = nrow(mc[[1]]), ncol = nrow(trt))))
+  chain <- list(mcmc(matrix(NA, nrow = nrow(mc[[1]]), ncol = nrow(col_ind))))
   out <- rep(chain, length(mc))
   #for each chain and treatment, combine the relevant posterior RE from trait.mcmc
   for(c in 1:length(mc)){
-    for(t in 1:nrow(trt)){ # number of treatments
+    for(t in 1:nrow(col_ind)){ # number of treatments + 1
       out[[c]][,t] <- rowSums(mc[[c]][ ,col_ind[t,]], na.rm = T)
     }
   }
@@ -97,15 +100,15 @@ RE_combine <- function(mc, trt){
 rename_cols <- function(trait.mcmc, trt, target.site, target.trt){
   #index of target treatment
   if (any(trt$trt_name %in% target.trt)) {
-    ind <- which(trt$site_id == target.site & trt$trt_name == target.trt)
+    ind <- which(trt$site_id == target.site & trt$trt_name == target.trt) + 1 # specific to site and treatment
   } else if (any(trt$site_id == target.site)){
-   ind <- which(trt$site_id == target.site & trt$trt_control == "control")
+   ind <- which(trt$site_id == target.site & trt$trt_control == "control") + 1 # specific to site (control treatment)
   } else {
-    stop("No matching treatment and site for parameter")
+    ind <- 1 # no site or treatment, using global beta.o
   }
   #for each chain, add treatment names as column names; then sub out the target treatment column name with "beta.o"
   for(c in 1:length(trait.mcmc)){
-    colnames(trait.mcmc[[c]]) <- trt$trt_name
+    colnames(trait.mcmc[[c]]) <- c("global", trt$trt_name)
     colnames(trait.mcmc[[c]])[ind] <- "beta.o"
   }
   
