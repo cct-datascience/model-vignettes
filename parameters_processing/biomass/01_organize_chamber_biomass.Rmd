@@ -330,5 +330,8 @@ exp_9 <- read_excel(data_path, sheets_names[3]) %>%
   mutate(tier = case_when(tier == "bot" ~ "low",
                           tier == "low" ~ "low",
                           tier == "mid" ~ "mid",
-                          tier == "top" ~ "high"))
+                          tier == "top" ~ "high")) %>%
+  tidyr::separate(genotype, c("genotype", "treatment")) %>%
+  mutate(genotype = case_when(genotype == "me034" ~ "ME034V-1",
+                              genotype == "svsd1" ~ "Svsldr"))
 ```
