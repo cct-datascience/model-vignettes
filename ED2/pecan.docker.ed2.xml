@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <pecan>
-  <outdir>/home/kristinariemer/model-vignettes/ED2/ed2</outdir>
+  <outdir>/data/tests/ed2</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
@@ -10,7 +10,7 @@
       <dbname>bety</dbname>
       <write>FALSE</write>
     </bety>
-    <dbfiles>/home/kristinariemer/model-vignettes/ED2/ed2/dbfiles</dbfiles>
+    <dbfiles>/data/tests/ed2/dbfiles</dbfiles>
   </database>
   <pfts>
     <pft>
@@ -36,7 +36,7 @@
 
   <model>
     <type>ED2</type>
-    <binary>/home/kristinariemer/model-vignettes/ED2/ed2_2.2.0_singularity.sh</binary>
+    <binary>/home/u29/kristinariemer/pecan/ed2_2.2.0_singularity.sh</binary>
     <id>14</id>
     <edin>/pecan/models/ed/inst/ED2IN.2.2.0</edin>
     <config.header>
@@ -64,9 +64,9 @@
       <met>/data/sites/ebifarm/ED_MET_DRIVER_HEADER</met>
       <veg>/data/oge2OLD/OGE2_</veg>
       <soil>/data/faoOLD/FAO_</soil>
-      <pss>/home/kristinariemer/model-vignettes/ED2/ebifarm/ebifarm.lat40.0lon-88.0.pss</pss>
-      <css>/home/kristinariemer/model-vignettes/ED2/ebifarm/ebifarm.lat40.0lon-88.0.css</css>
-      <site>/home/kristinariemer/model-vignettes/ED2/ebifarm/ebifarm.lat40.0lon-88.0.site</site>
+      <pss>/data/sites/ebifarm/ebifarm.lat40.0lon-88.0.pss</pss>
+      <css>/data/sites/ebifarm/ebifarm.lat40.0lon-88.0.css</css>
+      <site>/data/sites/ebifarm/ebifarm.lat40.0lon-88.0.site</site>
       <lu>/data/ed_inputs/glu/</lu>
       <thsum>/data/ed_inputs/</thsum>
     </inputs>
@@ -75,13 +75,13 @@
     <end.date>2004/12/31</end.date>
   </run>
   
-<!--  <host>
+  <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
       <qsub>qsub -N @NAME@ -W group_list=dlebauer -q standard -l select=1:ncpus=1:mem=6gb -l walltime=4:0:0 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
       <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
       <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
-      <tunnel>/tmp/ocelote</tunnel>
-  </host> -->
+<!--      <tunnel>/tmp/kristinariemer@login.ocelote.hpc.arizona.edu:22</tunnel> -->
+  </host>
 
 </pecan>
