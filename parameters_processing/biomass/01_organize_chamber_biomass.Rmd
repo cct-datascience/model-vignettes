@@ -450,8 +450,8 @@ df6 <- exp_6 %>%
          leaf_FW_g = ud.convert(leaf_FW_mg, "mg", "g"),
          yield_g = NA) %>%
   mutate(treatment = NA,
-         height_tip = NA) %>%
-  rename(height_collar = height) # only 1 height column, assuming top to mean top of collar
+         height_collar = NA) %>%
+  rename(height_tip = height) # only 1 height column is base to tip, per E. Castillo
 
 df7 <- exp_7 %>%
   mutate(root_FW_g = NA,
@@ -504,7 +504,8 @@ leafarea <- read_excel(data_path, sheets_names[2], range = cell_cols("A:H")) %>%
                                 experiment == "9th_biomass_svd1_me034_GA" ~ 9))
 
 
-chamber_biomass <- left_join(df_all, leafarea[c("exp_number", "plantID", "leaf_area_cm2")], 
+chamber_biomass <- left_join(df_all, 
+                             leafarea[c("exp_number", "plantID", "leaf_area_cm2")], 
                              by = c("exp_number", "plantID"))
 
 save(chamber_biomass, file = "chamber_biomass.Rdata")
