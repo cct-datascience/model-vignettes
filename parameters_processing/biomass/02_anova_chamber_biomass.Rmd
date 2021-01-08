@@ -1,0 +1,97 @@
+---
+title: "ANOVA chamber biomass"
+author: "Jessica Guo"
+date: "1/7/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Plant biomass data is used to validate crop and ecosystem model estimates. However, a validation showed large variation within treatment. Could these be due to the influence of chamber and tier?
+
+```{r}
+library(dplyr)
+library(udunits2)
+library(ggplot2)
+library(readxl)
+```
+
+### High night temperature
+
+First, we focus on the high night temperature treatment, genotype ME034V-1 at 250 uE light intensity and 31/31 day/night temperature. 
+
+```{r}
+load("chamber_biomass.Rdata")
+
+valid <- chamber_biomass %>%
+  filter(!is.na(panicle_DW_mg) & 
+         !is.na(stem_DW_mg) &
+         !is.na(leaf_DW_mg)) %>%
+  filter(is.na(treatment) | treatment == "control") %>%
+  filter(genotype == "ME034V-1" & 
+         light == "250" &
+         temp == "31/31") %>%
+  mutate(age = harvest_date - sowing_date,
+         abg_biomass_DW_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg,
+         sla_m2_kg = ud.convert(leaf_area_cm2, "cm2", "m2") / 
+           ud.convert(leaf_DW_mg, "mg", "kg"))
+
+ggplot(valid, aes(x = age, y = abg_biomass_DW_mg, color = chamber, shape = tier)) +
+  geom_point()
+```
+
+Only data from experiments 1, 3, and 6 are included. It appears that chamber has a greater effect than tier, based on experiments 3 and 6. Next, we investigate the chamber environmental conditions for these experiments. 
+
+```{r}
+data_path <- "~/sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+sheets_names <- excel_sheets(data_path)
+
+env3 <- read_excel(data_path, sheets_names[12]) %>%
+  rename(chamber = location,
+         sens_temp_C = "sensor_temperature_readings_celsius",
+         set_temp_C = "temperature_setpoint_celsius",
+         sens_RH = "sensor_relative_humidity_readings_%",
+         set_RH = "relative_humidity_setpoint_%",
+         low_light = "bot_tier_sensor_ligth_readings_umol/m2/s",
+         mid_light = "mid_tier_sensor_ligth_readings_umol/m2/s",
+         high_light = "top_tier_sensor_ligth_readings_umol/m2/s")
+
+tapply(env3$sens_temp_C, env3$chamber, FUN = mean,  na.rm = TRUE)
+tapply(env3$sens_temp_C, env3$chamber, FUN = sd,  na.rm = TRUE)
+
+tapply(env3$sens_RH, env3$chamber, FUN = mean,  na.rm = TRUE)
+tapply(env3$sens_RH, env3$chamber, FUN = sd,  na.rm = TRUE)
+
+ggplot(env3[env3$chamber != "GCH157",], aes(x = date_time, y = sens_temp_C, col = chamber))+
+  geom_point(alpha = 0.5)+
+  scale_y_continuous(limits = c(30.5, 31.5))
+```
+
+
+### ANOVA for chamber effects
+
+Using only teh ME034V-genotype and focusing on the most common temperature (22/22, 31/31, 36/36) and light (250, 430) treatments.
+```{r}
+
+expdf <- chamber_biomass %>%
+  filter(!is.na(panicle_DW_mg) & 
+         !is.na(stem_DW_mg) &
+         !is.na(leaf_DW_mg)) %>%
+  filter(is.na(treatment) | treatment == "control") %>%
+  filter(genotype == "ME034V-1") %>%
+  filter(temp %in% c("22/22", "31/31", "36/36")) %>%
+  filter(light %in% c(250, 430)) %>%
+  mutate(age = harvest_date - sowing_date,
+         abg_biomass_DW_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg)
+
+ggplot(expdf, aes(x = age, y = abg_biomass_DW_mg, color = chamber, shape = temp)) +
+  geom_point()
+
+
+```
