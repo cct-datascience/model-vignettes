@@ -87,11 +87,43 @@ expdf <- chamber_biomass %>%
   filter(genotype == "ME034V-1") %>%
   filter(temp %in% c("22/22", "31/31", "36/36")) %>%
   filter(light %in% c(250, 430)) %>%
-  mutate(age = harvest_date - sowing_date,
-         abg_biomass_DW_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg)
+  mutate(age = as.numeric(difftime(harvest_date, sowing_date, units = "days")),
+         abg_biomass_DW_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg) %>%
+    filter(age %in% c(40, 41, 42))
 
-ggplot(expdf, aes(x = age, y = abg_biomass_DW_mg, color = chamber, shape = temp)) +
+ggplot(expdf, aes(x = age, y = abg_biomass_DW_mg, color = chamber, shape = tier)) +
+  geom_point() +
+  facet_grid(rows = vars(temp),
+             cols = vars(light))
+
+ggplot(expdf, aes(x = age, y = abg_biomass_DW_mg)) +
+  geom_point() +
+  facet_grid(rows = vars(temp),
+             cols = vars(light))
+
+m1 <- lm(abg_biomass_DW_mg ~ light + chamber + tier, data = subset(expdf, temp == "31/31"))
+m2 <- lm(abg_biomass_DW_mg ~ light + chamber, data = subset(expdf, temp == "31/31"))
+m3 <- lm(abg_biomass_DW_mg ~ light, data = subset(expdf, temp == "31/31"))
+anova(m2, m3)
+anova(m1, m2)
+
+ggplot(subset(expdf, temp == "31/31")) +
+  geom_point(aes(x = as.factor(light), y = abg_biomass_DW_mg, col = chamber))
+
+m4 <- lm(abg_biomass_DW_mg ~ temp + chamber + tier, data = subset(expdf, light == "430"))
+m5 <- lm(abg_biomass_DW_mg ~ temp + chamber, data = subset(expdf, light == "430"))
+m6 <- lm(abg_biomass_DW_mg ~ temp, data = subset(expdf, light == "430"))
+anova(m5, m6)
+anova(m4, m5)
+
+ggplot(subset(expdf, light == "430")) +
+  geom_point(aes(x = temp, y = abg_biomass_DW_mg, col = chamber, shape = tier))
+
+foo <- subset(expdf, light == "430" & temp == "31/31")
+ggplot(foo, aes(x = chamber, y = abg_biomass_DW_mg, col = as.factor(exp_number))) +
   geom_point()
 
-
+foo <- subset(expdf, light == "250" & temp == "31/31")
+ggplot(foo, aes(x = chamber, y = abg_biomass_DW_mg, col = as.factor(exp_number))) +
+  geom_point()
 ```
