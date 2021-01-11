@@ -3,6 +3,8 @@ title: "Organize biomass data"
 author: "Jessica Guo"
 date: "1/5/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -267,7 +269,7 @@ exp_6 <- read_excel(data_path, sheets_names[6], n_max = 160) %>%
 Experiment 7 was conducted on ME034V-1 and A-10 and an additional 12 genotypes in 3 chambers (157, 158, and 159), set to a day/night temperature of 22, 31, and 17, respectively. Light was set to 430 for all chambers and tiers. 
 ```{r 7th}
 exp_7 <- read_excel(data_path, sheets_names[5]) %>% 
-  select( -"side_view_images_started", -"roots_dw_g") %>%
+  select( -"side_view_images_started") %>%
   rename(species = "specie", 
          pi_id = "Pi camera ID",
          temp = "temperature _°C",
@@ -280,9 +282,9 @@ exp_7 <- read_excel(data_path, sheets_names[5]) %>%
          panicle_FW_g = "panicle_fw_g",
          stem_FW_g = "stem_fw_g", 
          leaf_FW_g = "leaf_fw_g",
-         panicle_DW_mg = "panicle_dw_mg", 
-         stem_DW_mg = "stem_dw_mg",
-         leaf_DW_mg = "leaf_dw_mg") %>%
+         panicle_DW_g = "panicle_dw_g", 
+         stem_DW_g = "stem_dw_g",
+         leaf_DW_g = "leaf_dw_g") %>%
   filter(height_tip != "dead") %>%
   filter(harvest_date != "dead") %>%
   filter(!grepl("bagged", harvest_date)) %>% # remove because no yield reported
@@ -305,9 +307,9 @@ exp_7 <- read_excel(data_path, sheets_names[5]) %>%
 
 Experiment 8 was conducted on ME034V-1 and an additional 7 genotypes in 2 chambers (157 and 158), all set to a day/night temperature of 31/22. Light was set to 430 across all chambers and tiers. 
 ```{r 8th}
-exp_8 <- read_excel(data_path, sheets_names[4]) %>% 
+exp_8 <- read_excel(data_path, sheets_names[3]) %>% 
   select( -"notes", -"side_view_images_started", 
-          -"sample_for", -"roots_dw_g") %>%
+          -"sample_for") %>%
   rename(species = "specie", 
          pi_id = "Pi camera ID",
          temp = "temperature (°C) 12 hours day/12 hours night",
@@ -320,9 +322,9 @@ exp_8 <- read_excel(data_path, sheets_names[4]) %>%
          panicle_FW_g = "panicle_fw_g",
          stem_FW_g = "stem_fw_g", 
          leaf_FW_g = "leaf_fw_g",
-         panicle_DW_mg = "panicle_dw_mg", 
-         stem_DW_mg = "stem_dw_mg",
-         leaf_DW_mg = "leaf_dw_mg", 
+         panicle_DW_g = "panicle_dw_g", 
+         stem_DW_g = "stem_dw_g",
+         leaf_DW_g = "leaf_dw_g", 
          yield_g = "yield_g") %>%
   filter(!is.na(harvest_date)) %>%
   mutate(exp_number = 8) %>%
@@ -336,7 +338,7 @@ exp_8 <- read_excel(data_path, sheets_names[4]) %>%
 
 Experiment 9 was conducted on ME034V-1 and an additional 7 genotypes in 2 chambers (157 and 158), all set to a day/night temperature of 31. Light was set to 430 across all chambers and tiers. 
 ```{r 9th}
-exp_9 <- read_excel(data_path, sheets_names[3]) %>% 
+exp_9 <- read_excel(data_path, sheets_names[4]) %>% 
   select( -"notes", -"side_view_images_started", 
           -"sample_for", -"SFM scans__approximate_time1", 
           -"SFM scans__approximate_time2",
@@ -353,9 +355,9 @@ exp_9 <- read_excel(data_path, sheets_names[3]) %>%
          panicle_FW_g = "panicle_fw_g",
          stem_FW_g = "stem_fw_g", 
          leaf_FW_g = "leaf_fw_g",
-         panicle_DW_mg = "panicle_dw_mg", 
-         stem_DW_mg = "stem_dw_mg",
-         leaf_DW_mg = "leaf_dw_mg", 
+         panicle_DW_g = "panicle_dw_g", 
+         stem_DW_g = "stem_dw_g",
+         leaf_DW_g = "leaf_dw_g", 
          yield_g = "yield_g") %>%
   filter(!is.na(harvest_date)) %>%
   mutate(exp_number = 9) %>%
@@ -456,19 +458,28 @@ df6 <- exp_6 %>%
 df7 <- exp_7 %>%
   mutate(root_FW_g = NA,
          root_DW_mg = NA,
+         panicle_DW_mg = ud.convert(panicle_DW_g, "g", "mg"),
+         stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
+         leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg"),
          yield_g = NA) %>%
   mutate(treatment = NA)
 
 
 df8 <- exp_8 %>%
   mutate(root_FW_g = NA,
-         root_DW_mg = NA) %>%
+         root_DW_mg = NA,
+         panicle_DW_mg = ud.convert(panicle_DW_g, "g", "mg"),
+         stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
+         leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg")) %>%
   mutate(treatment = NA)
 
 
 df9 <- exp_9 %>%
   mutate(root_FW_g = NA,
-         root_DW_mg = NA)
+         root_DW_mg = NA,
+         panicle_DW_mg = ud.convert(panicle_DW_g, "g", "mg"),
+         stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
+         leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg"))
 ```
 
 Use the final column names to unify across dataframes. 
@@ -479,15 +490,15 @@ cnames <- c("exp_number", "plantID", "pi_id", "genotype", "treatment", "species"
             "panicle_FW_g", "stem_FW_g", "leaf_FW_g", "root_FW_g", 
             "panicle_DW_mg", "stem_DW_mg", "leaf_DW_mg", "root_DW_mg", "yield_g")
 
-df_all <- bind_rows(select(df1, cnames),
-                    select(df2, cnames),
-                    select(df3, cnames),
-                    select(df4, cnames),
-                    select(df5, cnames),
-                    select(df6, cnames),
-                    select(df7, cnames),
-                    select(df8, cnames),
-                    select(df9, cnames))
+df_all <- bind_rows(select(df1, all_of(cnames)),
+                    select(df2, all_of(cnames)),
+                    select(df3, all_of(cnames)),
+                    select(df4, all_of(cnames)),
+                    select(df5, all_of(cnames)),
+                    select(df6, all_of(cnames)),
+                    select(df7, all_of(cnames)),
+                    select(df8, all_of(cnames)),
+                    select(df9, all_of(cnames)))
 ```
 
 ## Add leaf area
