@@ -8,6 +8,7 @@ urlcolor: blue
 ## Read in libraries
 
 ```{r}
+devtools::install("~/pecan/models/biocro")
 library(PEcAn.BIOCRO)
 library(ncdf4)
 library(PEcAn.all)
@@ -42,7 +43,7 @@ met_stlew <- nc_open("/data/dbfiles/narr_subsets/stlew.nc")
 latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
                       lon = ncvar_get(met_stlew, "longitude"))
 
-dir.create("/data/output/biocro_gs_testing", recursive = TRUE, showWarnings = FALSE)
+#dir.create("/data/output/biocro_gs_testing", recursive = TRUE, showWarnings = TRUE)
 ```
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
@@ -76,7 +77,7 @@ estimate_biomass <- function(genotype){
     gs_testing_results <- rbind(gs_testing_results, regional_run_result_daily)
     print(point)
   }
-  results_path <- paste0("/data/output/biocro_gs_testing/stlew_", genotype, ".csv")
+  results_path <- paste0("/data/output/biocro_regional_runs/gs_test_", genotype, ".csv")
   write.csv(gs_testing_results, results_path)
 }
 lapply(genotypes, estimate_biomass)
