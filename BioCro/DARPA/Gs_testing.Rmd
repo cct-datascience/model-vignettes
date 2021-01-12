@@ -3,6 +3,8 @@ title: "How does decreasing stomatal slope affect transpiration and biomass?"
 author: "Author: Kristina Riemer, Jessica Guo"
 output: github_document
 urlcolor: blue
+editor_options: 
+  chunk_output_type: console
 ---
 
 ## Read in libraries
@@ -43,7 +45,7 @@ met_stlew <- nc_open("/data/dbfiles/narr_subsets/stlew.nc")
 latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
                       lon = ncvar_get(met_stlew, "longitude"))
 
-#dir.create("/data/output/biocro_gs_testing", recursive = TRUE, showWarnings = TRUE)
+dir.create("/data/output/biocro_regional_runs", recursive = TRUE, showWarnings = FALSE)
 ```
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
@@ -53,11 +55,9 @@ The BioCro model is then run for each location of interest, using the config fil
 The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. These are saved as csv files. 
 
 The below function was originally written to run BioCro across a grid ('regional runs') and here has been modified to run at only three locations: St. Louis (MO), Pueblo (CO), and Monticello (UT). 
-lon = -90.199402, lat = 38.627003
-38.27854493790886, -104.5953341613334
-37.86899250000444, -109.33881449753827
 ```{r}
-loc.coords <- data.frame(lat = c(38.625, 38.375, 37.875), 
+loc.coords <- data.frame(site = c("St. Louis, MO", "Pueblo, CO", "Monticello, UT"),
+                         lat = c(38.625, 38.375, 37.875), 
                          lon = c(-90.125, -104.625, -109.375))
 estimate_biomass <- function(genotype){
   config_path <- paste0("Gs_testing_inputs/config_", genotype, ".xml")
@@ -72,8 +72,8 @@ estimate_biomass <- function(genotype){
                                soil.nc = soil_nc,
                                config = config)
     regional_run_result_daily <- regional_run_result$daily
-    regional_run_result_daily$lat <- latlon$lat[point]
-    regional_run_result_daily$lon <- latlon$lon[point]
+    regional_run_result_daily$lat <- loc.coords$lat[point]
+    regional_run_result_daily$lon <- loc.coords$lon[point]
     gs_testing_results <- rbind(gs_testing_results, regional_run_result_daily)
     print(point)
   }
@@ -86,15 +86,15 @@ lapply(genotypes, estimate_biomass)
 The csv files are read in, combined, and cleaned/modified for later plotting. 
 
 ```{r}
-rr_results <- c()
+gs_results <- c()
 for(genotype in genotypes){
-  biomass_path <- paste0("/data/output/biocro_regional_runs/stlew_", genotype, ".csv")
-  rr_single <- read.csv(biomass_path)
-  rr_single$genotype <- genotype
-  rr_results <- rbind(rr_results, rr_single)
+  biomass_path <- paste0("/data/output/biocro_regional_runs/gs_test_", genotype, ".csv")
+  gs_single <- read.csv(biomass_path)
+  gs_single$genotype <- genotype
+  gs_results <- rbind(gs_results, gs_single)
 }
 
-rr_results <- rr_results %>% 
+gs_results <- gs_results %>% 
   mutate(date = as.Date(doy, "2009-12-31"), 
          latlon = paste0(lat, lon), 
          total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
@@ -103,10 +103,13 @@ rr_results <- rr_results %>%
          transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"), 
          genotype_formal = case_when(
            genotype == "wt" ~ "Wild type", 
-           genotype == "ss" ~ "Reduced stomatal conductance", 
-           genotype == "ca" ~ "Dwarf" 
-         ), 
-         genotype_formal = factor(genotype_formal, levels = c("Wild type", "Reduced stomatal conductance", "Dwarf")))
+           genotype == "ss1" ~ "Gs reduced by 1.5", 
+           genotype == "ss2" ~ "Gs reduced by 3"), 
+         genotype_formal = factor(genotype_formal, levels = c("Wild type", "Gs reduced by 1.5", "Gs reduced by 3")),
+         Location = case_when(
+           latlon == "38.625-90.125" ~ "St. Louis, MO", 
+           latlon == "38.375-104.625" ~ "Pueblo, CO", 
+           latlon == "37.875-109.375" ~ "Monticello, UT"),)
 ```
 
 # Plot biomass 
@@ -116,10 +119,19 @@ rr_results <- rr_results %>%
 The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
 
 ```{r}
-ggplot(rr_results, aes(x = date, y = total_biomass, group = latlon, color = latlon)) +
+ggplot(gs_results, aes(x = date, y = total_biomass, group = genotype_formal, color = genotype_formal)) +
   geom_line() +
-  theme(legend.position = "none") +
-  facet_wrap(~genotype_formal)
+  theme_bw(base_size = 12) +
+  scale_y_continuous(expression(paste("Total biomass (kg ", m^2, ")")))+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~Location, scales = "free_y", ncol = 1)
+
+ggplot(gs_results, aes(x = date, y = transpiration, group = genotype_formal, color = genotype_formal)) +
+  geom_line() +
+  theme_bw(base_size = 12) +
+  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ")")))+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~Location, scales = "free_y", ncol = 1)
 ```
 
 The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
