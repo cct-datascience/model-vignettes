@@ -18,6 +18,7 @@ library(dplyr)
 library(purrr)
 library(udunits2)
 library(ggplot2)
+library(data.table)
 ```
 
 ## Testing sensitivity of modeled transpiration and biomass to Gs parameters
@@ -106,13 +107,13 @@ gs_results <- gs_results %>%
            genotype == "ss1" ~ "Gs reduced by 1.5", 
            genotype == "ss2" ~ "Gs reduced by 3"), 
          genotype_formal = factor(genotype_formal, levels = c("Wild type", "Gs reduced by 1.5", "Gs reduced by 3")),
-         Location = case_when(
+         ocation = case_when(
            latlon == "38.625-90.125" ~ "St. Louis, MO", 
            latlon == "38.375-104.625" ~ "Pueblo, CO", 
            latlon == "37.875-109.375" ~ "Monticello, UT"),)
 ```
 
-# Plot biomass 
+# Plot biomass and transpiration
 
 ## By genotype
 
@@ -124,15 +125,67 @@ ggplot(gs_results, aes(x = date, y = total_biomass, group = genotype_formal, col
   theme_bw(base_size = 12) +
   scale_y_continuous(expression(paste("Total biomass (kg ", m^2, ")")))+
   scale_x_date(date_labels = "%b")+
-  facet_wrap(~Location, scales = "free_y", ncol = 1)
+  facet_wrap(~location, scales = "free_y", ncol = 1)
 
 ggplot(gs_results, aes(x = date, y = transpiration, group = genotype_formal, color = genotype_formal)) +
   geom_line() +
   theme_bw(base_size = 12) +
   scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ")")))+
   scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, scales = "free_y", ncol = 1)
+```
+
+## Add RH and VPD
+
+```{r}
+# VPD function
+VPD <- function(temp_C, RH_percent){
+  es = (6.11 * exp((2500000/461) * (1/273 - 1/(273 + temp_C))))
+  vpd = (((100 - RH_percent)/1000) * es)
+  return(vpd)
+}
+
+# Combine hourly weather data
+met_all <- c()
+for(point in 1:nrow(loc.coords)){ 
+    biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
+                            loc.coords$lat[point], "-", loc.coords$lon[point])
+    met <- read.csv(paste0(biocro_met_path, ".2010.csv"))
+    
+    met_df <- met %>%
+      mutate(date = as.Date(doy, "2009-12-31"), 
+             location = loc.coords$site[point],
+             D = VPD(Temp, RH*100)) %>%
+      filter(year == 2010)
+    met_all <- rbind(met_all, met_df)
+}
+
+# Summarize to daily
+met_all <- data.table(met_all)
+met_daily <- met_all[, .(year = unique(year),
+                         solar = mean(solar), 
+                         Temp = mean(Temp),
+                         RH = mean(RH),
+                         VPD = mean(D),
+                         windspeed = mean(windspeed),
+                         precip = sum (precip)), by = .(location, date)]
+
+ggplot(met_daily, aes(x = date, y = VPD, color = location, group = location)) +
+  geom_line() +
+  theme_bw(base_size = 12) +
+  scale_y_continuous("VPD (kPa)")+
+  scale_x_date(date_labels = "%b")
+
+# Combine
+ggplot() +
+  geom_line(data = met_daily, aes(x = date, y = RH))
+  geom_line(data = gs_results, aes(x = date, y = transpiration, group = genotype_formal, color = genotype_formal)) +
+  theme_bw(base_size = 12) +
+  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ")")))+
+  scale_x_date(date_labels = "%b")+
   facet_wrap(~Location, scales = "free_y", ncol = 1)
 ```
+
 
 The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
 
