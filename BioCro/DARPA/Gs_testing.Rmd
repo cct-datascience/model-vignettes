@@ -107,6 +107,11 @@ gs_results <- gs_results %>%
            genotype == "ss1" ~ "Gs reduced by 1.5", 
            genotype == "ss2" ~ "Gs reduced by 3"), 
          genotype_formal = factor(genotype_formal, levels = c("Wild type", "Gs reduced by 1.5", "Gs reduced by 3")),
+         treatment = case_when(
+           genotype == "wt" ~ "g1 = 4.86 (wt)", 
+           genotype == "ss1" ~ "g1 = 3.36", 
+           genotype == "ss2" ~ "g1 = 1.86"),
+         treatment = factor(treatment, levels = c("g1 = 4.86 (wt)", "g1 = 3.36", "g1 = 1.86")),
          location = case_when(
            latlon == "38.625-90.125" ~ "St. Louis, MO", 
            latlon == "38.375-104.625" ~ "Pueblo, CO", 
@@ -180,11 +185,11 @@ ggplot(met_daily, aes(x = date, y = VPD, color = location, group = location)) +
 ggplot() +
   geom_line(data = met_daily, aes(x = date, y = VPD)) +
   geom_bar(data = met_daily, aes(x = date, y = precip/10), stat = "identity") +
-  geom_line(data = gs_results, aes(x = date, y = transpiration, group = genotype_formal, color = genotype_formal)) +
-  theme_bw(base_size = 12) +
-  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ")")))+
+  geom_line(data = gs_results, aes(x = date, y = transpiration, group = treatment, color = treatment)) +
+  theme_bw(base_size = 11) +
+  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ") | VPD (kPa) | Precip/10 (mm) ")))+
   scale_x_date(date_labels = "%b")+
-  facet_wrap(~location, scales = "free_y", ncol = 1)
+  facet_wrap(~location, ncol = 1)
 ```
 
 
