@@ -289,3 +289,45 @@ trans_comp_2 <- ggplot() +
 
 cowplot::plot_grid(trans_comp_1, trans_comp_2, ncol = 1)
 ```
+
+Comparison of the relative change in transpiration per pixel and over time. 
+```{r}
+wt <- rr_results %>%
+  filter(genotype == "wt") %>%
+  mutate(date = as.POSIXct(date)) %>% 
+  select(date, doy, lat, lon, latlon, total_biomass, transpiration, genotype_formal)
+  
+ss <- rr_results %>%
+  filter(genotype == "ss") %>%
+  mutate(date = as.POSIXct(date)) %>% 
+  select(date, doy, lat, lon, latlon, total_biomass, transpiration, genotype_formal)
+
+rr_relative <- wt %>%
+  mutate(trans_ss = ss$transpiration,
+         biomass_ss = ss$total_biomass) %>%
+  mutate(prop_trans = trans_ss/transpiration,
+         prop_biomass = biomass_ss/total_biomass)
+
+trans_prop_animation <- ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = rr_relative, aes(x = lon, y = lat, fill = prop_trans), 
+              alpha = 0.9) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
+                       midpoint = 0.95, 
+                       breaks = seq(0, 1.5, 5), 
+                       limits = c(0, 1.5)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  theme_classic(base_size = 20) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+animate(trans_prop_animation, fps = 100, height = 400, width = 400)
+anim_save("stlew_trans_prop.gif", animation = trans_prop_animation, 
+          path = "/data/output/biocro_regional_runs/", fps = 100, height = 400, width = 400)
+```
