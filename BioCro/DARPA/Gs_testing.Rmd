@@ -1,4 +1,5 @@
----
+  facet_wrap(~location, scales = "free_y", ncol = 1)
+```---
 title: "How does decreasing stomatal slope affect transpiration and biomass?"
 author: "Author: Kristina Riemer, Jessica Guo"
 output: github_document
@@ -100,8 +101,14 @@ gs_results <- gs_results %>%
          latlon = paste0(lat, lon), 
          total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
                                     "Mg/ha", "kg/m2"), 
+         leaf_biomass =  ud.convert(as.numeric(Leaf), 
+                                    "Mg/ha", "kg/m2"),
          total_biomass = ifelse(total_biomass < 0, 0, total_biomass), 
          transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"), 
+         evaporation = ud.convert(SoilEvaporation, "Mg/ha/hr", "kg/m2/hr"),
+         ET = transpiration + evaporation,
+         T_ET = transpiration / ET,
+         WUE = total_biomass / transpiration,
          genotype_formal = case_when(
            genotype == "wt" ~ "Wild type", 
            genotype == "ss1" ~ "Gs reduced by 1.5", 
@@ -125,13 +132,17 @@ gs_results <- gs_results %>%
 The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
 
 ```{r}
-ggplot(gs_results, aes(x = date, y = total_biomass, group = genotype_formal, color = genotype_formal)) +
-  geom_line() +
+ggplot(gs_results, aes(x = date, group = genotype_formal, color = genotype_formal)) +
+  geom_line(aes(y = total_biomass)) +
+  geom_line(aes(y = leaf_biomass), lty = 2) +
   theme_bw(base_size = 12) +
   scale_y_continuous(expression(paste("Total biomass (kg ", m^2, ")")))+
   scale_x_date(date_labels = "%b")+
-  facet_wrap(~location, scales = "free_y", ncol = 1)
+  facet_wrap(~location, ncol = 1)
+```
 
+The results for total transpiration for each location across the year of 2010 are visualized. 
+```{r}
 ggplot(gs_results, aes(x = date, y = transpiration, group = genotype_formal, color = genotype_formal)) +
   geom_line() +
   theme_bw(base_size = 12) +
@@ -140,7 +151,29 @@ ggplot(gs_results, aes(x = date, y = transpiration, group = genotype_formal, col
   facet_wrap(~location, scales = "free_y", ncol = 1)
 ```
 
-## Add RH and VPD
+The results for T/ET for each location across the year of 2010 are visualized. 
+```{r}
+ggplot(gs_results, aes(x = date, y = T_ET, group = genotype_formal, color = genotype_formal)) +
+  geom_line() +
+  theme_bw(base_size = 12) +
+  scale_y_continuous("T/ET")+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, ncol = 1)
+```
+
+The results for WUE, which is biomass / transpiration, for each location across the year of 2010 are visualized. 
+```{r}
+ggplot(gs_results, aes(x = date, y = WUE, group = genotype_formal, color = genotype_formal)) +
+  geom_line() +
+  theme_bw(base_size = 12) +
+  scale_y_continuous("WUE")+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, scale = "free_y", ncol = 1)
+```
+
+Differences are most clear in T/ET at the Pueblo, CO location. 
+
+Next, add environmental variables in order to understand the local drivers of T behavior. 
 
 ```{r}
 # VPD function
@@ -174,198 +207,47 @@ met_daily <- met_all[, .(year = unique(year),
                          VPD = mean(D),
                          windspeed = mean(windspeed),
                          precip = sum (precip)), by = .(location, date)]
+met_daily <- met_daily[, .(date = date,
+                           year = year,
+                           solar = solar,
+                           Temp = Temp,
+                           RH = RH,
+                           VPD = VPD,
+                           windspeed = windspeed,
+                           precip = precip,
+                           cum_precip = cumsum(precip)), by = .(location)]
 
-ggplot(met_daily, aes(x = date, y = VPD, color = location, group = location)) +
-  geom_line() +
+ggplot(met_daily, aes(x = date,  group = location)) +
+  geom_line(aes(y = Temp, color = location,)) +
+  geom_line(aes(y = VPD, color = location,)) +
+  geom_bar(aes(y = cum_precip), stat = "identity") +
   theme_bw(base_size = 12) +
   scale_y_continuous("VPD (kPa)")+
-  scale_x_date(date_labels = "%b")
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location)
+```
 
-# Combine
+Combine transpiration, VPD, and precipitation in the same time-series plot. 
+```{r}
 ggplot() +
+  geom_bar(data = met_daily, aes(x = date, y = precip/10), stat = "identity", alpha = 0.25) +
   geom_line(data = met_daily, aes(x = date, y = VPD)) +
-  geom_bar(data = met_daily, aes(x = date, y = precip/10), stat = "identity") +
-  geom_line(data = gs_results, aes(x = date, y = transpiration, group = treatment, color = treatment)) +
+    geom_line(data = gs_results, aes(x = date, y = transpiration, group = treatment, color = treatment)) +
   theme_bw(base_size = 11) +
-  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ") | VPD (kPa) | Precip/10 (mm) ")))+
+  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ") | VPD (kPa) | Precip (cm) ")))+
   scale_x_date(date_labels = "%b")+
   facet_wrap(~location, ncol = 1)
 ```
 
-
-The final map plots estimated biomass values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
-
+Combine biomass, VPD, and cumulative precipitation in the same time-series plot. 
 ```{r}
-gif_background <- map_data("state")
-city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
-
-biomass_animation <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = total_biomass), 
-              alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
-                       midpoint = 1, 
-                       breaks = seq(-10, 10, 0.4), 
-                       limits = c(0, 2)) +
-  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
-  facet_wrap(~genotype_formal, ncol = 1) +
-  theme_classic(base_size = 20) +
-  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
-        panel.grid.major = element_line(colour = "grey"),
-        panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "") +
-  transition_manual(doy) +
-  ggtitle('Day: {current_frame}')
-
-animate(biomass_animation, fps = 100, height = 400, width = 400)
-anim_save("stlew_biomass.gif", animation = biomass_animation, 
-          path = "/data/output/biocro_regional_runs", fps = 100, height = 400, width = 400)
-```
-
-## Comparisons
-
-Calculating biomass and transpiration summaries by day for each genotype. 
-
-```{r}
-rr <- rr_results %>% 
-  mutate(date = as.POSIXct(date)) %>% 
-  select(date, lat, lon, latlon, total_biomass, transpiration, genotype_formal) %>% 
-  group_by(genotype_formal, date) %>% 
-  summarize(mean_total_biomass = mean(total_biomass), 
-            var_total_biomass = sd(total_biomass), 
-            mean_transpiration = mean(transpiration), 
-            var_transpiration = sd(transpiration))
-```
-
-Comparison of time series of mean and variation of total biomass by date, between two modified genotypes with the wild type. 
-
-```{r}
-bio_comp_1 <- ggplot() +
-  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
-            aes(x = date, y = mean_total_biomass, 
-                group = stringr::str_wrap(genotype_formal, 12), 
-                color = stringr::str_wrap(genotype_formal, 12))) +
-  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
-              aes(x = date, ymin = mean_total_biomass - var_total_biomass, 
-                  ymax = mean_total_biomass + var_total_biomass, 
-                  group = stringr::str_wrap(genotype_formal, 12), 
-                  fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
-  scale_x_datetime(labels = scales::date_format("%b")) +
-  scale_color_manual(values = c("red", "black")) +
-  scale_fill_manual(values = c("red", "black")) +
-  labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
-  theme_classic() +
-  lims(y = c(0, 2))
-
-bio_comp_2 <- ggplot() +
-  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
-            aes(x = date, y = mean_total_biomass, 
-                group = stringr::str_wrap(genotype_formal, 12), 
-                color = stringr::str_wrap(genotype_formal, 12))) +
-  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
-              aes(x = date, ymin = mean_total_biomass - var_total_biomass, 
-                  ymax = mean_total_biomass + var_total_biomass,
-                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
-  scale_x_datetime(labels = scales::date_format("%b")) +
-  scale_color_manual(values = c("orange", "black")) +
-  scale_fill_manual(values = c("orange", "black")) +
-  labs(x = "Month", y = "Biomass (kg/m2)", fill = "Genotype", color = "Genotype") +
-  theme_classic() +
-  lims(y = c(0, 2))
-
-cowplot::plot_grid(bio_comp_1, bio_comp_2, ncol = 1)
-```
-
-# Plot transpiration
-
-## By genotype
-
-The results for evapotranspiration for each location across the year of 2010 are visualized. 
-
-```{r}
-ggplot(rr_results, aes(x = date, y = transpiration, group = latlon, color = latlon)) +
-  geom_line(alpha = 0.2) +
-  labs(y = "Transpiration (kg/m2/hr)") +
-  theme(legend.position = "none") +
-  facet_wrap(~genotype_formal)
-```
-
-The final map plots estimated transpiration values for the `r length(unique(regional_run_results$latlon))` locations on a map of the United States, running through each day's values. 
-
-```{r}
-transpiration_animation <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_raster(data = rr_results, aes(x = lon, y = lat, fill = transpiration), 
-              alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
-                       midpoint = 7.5, 
-                       breaks = seq(0, 20, 5), 
-                       limits = c(0, 15)) +
-  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
-  facet_wrap(~genotype_formal, ncol = 1) +
-  theme_classic(base_size = 20) +
-  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
-        panel.grid.major = element_line(colour = "grey"),
-        panel.grid.minor = element_line(colour = "grey")) +
-  labs(x = "", y = "", fill = "") +
-  transition_manual(doy) +
-  ggtitle('Day: {current_frame}')
-
-animate(transpiration_animation, fps = 100, height = 400, width = 400)
-anim_save("stlew_transpiration.gif", animation = transpiration_animation, 
-          path = "/data/output/biocro_regional_runs/", fps = 100, height = 400, width = 400)
-
 ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
-               fill = "white", color = "black") +
-  geom_segment(aes(x = -114, y = 40.5, xend = -78, yend = 40.5), size = 3) +
-  geom_segment(aes(x = -114, y = 36, xend = -78, yend = 36), size = 3) +
-  geom_segment(aes(x = -114, y = 40.5, xend = -114, yend = 36), size = 3) +
-  geom_segment(aes(x = -78, y = 40.5, xend = -78, yend = 36), size = 3) +
-  theme_nothing()
+  geom_bar(data = met_daily, aes(x = date, y = cum_precip/1000), stat = "identity", alpha = 0.25) +
+  # geom_line(data = met_daily, aes(x = date, y = Temp/30)) +
+  geom_line(data = gs_results, aes(x = date, y = total_biomass, group = treatment, color = treatment)) +
+  theme_bw(base_size = 11) +
+  scale_y_continuous(expression(paste("Biomass (kg ", m^-2, ") | VPD (kPa) | cum_precip (m) ")))+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, scales = "free_y", ncol = 1)
 ```
 
-## Comparisons
-
-Comparison of time series of mean and variation of total biomass by date, between two modified genotypes with the wild type. 
-
-```{r}
-trans_comp_1 <- ggplot() +
-  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
-            aes(x = date, y = mean_transpiration, 
-                group = stringr::str_wrap(genotype_formal, 12), 
-                color = stringr::str_wrap(genotype_formal, 12))) +
-  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Reduced stomatal conductance")), 
-              aes(x = date, ymin = mean_transpiration - var_transpiration, 
-                  ymax = mean_transpiration + var_transpiration, 
-                  group = stringr::str_wrap(genotype_formal, 12), 
-                  fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
-  scale_x_datetime(labels = scales::date_format("%b")) +
-  scale_color_manual(values = c("red", "black")) +
-  scale_fill_manual(values = c("red", "black")) +
-  labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
-  theme_classic() +
-  lims(y = c(0, 15))
-
-trans_comp_2 <- ggplot() +
-  geom_line(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
-            aes(x = date, y = mean_transpiration, 
-                group = stringr::str_wrap(genotype_formal, 12), 
-                color = stringr::str_wrap(genotype_formal, 12))) +
-  geom_ribbon(data = filter(rr, genotype_formal %in% c("Wild type", "Dwarf")), 
-              aes(x = date, ymin = mean_transpiration - var_transpiration, 
-                  ymax = mean_transpiration + var_transpiration,
-                  group = stringr::str_wrap(genotype_formal, 12), fill = stringr::str_wrap(genotype_formal, 12)), alpha = 0.2) +
-  scale_x_datetime(labels = scales::date_format("%b")) +
-  scale_color_manual(values = c("orange", "black")) +
-  scale_fill_manual(values = c("orange", "black")) +
-  labs(x = "Month", y = "Transpiration (kg/m2/hr)", fill = "Genotype", color = "Genotype") +
-  theme_classic() +
-  lims(y = c(0, 15))
-
-cowplot::plot_grid(trans_comp_1, trans_comp_2, ncol = 1)
-```
