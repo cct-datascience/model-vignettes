@@ -92,6 +92,8 @@ rr_results <- rr_results %>%
                                     "Mg/ha", "kg/m2"), 
          total_biomass = ifelse(total_biomass < 0, 0, total_biomass), 
          transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"), 
+         evaporation = ud.convert(SoilEvaporation, "Mg/ha/hr", "kg/m2/hr"), 
+         T_ET = transpiration/ (transpiration + evaporation), 
          genotype_formal = case_when(
            genotype == "wt" ~ "Wild type", 
            genotype == "ss" ~ "Reduced stomatal conductance", 
@@ -314,12 +316,12 @@ trans_prop_animation <- ggplot() +
   geom_raster(data = rr_relative, aes(x = lon, y = lat, fill = prop_trans), 
               alpha = 0.9) +
   geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
+  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "navyblue", 
                        midpoint = 0.95, 
-                       breaks = seq(0, 1.5, 5), 
-                       limits = c(0, 1.5)) +
+                       breaks = seq(.5, 1.5, 0.5), 
+                       limits = c(0.45, 1.5)) +
   coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
-  theme_classic(base_size = 20) +
+  theme_classic(base_size = 12) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
@@ -327,7 +329,31 @@ trans_prop_animation <- ggplot() +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
-animate(trans_prop_animation, fps = 100, height = 400, width = 400)
-anim_save("stlew_trans_prop.gif", animation = trans_prop_animation, 
-          path = "/data/output/biocro_regional_runs/", fps = 100, height = 400, width = 400)
+animate(trans_prop_animation, fps = 10, height = 150, width = 600)
+anim_save("stlew_trans_rel_prop.gif", animation = trans_prop_animation, 
+          path = "/data/output/biocro_regional_runs/", fps = 10, height = 150, width = 600)
+
+biomass_prop_animation <- ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = rr_relative, aes(x = lon, y = lat, fill = prop_biomass), 
+              alpha = 0.9) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "forestgreen", high = "darkgreen", 
+                       midpoint = 0.95, 
+                       breaks = seq(.25, 1.25, 0.5), 
+                       limits = c(0.25, 1.25)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+animate(biomass_prop_animation, fps = 10, height = 150, width = 600)
+anim_save("stlew_biomass_rel_prop.gif", animation = biomass_prop_animation, 
+          path = "/data/output/biocro_regional_runs/", fps = 10, height = 150, width = 600)
+
 ```
