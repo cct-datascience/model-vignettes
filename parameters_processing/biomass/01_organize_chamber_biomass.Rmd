@@ -428,7 +428,6 @@ df2 <- exp_2 %>%
          sowing_date = germ_date) %>%
   mutate(treatment = NA)
 
-
 df3 <- exp_3 %>%
   mutate(root_FW_g = NA) %>%
   rename(transplant_date = temp_trt_started)
@@ -437,7 +436,6 @@ df4 <- exp_4 %>%
   mutate(root_FW_g = NA) %>%
   rename(transplant_date = temp_trt_started) %>%
   mutate(treatment = NA)
-
 
 df5 <- exp_5 %>%
   mutate(root_FW_g = NA) %>%
@@ -464,7 +462,6 @@ df7 <- exp_7 %>%
          yield_g = NA) %>%
   mutate(treatment = NA)
 
-
 df8 <- exp_8 %>%
   mutate(root_FW_g = NA,
          root_DW_mg = NA,
@@ -472,7 +469,6 @@ df8 <- exp_8 %>%
          stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
          leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg")) %>%
   mutate(treatment = NA)
-
 
 df9 <- exp_9 %>%
   mutate(root_FW_g = NA,
@@ -519,5 +515,5 @@ chamber_biomass <- left_join(df_all,
                              leafarea[c("exp_number", "plantID", "leaf_area_cm2")], 
                              by = c("exp_number", "plantID"))
 
-save(chamber_biomass, file = "chamber_biomass.Rdata")
+save(chamber_biomass, file = "~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
 ```

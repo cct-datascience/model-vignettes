@@ -1,0 +1,117 @@
+---
+title: "ANOVA chamber biomass"
+author: "Jessica Guo"
+date: "1/7/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Plant biomass data is used to validate crop and ecosystem model estimates. However, a validation showed large variation within treatment. Could these be due to the influence of chamber and tier?
+
+```{r}
+library(dplyr)
+library(udunits2)
+library(ggplot2)
+library(readxl)
+```
+
+### High night temperature
+
+First, we focus on the high night temperature treatment, genotype ME034V-1 at 250 uE light intensity and 31/31 day/night temperature. 
+
+```{r}
+load("~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
+
+valid <- chamber_biomass %>%
+  filter(!is.na(panicle_DW_mg) & 
+         !is.na(stem_DW_mg) &
+         !is.na(leaf_DW_mg)) %>%
+  filter(is.na(treatment) | treatment == "control") %>%
+  filter(genotype == "ME034V-1" & 
+         light == "250" &
+         temp == "31/31") %>%
+  mutate(age = harvest_date - sowing_date,
+         abg_biomass_DW_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg,
+         sla_m2_kg = ud.convert(leaf_area_cm2, "cm2", "m2") / 
+           ud.convert(leaf_DW_mg, "mg", "kg"))
+
+ggplot(valid, aes(x = age, y = abg_biomass_DW_mg, color = chamber, shape = tier)) +
+  geom_point()
+```
+
+Only data from experiments 1, 3, and 6 are included. It appears that chamber has a greater effect than tier, based on experiments 3 and 6. Next, we investigate the chamber environmental conditions for these experiments. 
+
+```{r}
+data_path <- "~/sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+sheets_names <- excel_sheets(data_path)
+
+env3 <- read_excel(data_path, sheets_names[12]) %>%
+  rename(chamber = location,
+         sens_temp_C = "sensor_temperature_readings_celsius",
+         set_temp_C = "temperature_setpoint_celsius",
+         sens_RH = "sensor_relative_humidity_readings_%",
+         set_RH = "relative_humidity_setpoint_%",
+         low_light = "bot_tier_sensor_ligth_readings_umol/m2/s",
+         mid_light = "mid_tier_sensor_ligth_readings_umol/m2/s",
+         high_light = "top_tier_sensor_ligth_readings_umol/m2/s")
+
+ggplot(env3[env3$chamber != "GCH157",], aes(x = date_time, y = sens_temp_C, col = chamber))+
+  geom_point(alpha = 0.5)+
+  scale_y_continuous(limits = c(30.5, 31.5))
+```
+
+While chamber 159 experiences greater variation in chamber temperature, the small magnitude makes it unlikely to explain the differences in biomass at day 47 for ME34/31/31/250. 
+
+### ANOVA for chamber effects
+
+Restricting to ME034V-genotype, biomass from at 40-42 days old, and focusing on the most common temperature (22/22, 31/31, 36/36) and light (250, 430) treatments.
+```{r}
+expdf <- chamber_biomass %>%
+  filter(!is.na(panicle_DW_mg) & 
+         !is.na(stem_DW_mg) &
+         !is.na(leaf_DW_mg)) %>%
+  filter(is.na(treatment) | treatment == "control") %>%
+  filter(genotype == "ME034V-1") %>%
+  filter(temp %in% c("22/22", "31/31", "36/36")) %>%
+  filter(light %in% c(250, 430)) %>%
+  mutate(age = as.numeric(difftime(harvest_date, sowing_date, units = "days")),
+         abg_biomass_DW_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg) %>%
+    filter(age %in% c(40, 41, 42))
+
+```
+
+For temperatures at 31/31, do chamber and tier matter in addition to light? Only light and chamber matter. 
+```{r}
+m1 <- lm(abg_biomass_DW_mg ~ light + chamber + tier, data = subset(expdf, temp == "31/31"))
+m2 <- lm(abg_biomass_DW_mg ~ light + chamber, data = subset(expdf, temp == "31/31"))
+m3 <- lm(abg_biomass_DW_mg ~ light, data = subset(expdf, temp == "31/31"))
+anova(m2, m3)
+anova(m1, m2)
+
+
+ggplot(subset(expdf, temp == "31/31"), aes(x = as.factor(light), y = abg_biomass_DW_mg, col = chamber)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(position = position_dodge(width = .75), size = 2.5)+
+  theme_bw()
+```
+
+For light at 430, do chamber and tier matter in addition to temperature? All three factors significantly influence biomass. 
+```{r}
+m4 <- lm(abg_biomass_DW_mg ~ temp + chamber + tier, data = subset(expdf, light == "430"))
+m5 <- lm(abg_biomass_DW_mg ~ temp + chamber, data = subset(expdf, light == "430"))
+m6 <- lm(abg_biomass_DW_mg ~ temp, data = subset(expdf, light == "430"))
+anova(m5, m6)
+anova(m4, m5)
+
+ggplot(subset(expdf, light == "430"), aes(x = temp, y = abg_biomass_DW_mg, col = chamber)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(aes(shape = tier), position = position_dodge(width = .75), size = 2.5)+
+  theme_bw()
+```
