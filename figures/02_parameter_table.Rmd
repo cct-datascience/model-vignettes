@@ -20,6 +20,7 @@ library(dplyr)
 library(data.table)
 library(tidyr)
 library(gt)
+library(Hotelling)
 ```
 
 ## Summarize parameter data
@@ -28,16 +29,16 @@ Obtain ACi and AQ data from the sentinel-detection [repo](https://github.com/dan
 
 ```{r}
 # List of experiments
-experiments <- read.csv("../../sentinel-detection/data/cleaned_data/experiments.csv")
+experiments <- read.csv("~/sentinel-detection/data/cleaned_data/experiments.csv")
 
 #
 # Read in high night temp
 hn_id <- experiments$ID[which(experiments$Treatment == "31_31_250")]
 hn <-  vector("list", length = length(hn_id))
 for(i in 1:length(hn_id)){
-  aci <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", hn_id[i], ".csv"), 
+  aci <- read.csv(paste0("~/sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", hn_id[i], ".csv"), 
                   na.strings = "#DIV/0!")
-  aq <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/AQ/AQin_curves_", hn_id[i], ".csv"), 
+  aq <- read.csv(paste0("~/sentinel-detection/data/cleaned_data/AQ/AQin_curves_", hn_id[i], ".csv"), 
                   na.strings = "#DIV/0!")
   
   dat <- rbind.data.frame(aci[, intersect(colnames(aci), colnames(aq))], 
@@ -52,9 +53,9 @@ for(i in 1:length(hn_id)){
 rn_id <- experiments$ID[which(experiments$Treatment == "31_22_250")]
 rn <-  vector("list", length = length(rn_id))
 for(i in 1:length(rn_id)){
-  aci <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", rn_id[i], ".csv"), 
+  aci <- read.csv(paste0("~/sentinel-detection/data/cleaned_data/ACi/A_Ci_curves_", rn_id[i], ".csv"), 
                   na.strings = "#DIV/0!")
-  aq <- read.csv(paste0("../../sentinel-detection/data/cleaned_data/AQ/AQin_curves_", rn_id[i], ".csv"), 
+  aq <- read.csv(paste0("~/sentinel-detection/data/cleaned_data/AQ/AQin_curves_", rn_id[i], ".csv"), 
                   na.strings = "#DIV/0!")
   
   dat <- rbind.data.frame(aci[, intersect(colnames(aci), colnames(aq))], 
@@ -116,7 +117,7 @@ ag_sum <- all_sum2 %>%
 Import parameters for all experiments and summarize. 
 
 ```{r}
-in_params <- as.data.table(read.csv("../../sentinel-detection/data/derived_data/parameters_data.csv"))
+in_params <- as.data.table(read.csv("~/sentinel-detection/data/derived_data/parameters_data.csv"))
 
 params_sum <- in_params[Treatment %in% c("31_22_250", "31_31_250"), .(p.mean = mean(Value, na.rm = T), 
                             p.se = SE(Value),
@@ -130,7 +131,6 @@ p_sum <- params_sum %>%
   bind_rows(ag_sum) %>%
   mutate(across(2:5, round, 3))
 ```
-
 
 ## Create table
 
@@ -190,4 +190,11 @@ print(tab1)
 gtsave(tab1, filename = "Table1.pdf", path = "/plots")
 ```
 
+## Conduct Hotelling's multivariate t-test
+
+Using A.m and gsw.m from all_sum and gas exchange parameters from in_params (SLA will be included when available for regular night temperature), format response matrix for Hotelling's multivariate t-test. 
+
+```{r}
+
+```
 
