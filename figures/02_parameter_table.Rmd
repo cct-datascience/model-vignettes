@@ -195,6 +195,33 @@ gtsave(tab1, filename = "Table1.pdf", path = "/plots")
 Using A.m and gsw.m from all_sum and gas exchange parameters from in_params (SLA will be included when available for regular night temperature), format response matrix for Hotelling's multivariate t-test. 
 
 ```{r}
+# Organize in_params into wide format
+params<- in_params %>%
+  filter(Treatment %in% c("31_31_250", "31_22_250")) %>%
+  select(ID, rep, Treatment, trait, Value) %>%
+  pivot_wider(names_from = trait, values_from = Value) %>%
+  select(-LCPT, -LSP, -Am, -g0M, -g1M) %>%
+  mutate(trt = case_when(Treatment == "31_31_250" ~ 1,
+                         Treatment == "31_22_250" ~ 2)) %>%
+  select(-ID, -rep, -Treatment) %>%
+  relocate(trt)
 
+# Add A.m and gsw.m from all_sum
+params <- left_join(params, all_sum[,c("ID", "rep", "A.m", "gsw.m")]) %>%
+  mutate(trt = case_when(Treatment == "31_31_250" ~ 1,
+                         Treatment == "31_22_250" ~ 2)) %>%
+  select(-ID, -rep, -Treatment) %>%
+  relocate(trt)
+
+# Conduct Hotelling's multivariate t-test
+fit <- hotelling.test(.~trt, data = params)
+fit
+
+# Conduct t-tests
+tt <- list()
+for(i in 1:6){
+  m <- t.test(c(params[,(i+1)])~params$trt)
+  tt[[i]] <- 
+}
 ```
 
