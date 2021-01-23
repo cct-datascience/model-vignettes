@@ -1,0 +1,70 @@
+<pecan>
+
+  <outdir>/data/output/pecan_runs/env_comp_results/oug</outdir>
+
+  <database>
+    <bety>
+      <driver>PostgreSQL</driver>
+      <user>bety</user>
+      <password>bety</password>
+      <host>postgres</host>
+      <dbname>bety</dbname>
+      <write>FALSE</write>
+    </bety>
+
+    <dbfiles>/data/output/pecan_runs/env_comp_results/out/dbfiles</dbfiles>
+
+  </database>
+
+  <pfts>
+    <pft>
+      <name>SetariaWT_ME034</name>
+      <outdir>/data/output/pecan_runs/env_comp_results/out/pft/SetariaWT_ME034</outdir>
+      <constants>
+        <file>/home/jessicaguo/model-vignettes/BioCro/DARPA/env_comparison/inputs/setaria.constants.xml</file>
+      </constants>
+    </pft>
+  </pfts>
+
+  <ensemble>
+    <size>100</size>
+    <variable>TotLivBiom</variable>
+    <variable>TVeg</variable>
+  </ensemble>
+
+  <meta.analysis>
+    <iter>30000</iter>
+    <random.effects>TRUE</random.effects>
+    <threshold>1.2</threshold>
+    <update>TRUE</update>
+    <treatment>outdoor JollyG soil</treatment>
+  </meta.analysis>
+
+  <sensitivity.analysis>
+    <variable>TotLivBiom</variable>
+    <variable>TVeg</variable>
+  </sensitivity.analysis>
+
+  <model>
+    <type>BIOCRO</type>
+    <binary>~/pecan/models/biocro/inst/biocro.Rscript</binary>
+    <revision>0.95</revision>
+  </model>
+
+  <run>
+    <site>
+      <id>9000000006</id>
+    </site>
+    <inputs>
+      <met>
+        <output>BIOCRO</output>
+        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/env_comparison/weather.out</path>
+      </met>
+    </inputs>
+      <start.date>2020/01/01</start.date>
+      <end.date>2020/12/31</end.date>
+    <host>
+      <name>localhost</name>
+    </host>
+  </run>
+</pecan>
