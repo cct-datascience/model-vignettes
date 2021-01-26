@@ -58,7 +58,7 @@
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/env_comparison/weather.ch</path>
+        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/env_comparison/inputs/weather.ch</path>
       </met>
     </inputs>
       <start.date>2020/01/01</start.date>

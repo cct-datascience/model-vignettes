@@ -36,7 +36,7 @@
     <iter>30000</iter>
     <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
-    <update>TRUE</update>
+    <update>FALSE</update>
     <treatment>outdoor JollyG soil</treatment>
   </meta.analysis>
 
@@ -58,7 +58,7 @@
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/env_comparison/weather.out</path>
+        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/env_comparison/inputs/weather.out</path>
       </met>
     </inputs>
       <start.date>2020/01/01</start.date>
