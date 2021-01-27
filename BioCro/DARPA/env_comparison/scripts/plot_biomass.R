@@ -51,50 +51,40 @@ ggplot(data = daily_biomass) +
 load("~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
 load("~/sentinel-detection/data/cleaned_data/biomass/greenhouse_outdoor_biomass.Rdata")
 
+# Filter
+# Calculating age and total aboveground biomass
+# Convert from milligrams to megagrams per hectare (each plant grown in pot with 103 cm2 area). 
 bio_ch <- chamber_biomass %>%
-  filter()
-data_path <- "../../../sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
-sheets_names <- excel_sheets(data_path)
-area_cm2 <- 103
-area_ha <- ud.convert(area_cm2, "cm2", "ha")
+  filter(genotype == "ME034V-1" & temp == "31/22" & light == 430) %>%
+  mutate(trt = "ch",
+         days_grown = difftime(harvest_date, sowing_date, units = "days"),
+         biomass_mg = panicle_DW_mg + stem_DW_mg + leaf_DW_mg,
+         biomass_Mgha = ud.convert(biomass_mg, "mg", "Mg")/ud.convert(103, "cm2", "ha"),
+         biomass_kgm2 = ud.convert(biomass_Mgha, "Mg/ha", "kg/m2")) %>%
+  filter(!is.na(biomass_mg)) %>%
+  select(trt, days_grown, biomass_kgm2)
 
-highnight_biomass1 <- read_excel(data_path, sheets_names[11]) %>% 
-  rename(temperature...C..day.night = 6, 
-         light.intensity = 7, 
-         sowing.date = 8, 
-         biomass.harvested = 12, 
-         panicles.DW..mg. = 21, 
-         stemDW.mg. = 18,
-         leaf.DW.mg. = 19, 
-         roots.DW..mg. = 20) %>% 
-  filter(genotype == "ME034V-1", temperature...C..day.night == "31.0", 
-         light.intensity == "250.0", 
-         treatment == "control", sample_for == "biomass") %>% 
-  mutate(days_grown = as.integer(as.Date(as.character(biomass.harvested), format = "%Y-%m-%d") - 
-                                   as.Date(as.numeric(sowing.date), origin = "1899-12-30")),
-         total_biomass_mg = panicles.DW..mg. + stemDW.mg. + leaf.DW.mg. + roots.DW..mg., 
-         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
-         total_biomass_kgm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "kg/m2")) %>% 
-  filter(!is.na(total_biomass_Mgha)) %>% 
-  select(days_grown, total_biomass_kgm2)
+bio_gh <- greenhouse_outdoor_biomass %>%
+  filter(genotype == "ME034V-1" & exp_site == "GH" & exp_number == 1 & treatment == "pot") %>%
+  mutate(trt = "gh",
+         days_grown = difftime(harvest_date, sowing_date, units = "days"),
+         biomass_g = panicle_DW_g + stem_DW_g + leaf_DW_g,
+         biomass_Mgha = ud.convert(biomass_g, "g", "Mg")/ud.convert(103, "cm2", "ha"),
+         biomass_kgm2 = ud.convert(biomass_Mgha, "Mg/ha", "kg/m2")) %>%
+  filter(!is.na(biomass_g)) %>%
+  select(trt, days_grown, biomass_kgm2)
 
-highnight_biomass2 <- read_excel(data_path, sheets_names[6]) %>% 
-  rename(temperature_C = 6, 
-         sowing_date = 8) %>% 
-  filter(genotype == "ME034V-1", temperature_C == "31.0", 
-         light_intensity == "250.0") %>% 
-  mutate(days_grown = as.integer(as.Date(as.character(biomass_harvest), format = "%Y-%m-%d") - 
-                                   as.Date(as.numeric(sowing_date), origin = "1899-12-30")),
-         total_biomass_mg = as.numeric(panicle_dry_weight_mg) + 
-           as.numeric(stem_dry_weight_mg) + as.numeric(leaf_dry_weight_mg) + 
-           as.numeric(roots_dry_weight_mg), 
-         total_biomass_Mgha = ud.convert(total_biomass_mg, "mg", "Mg") / area_ha, 
-         total_biomass_kgm2 = ud.convert(total_biomass_Mgha, "Mg/ha", "kg/m2")) %>% 
-  filter(!is.na(total_biomass_Mgha)) %>% 
-  select(days_grown, total_biomass_kgm2)
+bio_out <- greenhouse_outdoor_biomass %>%
+  filter(genotype == "ME034V-1" & exp_site == "Field" & exp_number == 2 & treatment == "field_pot") %>%
+  mutate(trt = "out",
+         days_grown = difftime(harvest_date, sowing_date, units = "days"),
+         biomass_g = panicle_DW_g + stem_DW_g + leaf_DW_g,
+         biomass_Mgha = ud.convert(biomass_g, "g", "Mg")/ud.convert(103, "cm2", "ha"),
+         biomass_kgm2 = ud.convert(biomass_Mgha, "Mg/ha", "kg/m2")) %>%
+  filter(!is.na(biomass_g)) %>%
+  select(trt, days_grown, biomass_kgm2)
 
-highnight_biomass <- bind_rows(highnight_biomass1, highnight_biomass2)
-write.csv(highnight_biomass, "temp_exps_inputs3/highnight_biomass_meas.csv")
+bio <- rbind(bio_ch, bio_gh, bio_out)
 
 # Clean up biomass estimates
 load('/data/output/pecan_runs/env_comp_results/gh/out/SA-median/biocro_output.RData')
