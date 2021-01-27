@@ -1,6 +1,6 @@
 <pecan>
 
-  <outdir>/data/output/pecan_runs/env_comp_results/oug</outdir>
+  <outdir>/data/output/pecan_runs/env_comp_results/out</outdir>
 
   <database>
     <bety>
