@@ -69,7 +69,7 @@ exp_1 <- read_excel(data_path, sheets_names[14]) %>%
                            light == "150" ~ 150))
 ```
 
-Experiment 2 was conducted on ME034V-1 and mutants Les1 and Les5 in 3 chambers (157, 158, and 159). All chambers were set to temperatures of 34. In each chamber, biomass samples of Les1 were taken from low and mid tiers, Les 5 was taken from low and high tiers, and ME034V-1 was taken from all three tiers. Light is currently unknown. 
+Experiment 2 was conducted on ME034V-1 and mutants Les1 and Les5 in 3 chambers (157, 158, and 159). Temperatures were set at 22, 31, or 36 for day/night. In each chamber, biomass samples of Les1 were taken from low and mid tiers, Les 5 was taken from low and high tiers, and ME034V-1 was taken from all three tiers. Light levels were set at 430. 
 ```{r 2nd}
 exp_2 <- read_excel(data_path, sheets_names[13]) %>% 
   select( -"image_path before harvest", -"image_path after harvest") %>%
@@ -103,7 +103,7 @@ exp_2 <- read_excel(data_path, sheets_names[13]) %>%
   mutate(light = 430)
 ```
 
-Experiment 3 was conducted on ME034V-1 in 3 chambers (157, 158, and 159) and consisted of the application of GA_1 and GA_2 at different light and temperature combinations. Chamber 157 was set to a temperature of 22, while chambers 158 and 159 were set to 31. The high tier of each chamber was set to 450 light, while the low and mid tiers were set to 250. All three treatments (GA_1, GA_2, and control) were undertaken in each light and temprature combination. 
+Experiment 3 was conducted on ME034V-1 in 3 chambers (157, 158, and 159) and consisted of the application of GA_1 and GA_2 at different light and temperature combinations. Chamber 157 was set to a temperature of 22, while chambers 158 and 159 were set to 31. The high tier of each chamber was set to 450 light, while the low and mid tiers were set to 250. All three treatments (GA_1, GA_2, and control) were undertaken in each light and temperature combination. 
 ```{r 3rd}
 # Due to additional character rows, sheet needed to be imported in two batches
 top <- read_excel(data_path, sheets_names[11], n_max = 18)
@@ -336,7 +336,7 @@ exp_8 <- read_excel(data_path, sheets_names[3]) %>%
                           tier == "top" ~ "high"))
 ```
 
-Experiment 9 was conducted on ME034V-1 and an additional 7 genotypes in 2 chambers (157 and 158), all set to a day/night temperature of 31. Light was set to 430 across all chambers and tiers. 
+Experiment 9 was conducted on ME034V-1 and Svsldr in 2 chambers (157 and 158), all set to a day/night temperature of 31. Light was set to 430 across all chambers and tiers. Two treatments were applied factorially to the genotypes, control and GA. 
 ```{r 9th}
 exp_9 <- read_excel(data_path, sheets_names[4]) %>% 
   select( -"notes", -"side_view_images_started", 
