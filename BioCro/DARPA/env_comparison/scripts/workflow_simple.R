@@ -12,6 +12,7 @@ devtools::load_all("~/pecan/base/workflow")
 devtools::load_all("~/pecan/base/settings")
 devtools::load_all("~/pecan/modules/meta.analysis")
 devtools::load_all("~/pecan/modules/uncertainty")
+# or load_all?
 
 # Add function for setting MA treatments
 source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")
