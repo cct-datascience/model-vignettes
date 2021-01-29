@@ -34,7 +34,7 @@ sheets_names <- excel_sheets(data_path)
 
 The first greenhouse experiment was conducted on ME034V-1 in GH2B under the temperature conditions of 22/20 day/night temperature. 4 planting densities were tested (5 cm, 15 cm, 25 cm, and pot). 
 ```{r 1st}
-gh_1 <- read_excel(data_path, sheets_names[16], n_max = 72) %>% 
+gh_1 <- read_excel(data_path, sheets_names[18], n_max = 72) %>% 
   select(-sample_for) %>%
   rename(species = "specie", 
          temp = "temperature (°C) 12 hours day/12 hours night",
