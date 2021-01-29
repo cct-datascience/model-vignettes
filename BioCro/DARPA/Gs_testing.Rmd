@@ -25,8 +25,6 @@ library(data.table)
 
 Regional runs of BioCro using the parameters from the 'high light' chamber treatment were conducted, but no differences in transpiration or biomass were found for the stomatal parameter experiment. Here, we test a range of stomatal parameter values at 3 different locations to a) isolate the sensitivity of transpiration and biomass to the stomatal slope and b) understand how this sensitivity may differ spatially due to environmental conditions. 
 
-This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
-
 # Estimate biomass & transpiration
 
 The three genotypes are 1) high light chamber treatment (control), 2) decreased stomatal slope by 1.5, and 3) decreased stomatal slope by 3. The first genotype's config file here comes from [the high light treatment BioCro run](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. The second has the stomatal slope value changed from 4.86 to 3.36, while the third has the stomatal slope value changed from 4.86 to 1.86. 
