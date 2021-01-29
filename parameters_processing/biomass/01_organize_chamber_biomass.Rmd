@@ -1,0 +1,523 @@
+---
+title: "Organize biomass data"
+author: "Jessica Guo"
+date: "1/5/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Biomass and leaf area data were provided by Malia Gehan's group as Excel sheets with multiple tabs, indicating different experiments and data types. Some leaf biomass and area data are extracted and used in 02_parameter_upload.Rmd to calculate SLA, a key parameter needed for crop and ecological models. Other biomass data is used to determine biomass partitioning across life stages. 
+
+Biomass data also serves an important role in model validation. In a recent model run comparing high night temperature to the control, the biomass data exhibited large variation, which was attributed to possible differences in chamber and tier. Therefore, here we collate all biomass data for the chambers in order to try to detect the influence of chamber and tier. 
+
+```{r library}
+library(dplyr)
+library(readxl)
+library(udunits2)
+```
+
+Read in the Excel sheet of chamber experiment biomass data, which are found in the [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection). Nine of fifteen tabs describe biomass from the 9 chamber experiments. 
+
+```{r data}
+data_path <- "~/sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
+sheets_names <- excel_sheets(data_path)
+```
+
+## Experiments
+
+Experiment 1 was conducted on ME034V-1 in 3 chambers (157, 158, and 159), set to day/night temperatures of 22, 31, and 36, respectively. In all chambers, the 3 tiers were set to different light levels of 150 in the low tier, 250 in the mid tier, and 450 in the high tier. 
+```{r 1st}
+exp_1 <- read_excel(data_path, sheets_names[14]) %>% 
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature (°C) day/night",
+         light = "light_intensity(umol/m2/s)",
+         sowing_date = "sowing date T°31Cday/night",
+         trt_started = "treatment and images started",
+         harvest_date = "biomas harvested",
+         height_tip = "height base plant to tip of longest culm(cm)",
+         height_collar = "height base to top collar of longest culm (cm)",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_g = "stemFW(g)", 
+         leaf_FW_g = "leaf FW(g)",
+         root_FW_g = "roots FW (g)",
+         panicle_DW_g = "panicle DW(g)", 
+         stem_DW_g = "stemDW(g)",
+         leaf_DW_g = "leaf DW(g)", 
+         root_DW_g = "roots DW (g)",
+         yield_mg = "Yield (mg)") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 1) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high")) %>%
+  mutate(temp = case_when(temp == "22" ~ "22/22",
+                          temp == "31" ~ "31/31",
+                          temp == "36" ~ "36/36")) %>%
+  mutate(light = case_when(light == "450" ~ 430,
+                           light == "250" ~ 250,
+                           light == "150" ~ 150))
+```
+
+Experiment 2 was conducted on ME034V-1 and mutants Les1 and Les5 in 3 chambers (157, 158, and 159). All chambers were set to temperatures of 34. In each chamber, biomass samples of Les1 were taken from low and mid tiers, Les 5 was taken from low and high tiers, and ME034V-1 was taken from all three tiers. Light is currently unknown. 
+```{r 2nd}
+exp_2 <- read_excel(data_path, sheets_names[13]) %>% 
+  select( -"image_path before harvest", -"image_path after harvest") %>%
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature (°C) day/night",
+         germ_date = "seeds in germination",
+         trt_started = "treatment and images started",
+         harvest_date = "biomas harvested",
+         height_tip = "height base plant to tip of longest culm(cm)",
+         height_collar = "height base to top collar of longest culm (cm)",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_mg = "stemFW(mg)", 
+         leaf_FW_mg = "leaf FW(mg)",
+         root_FW_mg = "roots FW (mg)",
+         panicle_DW_mg = "panicle DW(mg)", 
+         stem_DW_mg = "stemDW(mg)",
+         leaf_DW_mg = "leaf DW(mg)", 
+         root_DW_mg = "roots DW (mg)") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 2) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high")) %>%
+  mutate(temp = case_when(temp == "22" ~ "22/22",
+                          temp == "31" ~ "31/31",
+                          temp == "36" ~ "36/36")) %>%
+  mutate(light = 430)
+```
+
+Experiment 3 was conducted on ME034V-1 in 3 chambers (157, 158, and 159) and consisted of the application of GA_1 and GA_2 at different light and temperature combinations. Chamber 157 was set to a temperature of 22, while chambers 158 and 159 were set to 31. The high tier of each chamber was set to 450 light, while the low and mid tiers were set to 250. All three treatments (GA_1, GA_2, and control) were undertaken in each light and temprature combination. 
+```{r 3rd}
+# Due to additional character rows, sheet needed to be imported in two batches
+top <- read_excel(data_path, sheets_names[11], n_max = 18)
+
+# Obtain col_types argument for read_excel()
+types <- sapply(top, class)
+date.ind <- which(lapply(types, length) == 2)
+for(i in date.ind){
+  types[[i]] <- "date"
+}
+text.ind <- which(types == "character")
+for(i in text.ind){
+  types[[i]] <- "text"
+}
+
+bottom <- read_excel(data_path, sheets_names[11], col_types = unlist(types, use.names = F),
+                     col_names = FALSE, skip = 25)
+colnames(bottom) <- colnames(top)
+
+exp_3 <- rbind(top, bottom) %>% 
+  select( -"sample_for") %>%
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature (°C) day/night",
+         light = "light_intensity(umol/m2/s)",
+         sowing_date = "sowing date T°31Cday/night",
+         temp_trt_started = "temperature_treatment_and_images_started",
+         harvest_date = "biomas harvested",
+         height_tip = "height base plant to tip of longest culm(cm)",
+         height_collar = "height base to top collar of longest culm (cm)",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_g = "stemFW(g)", 
+         leaf_FW_g = "leaf FW(g)",
+         panicle_DW_mg = "panicles DW (mg)", 
+         stem_DW_mg = "stemDW(mg)",
+         leaf_DW_mg = "leaf DW(mg)", 
+         root_DW_mg = "roots DW (mg)",
+         yield_g = "yield (g)") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 3) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high"),
+         treatment = case_when(treatment == "GA1" ~ "GA_1",
+                               treatment == "GA2" ~ "GA_2",
+                               treatment == "GA_1" ~ "GA_1",
+                               treatment == "GA_2" ~ "GA_2",
+                               treatment == "control" ~ "control")) %>%
+  mutate(temp = case_when(temp == "22" ~ "22/22",
+                          temp == "31" ~ "31/31",
+                          temp == "36" ~ "36/36")) %>%
+  mutate(light = case_when(light == "450" ~ 430,
+                           light == "250" ~ 250,
+                           light == "150" ~ 150))
+```
+
+Experiment 4 was conducted on ME034V-1 and mutants Les1 and LES5 in 3 chambers (157, 158, and 159), set to day/night temperatures of 22, 31, and 36, respectively. Light in all chambers and tiers was set to 450. For yield plants, panicles were bagged either early or late in all 3 chambers, for 3-6 plants of each genotype. 
+```{r 4th}
+# Due to additional character rows "of dead/dry plant", use n_max argument
+exp_4 <- read_excel(data_path, sheets_names[9],range = cell_cols("A:V"), n_max = 152) %>%
+  select( -"sample_for") %>%
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature (°C) day/night",
+         light = "light_intensity(umol/m2/s)",
+         sowing_date = "sowing date T°31Cday/night",
+         temp_trt_started = "temperature_treatment_and_images_started",
+         harvest_date = "biomass harvested",
+         height_tip = "height base plant to tip of longest culm(cm)",
+         height_collar = "height base to top collar of longest culm (cm)",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_g = "stemFW(g)", 
+         leaf_FW_g = "leaf FW(g)",
+         panicle_DW_mg = "panicle DW(mg)", 
+         stem_DW_mg = "stemDW(mg)",
+         leaf_DW_mg = "leaf DW(mg)", 
+         root_DW_mg = "roots DW (mg)",
+         yield_g = "yield_g") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 4) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high"),
+         genotype = case_when(genotype == "les 1" ~ "Les1",
+                              genotype == "les 5" ~ "Les5",
+                              genotype == "ME034-V1" ~ "ME034-V1"))%>%
+  mutate(temp = case_when(temp == "22" ~ "22/22",
+                          temp == "31" ~ "31/31",
+                          temp == "36" ~ "36/36")) %>%
+  mutate(light = case_when(light == "450" ~ 430,
+                           light == "250" ~ 250,
+                           light == "150" ~ 150))
+```
+
+Experiment 5 was conducted on ME034V-1 and A-10 in 3 chambers (157, 158, and 159), set to day/night temperatures of 22/17, 31/22, and 36/31, respectively. Light in all chambers and tiers was set to 430. Only the high and mid tiers were used in this experiment. 
+```{r 5th}
+exp_5 <- read_excel(data_path, sheets_names[7], range = cell_cols("A:U")) %>% 
+  select( -"sample_for") %>%
+  rename(plantID = "...1",
+         species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature (°C) day/night",
+         light = "light_intensity(umol/m2/s)",
+         sowing_date = "sowing date T°31Cday/22Cnight",
+         trt_started = "treatment started and images started",
+         harvest_date = "biomass harvested",
+         height_tip = "height base plant to tip of longest culm(cm)",
+         height_collar = "height base to top collar of longest culm (cm)",
+         panicle_FW_g = "panicle_FW_g",
+         stem_FW_g = "stem_FW_g", 
+         leaf_FW_g = "leaf_FW_g",
+         panicle_DW_mg = "panicle_DW_mg", 
+         stem_DW_mg = "stem_DW_mg",
+         leaf_DW_mg = "leaf_DW_mg", 
+         root_DW_mg = "roots_DW_mg",
+         yield_g = "yield_g") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 5) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "mid" ~ "mid",
+                          tier == "top" ~ "high"))
+```
+
+Experiment 6 was conducted on ME034V-1 and Svsldr in 3 chambers (157, 158, and 159), all set to a day/night temperature of 31. Light was set to 430 in the high and 250 in the mid and low tiers of 157 and 159, while in 158 light was at 430 in the high and mid and 250 in the low tier. 
+```{r 6th}
+exp_6 <- read_excel(data_path, sheets_names[6], n_max = 160) %>% 
+  select( -"images_started", -"Eveland's lab harvest") %>%
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature _°C",
+         light = "light_intensity",
+         sowing_date = "sowing _date",
+         transplant_date = "transplanting_date",
+         harvest_date = "biomass_harvest",
+         height = "height_cm_bottom to top of the plant",
+         panicle_FW_mg = "panicles_mg_fw",
+         stem_FW_mg = "stems_mg_fw", 
+         leaf_FW_mg = "leaves_mg_fw",
+         panicle_DW_mg = "panicle_dry_weight_mg", 
+         stem_DW_mg = "stem_dry_weight_mg",
+         leaf_DW_mg = "leaf_dry_weight_mg", 
+         root_DW_mg = "roots_dry_weight_mg") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 6) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high")) %>%
+  mutate(temp = case_when(temp == "22" ~ "22/22",
+                          temp == "31" ~ "31/31",
+                          temp == "36" ~ "36/36"))
+```
+
+Experiment 7 was conducted on ME034V-1 and A-10 and an additional 12 genotypes in 3 chambers (157, 158, and 159), set to a day/night temperature of 22, 31, and 17, respectively. Light was set to 430 for all chambers and tiers. 
+```{r 7th}
+exp_7 <- read_excel(data_path, sheets_names[5]) %>% 
+  select( -"side_view_images_started") %>%
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature _°C",
+         light = "light_intensity",
+         sowing_date = "sowing _date",
+         transplant_date = "transplanting_date",
+         harvest_date = "harvest_biomass_time",
+         height_tip = "height_top_panicle_cm",
+         height_collar = "height_top_collar_cm",
+         panicle_FW_g = "panicle_fw_g",
+         stem_FW_g = "stem_fw_g", 
+         leaf_FW_g = "leaf_fw_g",
+         panicle_DW_g = "panicle_dw_g", 
+         stem_DW_g = "stem_dw_g",
+         leaf_DW_g = "leaf_dw_g") %>%
+  filter(height_tip != "dead") %>%
+  filter(harvest_date != "dead") %>%
+  filter(!grepl("bagged", harvest_date)) %>% # remove because no yield reported
+  mutate(harvest_date = 
+           as.POSIXct((as.numeric(harvest_date) - 2)*60*60*24, origin = "1900-01-01")) %>%
+  mutate(exp_number = 7) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high")) %>%
+  mutate(temp = case_when(temp == "22" ~ "22/22",
+                          temp == "31" ~ "31/31",
+                          temp == "36" ~ "36/36",
+                          temp == "17" ~ "17/17")) %>%
+  mutate(height_tip = as.numeric(height_tip),
+         height_collar = as.numeric(height_collar))
+```
+
+Experiment 8 was conducted on ME034V-1 and an additional 7 genotypes in 2 chambers (157 and 158), all set to a day/night temperature of 31/22. Light was set to 430 across all chambers and tiers. 
+```{r 8th}
+exp_8 <- read_excel(data_path, sheets_names[3]) %>% 
+  select( -"notes", -"side_view_images_started", 
+          -"sample_for") %>%
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature (°C) 12 hours day/12 hours night",
+         light = "light_intensity(umol/m2/s)",
+         sowing_date = "sowing date",
+         transplant_date = "transplanting_date",
+         harvest_date = "harvest_time",
+         height_tip = "height_top_panicle_cm",
+         height_collar = "height_top_collar_cm",
+         panicle_FW_g = "panicle_fw_g",
+         stem_FW_g = "stem_fw_g", 
+         leaf_FW_g = "leaf_fw_g",
+         panicle_DW_g = "panicle_dw_g", 
+         stem_DW_g = "stem_dw_g",
+         leaf_DW_g = "leaf_dw_g", 
+         yield_g = "yield_g") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 8) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high"))
+```
+
+Experiment 9 was conducted on ME034V-1 and an additional 7 genotypes in 2 chambers (157 and 158), all set to a day/night temperature of 31. Light was set to 430 across all chambers and tiers. 
+```{r 9th}
+exp_9 <- read_excel(data_path, sheets_names[4]) %>% 
+  select( -"notes", -"side_view_images_started", 
+          -"sample_for", -"SFM scans__approximate_time1", 
+          -"SFM scans__approximate_time2",
+          -"roots_dw_g") %>%
+  rename(species = "specie", 
+         pi_id = "Pi camera ID",
+         temp = "temperature (°C) 12 hours day/12 hours night",
+         light = "light_intensity(umol/m2/s)",
+         sowing_date = "sowing date",
+         transplant_date = "transplanting_date",
+         harvest_date = "harvest_time",
+         height_tip = "height_top_panicle_cm",
+         height_collar = "height_top_collar_cm",
+         panicle_FW_g = "panicle_fw_g",
+         stem_FW_g = "stem_fw_g", 
+         leaf_FW_g = "leaf_fw_g",
+         panicle_DW_g = "panicle_dw_g", 
+         stem_DW_g = "stem_dw_g",
+         leaf_DW_g = "leaf_dw_g", 
+         yield_g = "yield_g") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_number = 9) %>%
+  relocate(exp_number) %>%
+  tidyr::separate(location, c("chamber", "tier", NA)) %>%
+  mutate(tier = case_when(tier == "bot" ~ "low",
+                          tier == "low" ~ "low",
+                          tier == "mid" ~ "mid",
+                          tier == "top" ~ "high")) %>%
+  tidyr::separate(genotype, c("genotype", "treatment")) %>%
+  mutate(genotype = case_when(genotype == "me034" ~ "ME034V-1",
+                              genotype == "svsd1" ~ "Svsldr")) %>%
+  mutate(temp = case_when(temp == "22" ~ "22/22",
+                          temp == "31" ~ "31/31",
+                          temp == "36" ~ "36/36",
+                          temp == "17" ~ "17/17"))
+```
+
+## Organization
+
+Different sheets have different column names. Below, we track which column names are present in which experiments. 
+```{r}
+# exploring the column names
+df <- list(exp_1, exp_2, exp_3,
+           exp_4, exp_5, exp_6,
+           exp_7, exp_8, exp_9)
+names(df) <- c("exp_1", "exp_2", "exp_3",
+               "exp_4", "exp_5", "exp_6",
+               "exp_7", "exp_8", "exp_9")
+cn.list <- lapply(df, colnames)
+
+# total set of column names
+cn.vec <- unique(unlist(cn.list))
+
+cn.track <- list()
+for(i in 1:length(cn.vec)){
+  track <- c()
+  for(j in 1:9) {
+     temp <- ifelse(cn.vec[[i]] %in% cn.list[[j]], 
+                     paste0("exp_", j), NA)
+     track <- c(track, temp)
+  }
+  cn.track[[i]] <- track
+}
+names(cn.track) <- cn.vec
+
+count <- function(x) {sum(!is.na(x))}
+all.cnames <- unlist(lapply(cn.track, FUN = count))
+```
+
+We use this information to consolidate the column types. It appears that fresh weights and yield are most commonly reported in g while dry weights are most commonly reported in mg. 
+```{r}
+df1 <- exp_1 %>%
+  mutate(panicle_DW_mg = ud.convert(panicle_DW_g, "g", "mg"),
+         stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
+         leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg"),
+         root_DW_mg = ud.convert(root_DW_g, "g", "mg"),
+         yield_g  = ud.convert(yield_mg, "mg", "g")) %>%
+  rename(transplant_date = trt_started) %>%
+  mutate(treatment = NA)
+
+df2 <- exp_2 %>%
+  mutate(stem_FW_g = ud.convert(stem_FW_mg, "mg", "g"),
+         leaf_FW_g = ud.convert(leaf_FW_mg, "mg", "g"),
+         root_FW_g = ud.convert(root_FW_mg, "mg", "g"),
+         yield_g  = NA) %>%
+  rename(transplant_date = trt_started,
+         sowing_date = germ_date) %>%
+  mutate(treatment = NA)
+
+
+df3 <- exp_3 %>%
+  mutate(root_FW_g = NA) %>%
+  rename(transplant_date = temp_trt_started)
+  
+df4 <- exp_4 %>%
+  mutate(root_FW_g = NA) %>%
+  rename(transplant_date = temp_trt_started) %>%
+  mutate(treatment = NA)
+
+
+df5 <- exp_5 %>%
+  mutate(root_FW_g = NA) %>%
+  rename(transplant_date = trt_started) %>%
+  mutate(treatment = NA)
+
+
+df6 <- exp_6 %>%
+  mutate(root_FW_g = NA,
+         panicle_FW_g = ud.convert(panicle_FW_mg, "mg", "g"),
+         stem_FW_g = ud.convert(stem_FW_mg, "mg", "g"),
+         leaf_FW_g = ud.convert(leaf_FW_mg, "mg", "g"),
+         yield_g = NA) %>%
+  mutate(treatment = NA,
+         height_collar = NA) %>%
+  rename(height_tip = height) # only 1 height column is base to tip, per E. Castillo
+
+df7 <- exp_7 %>%
+  mutate(root_FW_g = NA,
+         root_DW_mg = NA,
+         panicle_DW_mg = ud.convert(panicle_DW_g, "g", "mg"),
+         stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
+         leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg"),
+         yield_g = NA) %>%
+  mutate(treatment = NA)
+
+
+df8 <- exp_8 %>%
+  mutate(root_FW_g = NA,
+         root_DW_mg = NA,
+         panicle_DW_mg = ud.convert(panicle_DW_g, "g", "mg"),
+         stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
+         leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg")) %>%
+  mutate(treatment = NA)
+
+
+df9 <- exp_9 %>%
+  mutate(root_FW_g = NA,
+         root_DW_mg = NA,
+         panicle_DW_mg = ud.convert(panicle_DW_g, "g", "mg"),
+         stem_DW_mg = ud.convert(stem_DW_g, "g", "mg"),
+         leaf_DW_mg = ud.convert(leaf_DW_g, "g", "mg"))
+```
+
+Use the final column names to unify across dataframes. 
+```{r}
+cnames <- c("exp_number", "plantID", "pi_id", "genotype", "treatment", "species",
+            "chamber", "tier", "temp", "light", "sowing_date",
+            "transplant_date", "harvest_date", "height_tip", "height_collar",
+            "panicle_FW_g", "stem_FW_g", "leaf_FW_g", "root_FW_g", 
+            "panicle_DW_mg", "stem_DW_mg", "leaf_DW_mg", "root_DW_mg", "yield_g")
+
+df_all <- bind_rows(select(df1, all_of(cnames)),
+                    select(df2, all_of(cnames)),
+                    select(df3, all_of(cnames)),
+                    select(df4, all_of(cnames)),
+                    select(df5, all_of(cnames)),
+                    select(df6, all_of(cnames)),
+                    select(df7, all_of(cnames)),
+                    select(df8, all_of(cnames)),
+                    select(df9, all_of(cnames)))
+```
+
+## Add leaf area
+
+All leaf area measurements are recorded on a separate sheet. Prepare sheet and join to existing dataframe. 
+```{r}
+leafarea <- read_excel(data_path, sheets_names[2], range = cell_cols("A:H")) %>% 
+  rename(temp = "temperature (°C) day/night", 
+         light = "light_intensity(umol/m2/s)",
+         leaf_area_cm2 = "total_leaf_area_cm2 (pixels area * factor= 0.000071)") %>%
+  mutate(exp_number = case_when(experiment == "3rd_Biomass_ME034_GA" ~ 3,
+                                experiment == "2nd_Biomass_LesMutants_ME034" ~ 2,
+                                experiment == "5th_Biomass_A10&ME034_cycling_temp" ~ 5,
+                                experiment == "9th_biomass_svd1_me034_GA" ~ 9))
+
+
+chamber_biomass <- left_join(df_all, 
+                             leafarea[c("exp_number", "plantID", "leaf_area_cm2")], 
+                             by = c("exp_number", "plantID"))
+
+save(chamber_biomass, file = "chamber_biomass.Rdata")
+```
