@@ -1,0 +1,246 @@
+---
+title: "How does decreasing stomatal slope affect transpiration and biomass?"
+author: "Author: Kristina Riemer, Jessica Guo"
+output: github_document
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---
+
+## Read in libraries
+
+```{r}
+devtools::install("~/pecan/models/biocro")
+library(PEcAn.BIOCRO)
+library(ncdf4)
+library(PEcAn.all)
+library(dplyr)
+library(purrr)
+library(udunits2)
+library(ggplot2)
+library(data.table)
+```
+
+## Testing sensitivity of modeled transpiration and biomass to Gs parameters
+
+Regional runs of BioCro using the parameters from the 'high light' chamber treatment were conducted, but no differences in transpiration or biomass were found for the stomatal parameter experiment. Here, we test a range of stomatal parameter values at 3 different locations to a) isolate the sensitivity of transpiration and biomass to the stomatal slope and b) understand how this sensitivity may differ spatially due to environmental conditions. 
+
+# Estimate biomass & transpiration
+
+The three genotypes are 1) high light chamber treatment (control), 2) decreased stomatal slope by 1.5, and 3) decreased stomatal slope by 3. The first genotype's config file here comes from [the high light treatment BioCro run](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. The second has the stomatal slope value changed from 4.86 to 3.36, while the third has the stomatal slope value changed from 4.86 to 1.86. 
+
+For the spatial comparison, we also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
+
+```{r}
+genotypes <- c("wt", "ss1", "ss2")
+
+soil_nc <- nc_open("/data/dbfiles/soil/hwsd.nc")
+
+met_stlew <- nc_open("/data/dbfiles/narr_subsets/stlew.nc")
+latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
+                      lon = ncvar_get(met_stlew, "longitude"))
+
+dir.create("/data/output/biocro_regional_runs", recursive = TRUE, showWarnings = FALSE)
+```
+
+The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
+
+ The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_stlew.Rmd). This data is specifically for an extended longitudinal range across North America that includes the city of St. Louis.  
+
+The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. These are saved as csv files. 
+
+The below function was originally written to run BioCro across a grid ('regional runs') and here has been modified to run at only three locations: St. Louis (MO), Pueblo (CO), and Monticello (UT). 
+```{r}
+loc.coords <- data.frame(site = c("St. Louis, MO", "Pueblo, CO", "Monticello, UT"),
+                         lat = c(38.625, 38.375, 37.875), 
+                         lon = c(-90.125, -104.625, -109.375))
+estimate_biomass <- function(genotype){
+  config_path <- paste0("Gs_testing_inputs/config_", genotype, ".xml")
+  config <- read.biocro.config(config_path)
+  gs_testing_results <- c()
+  
+  for(point in 1:nrow(loc.coords)){ 
+    biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
+                            loc.coords$lat[point], "-", loc.coords$lon[point])
+    regional_run_result <- run.biocro(loc.coords$lat[point], loc.coords$lon[point],
+                               metpath = biocro_met_path,
+                               soil.nc = soil_nc,
+                               config = config)
+    regional_run_result_daily <- regional_run_result$daily
+    regional_run_result_daily$lat <- loc.coords$lat[point]
+    regional_run_result_daily$lon <- loc.coords$lon[point]
+    gs_testing_results <- rbind(gs_testing_results, regional_run_result_daily)
+    print(point)
+  }
+  results_path <- paste0("/data/output/biocro_regional_runs/gs_test_", genotype, ".csv")
+  write.csv(gs_testing_results, results_path)
+}
+lapply(genotypes, estimate_biomass)
+```
+
+The csv files are read in, combined, and cleaned/modified for later plotting. 
+
+```{r}
+gs_results <- c()
+for(genotype in genotypes){
+  biomass_path <- paste0("/data/output/biocro_regional_runs/gs_test_", genotype, ".csv")
+  gs_single <- read.csv(biomass_path)
+  gs_single$genotype <- genotype
+  gs_results <- rbind(gs_results, gs_single)
+}
+
+gs_results <- gs_results %>% 
+  mutate(date = as.Date(doy, "2009-12-31"), 
+         latlon = paste0(lat, lon), 
+         total_biomass = ud.convert(as.numeric(Stem + Leaf + Root + Rhizome + Grain), 
+                                    "Mg/ha", "kg/m2"), 
+         leaf_biomass =  ud.convert(as.numeric(Leaf), 
+                                    "Mg/ha", "kg/m2"),
+         total_biomass = ifelse(total_biomass < 0, 0, total_biomass), 
+         transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"), 
+         evaporation = ud.convert(SoilEvaporation, "Mg/ha/hr", "kg/m2/hr"),
+         ET = transpiration + evaporation,
+         T_ET = transpiration / ET,
+         WUE = total_biomass / transpiration,
+         genotype_formal = case_when(
+           genotype == "wt" ~ "Wild type", 
+           genotype == "ss1" ~ "Gs reduced by 1.5", 
+           genotype == "ss2" ~ "Gs reduced by 3"), 
+         genotype_formal = factor(genotype_formal, levels = c("Wild type", "Gs reduced by 1.5", "Gs reduced by 3")),
+         treatment = case_when(
+           genotype == "wt" ~ "g1 = 4.86 (wt)", 
+           genotype == "ss1" ~ "g1 = 3.36", 
+           genotype == "ss2" ~ "g1 = 1.86"),
+         treatment = factor(treatment, levels = c("g1 = 4.86 (wt)", "g1 = 3.36", "g1 = 1.86")),
+         location = case_when(
+           latlon == "38.625-90.125" ~ "St. Louis, MO", 
+           latlon == "38.375-104.625" ~ "Pueblo, CO", 
+           latlon == "37.875-109.375" ~ "Monticello, UT"),)
+```
+
+# Plot biomass and transpiration
+
+## By genotype
+
+The results for total biomass (the sum of stem, leaf, grain, rhizome, and root biomasses) for each location across the year of 2010 are visualized. 
+
+```{r}
+ggplot(gs_results, aes(x = date, group = genotype_formal, color = genotype_formal)) +
+  geom_line(aes(y = total_biomass)) +
+  geom_line(aes(y = leaf_biomass), lty = 2) +
+  theme_bw(base_size = 12) +
+  scale_y_continuous(expression(paste("Total biomass (kg ", m^2, ")")))+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, ncol = 1)
+```
+
+The results for total transpiration for each location across the year of 2010 are visualized. 
+```{r}
+ggplot(gs_results, aes(x = date, y = transpiration, group = genotype_formal, color = genotype_formal)) +
+  geom_line() +
+  theme_bw(base_size = 12) +
+  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ")")))+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, scales = "free_y", ncol = 1)
+```
+
+The results for T/ET for each location across the year of 2010 are visualized. 
+```{r}
+ggplot(gs_results, aes(x = date, y = T_ET, group = genotype_formal, color = genotype_formal)) +
+  geom_line() +
+  theme_bw(base_size = 12) +
+  scale_y_continuous("T/ET")+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, ncol = 1)
+```
+
+The results for WUE, which is biomass / transpiration, for each location across the year of 2010 are visualized. 
+```{r}
+ggplot(gs_results, aes(x = date, y = WUE, group = genotype_formal, color = genotype_formal)) +
+  geom_line() +
+  theme_bw(base_size = 12) +
+  scale_y_continuous("WUE")+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, scale = "free_y", ncol = 1)
+```
+
+Differences are most clear in T/ET at the Pueblo, CO location. 
+
+Next, add environmental variables in order to understand the local drivers of T behavior. 
+
+```{r}
+# VPD function
+VPD <- function(temp_C, RH_percent){
+  es = (6.11 * exp((2500000/461) * (1/273 - 1/(273 + temp_C))))
+  vpd = (((100 - RH_percent)/1000) * es)
+  return(vpd)
+}
+
+# Combine hourly weather data
+met_all <- c()
+for(point in 1:nrow(loc.coords)){ 
+    biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
+                            loc.coords$lat[point], "-", loc.coords$lon[point])
+    met <- read.csv(paste0(biocro_met_path, ".2010.csv"))
+    
+    met_df <- met %>%
+      mutate(date = as.Date(doy, "2009-12-31"), 
+             location = loc.coords$site[point],
+             D = VPD(Temp, RH*100)) %>%
+      filter(year == 2010)
+    met_all <- rbind(met_all, met_df)
+}
+
+# Summarize to daily
+met_all <- data.table(met_all)
+met_daily <- met_all[, .(year = unique(year),
+                         solar = mean(solar), 
+                         Temp = mean(Temp),
+                         RH = mean(RH),
+                         VPD = mean(D),
+                         windspeed = mean(windspeed),
+                         precip = sum (precip)), by = .(location, date)]
+met_daily <- met_daily[, .(date = date,
+                           year = year,
+                           solar = solar,
+                           Temp = Temp,
+                           RH = RH,
+                           VPD = VPD,
+                           windspeed = windspeed,
+                           precip = precip,
+                           cum_precip = cumsum(precip)), by = .(location)]
+
+ggplot(met_daily, aes(x = date,  group = location)) +
+  geom_line(aes(y = Temp, color = location,)) +
+  geom_line(aes(y = VPD, color = location,)) +
+  geom_bar(aes(y = cum_precip), stat = "identity") +
+  theme_bw(base_size = 12) +
+  scale_y_continuous("VPD (kPa)")+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location)
+```
+
+Combine transpiration, VPD, and precipitation in the same time-series plot. 
+```{r}
+ggplot() +
+  geom_bar(data = met_daily, aes(x = date, y = precip/10), stat = "identity", alpha = 0.25) +
+  geom_line(data = met_daily, aes(x = date, y = VPD)) +
+    geom_line(data = gs_results, aes(x = date, y = transpiration, group = treatment, color = treatment)) +
+  theme_bw(base_size = 11) +
+  scale_y_continuous(expression(paste("Transpiration (kg ", m^-2, hr^-1, ") | VPD (kPa) | Precip (cm) ")))+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, ncol = 1)
+```
+
+Combine biomass, VPD, and cumulative precipitation in the same time-series plot. 
+```{r}
+ggplot() +
+  geom_bar(data = met_daily, aes(x = date, y = cum_precip/1000), stat = "identity", alpha = 0.25) +
+  # geom_line(data = met_daily, aes(x = date, y = Temp/30)) +
+  geom_line(data = gs_results, aes(x = date, y = total_biomass, group = treatment, color = treatment)) +
+  theme_bw(base_size = 11) +
+  scale_y_continuous(expression(paste("Biomass (kg ", m^-2, ") | VPD (kPa) | cum_precip (m) ")))+
+  scale_x_date(date_labels = "%b")+
+  facet_wrap(~location, scales = "free_y", ncol = 1)
+```
+
