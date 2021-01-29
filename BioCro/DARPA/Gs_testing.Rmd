@@ -1,5 +1,4 @@
-  facet_wrap(~location, scales = "free_y", ncol = 1)
-```---
+---
 title: "How does decreasing stomatal slope affect transpiration and biomass?"
 author: "Author: Kristina Riemer, Jessica Guo"
 output: github_document
@@ -27,10 +26,6 @@ library(data.table)
 Regional runs of BioCro using the parameters from the 'high light' chamber treatment were conducted, but no differences in transpiration or biomass were found for the stomatal parameter experiment. Here, we test a range of stomatal parameter values at 3 different locations to a) isolate the sensitivity of transpiration and biomass to the stomatal slope and b) understand how this sensitivity may differ spatially due to environmental conditions. 
 
 This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
-
-Changed Carbon Allocation Regional Runs
-
-This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` 
 
 # Estimate biomass & transpiration
 
