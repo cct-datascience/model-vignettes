@@ -1,0 +1,199 @@
+---
+title: "Organize greenhouse and outdoor biomass data"
+author: "Jessica Guo"
+date: "1/19/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Biomass and leaf area data were provided by Malia Gehan's group as Excel sheets with multiple tabs, indicating different experiments and data types. Some leaf biomass and area data are extracted and used in 02_parameter_upload.Rmd to calculate SLA, a key parameter needed for crop and ecological models. Other biomass data is used to determine biomass partitioning across life stages. Biomass data also serves an important role in model validation. 
+
+Here, we collate all biomass data from the greenhouse and outdoor experiments for use as model parameters and model validation. 
+
+```{r library}
+library(dplyr)
+library(readxl)
+library(udunits2)
+```
+
+Read in the Excel sheet of chamber experiment biomass data, which are found in the [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection). Two experiments were conducted in each of greenhouse and outdoor conditions. 
+
+```{r data}
+data_path <- "~/sentinel-detection/data/raw_data/biomass/field_and_greenhouse_experiments.xlsx"
+sheets_names <- excel_sheets(data_path)
+```
+
+## Experiments
+
+The first greenhouse experiment was conducted on ME034V-1 in GH2B under the temperature conditions of 22/20 day/night temperature. 4 planting densities were tested (5 cm, 15 cm, 25 cm, and pot). 
+```{r 1st}
+gh_1 <- read_excel(data_path, sheets_names[18], n_max = 72) %>% 
+  select(-sample_for) %>%
+  rename(species = "specie", 
+         temp = "temperature (°C) 12 hours day/12 hours night",
+         sowing_date = "sowing _date",
+         transplant_date = "transplanting_date",
+         panicle_bag_date = "panicles_bagged",
+         harvest_date = "harvested",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_g = "stemFW(g)", 
+         leaf_FW_g = "leaf FW(g)",
+         panicle_DW_g = "panicles DW (g)", 
+         stem_DW_g = "stemDW(g)",
+         leaf_DW_g = "leaf DW(g)", 
+         yield_g = "yield (g)") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_site = "GH",
+         exp_number = 1,
+         root_FW_g = NA,
+         root_DW_g = NA) %>%
+  relocate(exp_site, exp_number)
+```
+
+The second greenhouse experiment was conducted on ME034V-1 in GH2B under the temperature conditions of 31/22 day/night temperature. 4 planting densities were tested (5 cm, 15 cm, 25 cm, and pot). 
+```{r 2nd}
+gh_2 <- read_excel(data_path, sheets_names[11]) %>% 
+  select(-sample_for) %>%
+  rename(species = "specie", 
+         temp = "temperature (°C) 12 hours day/12 hours night",
+         sowing_date = "sowing _date",
+         transplant_date = "transplanting_date",
+         panicle_bag_date = "panicles_bagged",
+         harvest_date = "harvested",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_g = "stemFW(g)", 
+         leaf_FW_g = "leaf FW(g)",
+         root_FW_g =  "roots FW(g)",
+         panicle_DW_g = "panicles DW (g)", 
+         stem_DW_g = "stemDW(g)",
+         leaf_DW_g = "leaf DW(g)", 
+         root_DW_g = "roots DW(g)",
+         yield_g = "yield (g)") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_site = "GH",
+         exp_number = 2) %>%
+  relocate(exp_site, exp_number)
+```
+
+The first field experiment was conducted at Cella Farm with ME034V-1 under natural field conditions. 5 planting treatments were tested (5 cm, 15 cm, 25 cm, pot with JollyG and pot with field soil). 
+```{r 3rd}
+field_1 <- read_excel(data_path, sheets_names[3]) %>% 
+  select( -"sample_for") %>%
+  rename(species = "specie", 
+         temp = "temperature (°C) 12 hours day/12 hours night",
+         sowing_date = "sowing _date",
+         transplant_date = "transplanting_date",
+         panicle_bag_date = "panicles_bagged",
+         harvest_date = "harvested",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_g = "stemFW(g)", 
+         leaf_FW_g = "leaf FW(g)",
+         panicle_DW_g = "panicles DW (g)", 
+         stem_DW_g = "stemDW(g)",
+         leaf_DW_g = "leaf DW(g)", 
+         yield_g = "yield (g)") %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_site = "Field",
+         exp_number = 1,
+         genotype = "ME034V-1",
+         root_FW_g = NA,
+         root_DW_g = NA) %>%
+  relocate(exp_site, exp_number, genotype)
+```
+
+The second field experiment was conducted at Cella Farm with ME034V-1 under natural field conditions. 5 planting treatments were tested (5 cm, 15 cm, 25 cm, pot with JollyG and pot with field soil). 
+```{r 4th}
+field_2 <- read_excel(data_path, sheets_names[7]) %>% 
+  select( -"sample_for") %>%
+  rename(species = "specie", 
+         temp = "temperature (°C) 12 hours day/12 hours night",
+         sowing_date = "sowing _date",
+         transplant_date = "transplanting_date",
+         panicle_bag_date = "panicles_bagged",
+         harvest_date = "harvested",
+         panicle_FW_g = "panicle FW(g)",
+         stem_FW_g = "stem FW(g)", 
+         leaf_FW_g = "leaf FW(g)",
+         root_FW_g =  "root FW(g)",
+         panicle_DW_g = "panicle DW(g)", 
+         stem_DW_g = "stemDW(g)",
+         leaf_DW_g = "leaf DW(g)", 
+         root_DW_g = "root DW(g)",
+         yield_g = "yield (g)")  %>%
+  filter(!is.na(harvest_date)) %>%
+  mutate(exp_site = "Field",
+         exp_number = 2,
+         genotype = "ME034V-1") %>%
+  relocate(exp_site, exp_number, genotype)
+```
+
+## Organization
+
+Different sheets have different column names. Below, we track which column names are present in which experiments. 
+```{r}
+# exploring the column names
+df <- list(gh_1, gh_2,
+           field_1, field_2)
+names(df) <- c("gh_1", "gh_2",
+               "field_1", "field_2")
+cn.list <- lapply(df, colnames)
+
+# total set of column names
+cn.vec <- unique(unlist(cn.list))
+
+cn.track <- list()
+for(i in 1:length(cn.vec)){
+  track <- c()
+  for(j in 1:4) {
+     temp <- ifelse(cn.vec[[i]] %in% cn.list[[j]], 
+                     paste0("exp_", j), NA)
+     track <- c(track, temp)
+  }
+  cn.track[[i]] <- track
+}
+names(cn.track) <- cn.vec
+
+count <- function(x) {sum(!is.na(x))}
+all.cnames <- unlist(lapply(cn.track, FUN = count))
+```
+
+The weights in this data were consistently in grams and can be combined directly. Use the final column names to unify across dataframes. 
+```{r}
+cnames <- names(all.cnames)
+df_all <- bind_rows(select(gh_1, all_of(cnames)),
+                    select(gh_2, all_of(cnames)),
+                    select(field_1, all_of(cnames)),
+                    select(field_2, all_of(cnames)))
+```
+
+## Add leaf area
+
+All leaf area measurements are recorded on a separate sheet. Prepare sheet and join to existing dataframe. 
+```{r}
+leafarea <- read_excel(data_path, sheets_names[1]) %>% 
+  rename(species = "specie",
+         avg_temp = "average_temperature (°C)", 
+         harvest_date = "harvest_time",
+         leaf_area_cm2 = "total_leaf_area_cm2 (pixels area * factor= 0.000071)") %>%
+  mutate(exp_site = case_when(experiment == "1st_field_biomass" ~ "Field",
+                              experiment == "2nd_field_biomass" ~ "Field",
+                              experiment == "1st_gh_biomass" ~ "GH"),
+         exp_number = case_when(experiment == "1st_field_biomass" ~ 1,
+                                experiment == "2nd_field_biomass" ~ 2,
+                                experiment == "1st_gh_biomass" ~ 1))
+         
+
+
+greenhouse_outdoor_biomass <- left_join(df_all, 
+                             leafarea[c("exp_site", "exp_number", "plant_id", "leaf_area_cm2")], 
+                             by = c("exp_site", "exp_number", "plant_id"))
+
+save(greenhouse_outdoor_biomass, file = "~/sentinel-detection/data/cleaned_data/biomass/greenhouse_outdoor_biomass.Rdata")
+```

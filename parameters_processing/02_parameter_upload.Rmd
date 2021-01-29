@@ -154,7 +154,7 @@ done
 
 ## Specific Leaf Area
 
-These SLA values are calculated from leaf area and leaf dry biomass. Below, the data are read in, filtered, and combined to produce specific leaf area in units of m2/kg. 
+These SLA values are calculated from leaf area and leaf dry biomass. Below, the organized data are read in, filtered, and combined to produce specific leaf area in units of m2/kg. 
 
 These are the final columns:
 
@@ -169,153 +169,117 @@ These are the final columns:
 9. `access_level`: 2, equivalent to Internal & Collaborators
 
 
-First, load in data from the chamber experiments, an Excel sheet entitled "manual-measurements-Darpa_setaria_chambers_experiments.xlsx", which consists of multiple tabs. All leaf areas are avaiable in tab 'total_leaf_area'; biomass for the high night temperature experiment are found in '3rd_Biomass_ME034_GA_Exp' and the biomass for the high light experiment are found in '5th_Biomass_A10&ME034_cycling_t'. Note that because physiological and biomass data were taken on different individual plants, unique filters are applied to each biomass data to obtain the same set of experimental conditions as the physiological data. 
+First, load in organized biomass data from the chamber and greenhouse/outdoor experiments, which are saved in the [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection); this repo should be cloned into the same folder as model-vignettes repo. 
 ```{r}
-# Data from chamber experiments
-data_path <- "../../sentinel-detection/data/raw_data/biomass/manual-measurements-Darpa_setaria_chambers_experiments.xlsx"
-sheets_names <- excel_sheets(data_path)
+load("~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
+load("~/sentinel-detection/data/cleaned_data/biomass/greenhouse_outdoor_biomass.Rdata")
+```
 
+Select leaf biomass and leaf area that correspond to the chamber treatments; only 2 treatments have data available, as biomass has was not originally measured for 31_22_250 'regular night temperature'. 
+```{r}
 # Biomass and leaf area for high light treatment, 31_31_250
-leaf_biomass_hightemp <- read_excel(data_path, sheets_names[11]) %>% 
-  dplyr::rename(temperature = 6, 
-                leaf_dry_biomass_mg = 19) %>% 
-  filter(temperature == "31.0", 
-         `light_intensity(umol/m2/s)` == "250.0",
-         !is.na(leaf_dry_biomass_mg), 
-         treatment == "control") %>% 
-  mutate(leaf_dry_biomass_mg == as.numeric(leaf_dry_biomass_mg))
-
-leaf_area_hightemp <- read_excel(data_path, sheets_names[2]) %>% 
-  dplyr::rename(leaf_area_cm2 = 8) %>% 
-  filter(experiment == "3rd_Biomass_ME034_GA", 
-         treatment == "control")
-
-sla_hightemp <- left_join(leaf_biomass_hightemp, leaf_area_hightemp, by = "plantID") %>% 
-  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
-         dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
-         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
-         SLA = area_m2 / dry_biomass_kg) %>% 
-  mutate(local_datetime = as.Date(`biomas harvested`), 
-         treatment = "high night temperature") %>% 
-  select(local_datetime, treatment, SLA) %>% 
-  mutate(statname = '')
-
+sla_hightemp <- chamber_biomass %>% 
+ filter(genotype == "ME034V-1",
+        temp == "31/31", 
+        light == 250,
+        !is.na(leaf_DW_mg), 
+        !is.na(leaf_area_cm2),
+        treatment == "control" | is.na(treatment)) %>%
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_DW_mg, 
+         leaf_DW_kg = ud.convert(leaf_DW_mg, "mg", "kg"), 
+         leaf_area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = leaf_area_m2 / leaf_DW_kg,
+         Treatment = "high night temperature",
+         local_datetime = harvest_date) %>% 
+  select(local_datetime, Treatment, SLA) 
 
 # Biomass and leaf area for control treatment, 31_22_450
-leaf_biomass_control <- read_excel(data_path, sheets_names[7]) %>% 
-  dplyr::rename(temperature = 6, 
-         leaf_dry_biomass_mg = 19, 
-         plantID = 1) %>% 
-  filter(temperature == "31/22", 
-         genotype == "ME034V-1", 
-         !is.na(leaf_dry_biomass_mg))
-
-leaf_area_control <- read_excel(data_path, sheets_names[2]) %>% 
-  dplyr::rename(leaf_area_cm2 = 8) %>% 
-  filter(experiment == "5th_Biomass_A10&ME034_cycling_temp")
-
-sla_control <- left_join(leaf_biomass_control, leaf_area_control, by = "plantID") %>% 
-  filter(!is.na(leaf_area_cm2)) %>% 
-  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_mg, 
-         dry_biomass_kg = ud.convert(leaf_dry_biomass_mg, "mg", "kg"), 
-         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
-         SLA = area_m2 / dry_biomass_kg) %>% 
-    mutate(local_datetime = as.Date(`biomass harvested`), 
-         treatment = "high light") %>% 
-  select(local_datetime, treatment, SLA) %>% 
-  mutate(statname = '')
+sla_control <- chamber_biomass %>% 
+ filter(genotype == "ME034V-1",
+        temp == "31/22", 
+        light == 430,
+        !is.na(leaf_DW_mg), 
+        !is.na(leaf_area_cm2),
+        treatment == "control" | is.na(treatment)) %>%
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_DW_mg, 
+         leaf_DW_kg = ud.convert(leaf_DW_mg, "mg", "kg"), 
+         leaf_area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = leaf_area_m2 / leaf_DW_kg,
+         Treatment = "high light",
+         local_datetime = harvest_date) %>% 
+  select(local_datetime, Treatment, SLA) 
 ```
 
-Next, load in data from the outdoor and greenhouse experiments, an Excel sheet entitled "field_and_greenhouse_experiments.xlsx", which consists of multiple tabs. All leaf areas are avaiable in tab 'total_leaf_area'; biomass for the greenhouse experiment and 1st/2nd field experiments are found in '1st_gh_biomass', '1st_field_biomass', and '2nd_field_biomass', respectively. Again, physiological and biomass data were taken on different individual plants. In this case, the greenhouse physiological data came from pots and teh outdoor physiological data came from 5 cm and JollyG pots. Unique filters are applied to each biomass data to obtain the same set of experimental conditions as the physiological data. 
-
+Next, select leaf biomass and leaf area that correspond to the greenhouse and outdoor treatments. To match the physiological parameters, we use data corresponding to the first greenhouse experiment (pot treatment) and the 2nd outdoor experiment (5 cm density and JollyG pots). 
 ```{r}
-# Data from chamber experiments
-data_path2 <- "../../sentinel-detection/data/raw_data/biomass/field_and_greenhouse_experiments.xlsx"
-sheets_names2 <- excel_sheets(data_path2)
-
 # Biomass and leaf area for greenhouse pots
-leaf_biomass_gh <- read_excel(data_path2, sheets_names2[16]) %>% 
-  dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
-  filter(treatment == "pot") %>% 
-  mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
-
-leaf_area_gh <- read_excel(data_path2, sheets_names2[1]) %>% 
-  dplyr::rename(leaf_area_cm2 = 9) %>% 
-  filter(experiment == "1st_gh_biomass", 
-         treatment == "pot")
-
-sla_gh <- left_join(leaf_area_gh, leaf_biomass_gh, by = "plant_id") %>% 
-  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_g, 
-         dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
-         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
-         SLA = area_m2 / dry_biomass_kg) %>% 
-  mutate(local_datetime = as.Date(`harvest_time`), 
-         treatment = "greenhouse") %>% 
-  select(local_datetime, treatment, SLA) %>% 
-  mutate(statname = '')
+sla_gh <- greenhouse_outdoor_biomass %>%
+  filter(genotype == "ME034V-1",
+        exp_site == "GH", 
+        exp_number == 1,
+        !is.na(leaf_DW_g), 
+        !is.na(leaf_area_cm2),
+        treatment == "pot") %>%
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_DW_g, 
+         leaf_DW_kg = ud.convert(leaf_DW_g, "g", "kg"), 
+         leaf_area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = leaf_area_m2 / leaf_DW_kg,
+         Treatment = "greenhouse",
+         local_datetime = harvest_date) %>% 
+  select(local_datetime, Treatment, SLA) 
 
 # Biomass and leaf area for 2nd field experiment, 5 cm
-leaf_biomass_5cm <- read_excel(data_path2, sheets_names2[7]) %>% 
-  dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
-  filter(treatment == "5cm") %>% 
-  mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
-
-leaf_area_5cm <- read_excel(data_path2, sheets_names2[1]) %>% 
-  dplyr::rename(leaf_area_cm2 = 9) %>% 
-  filter(experiment == "2nd_field_biomass", 
-         treatment == "5cm")
-
-sla_5cm <- left_join(leaf_area_5cm, leaf_biomass_5cm, by = "plant_id") %>% 
-  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_g, 
-         dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
-         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
-         SLA = area_m2 / dry_biomass_kg) %>% 
-  mutate(local_datetime = as.Date(`harvest_time`), 
-         treatment = "outdoor 5 cm density") %>% 
-  select(local_datetime, treatment, SLA) %>% 
-  mutate(statname = '')
+sla_5cm <- greenhouse_outdoor_biomass %>%
+  filter(genotype == "ME034V-1",
+        exp_site == "Field", 
+        exp_number ==  2, 
+        !is.na(leaf_DW_g), 
+        !is.na(leaf_area_cm2),
+        treatment == "5cm") %>%
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_DW_g, 
+         leaf_DW_kg = ud.convert(leaf_DW_g, "g", "kg"), 
+         leaf_area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = leaf_area_m2 / leaf_DW_kg,
+         Treatment = "outdoor 5 cm density",
+         local_datetime = harvest_date) %>% 
+  select(local_datetime, Treatment, SLA) 
 
 # Biomass and leaf area for 2nd field experiment, JollyG
-leaf_biomass_JollyG <- read_excel(data_path2, sheets_names2[7]) %>% 
-  dplyr::rename(leaf_dry_biomass_g = 16) %>% # leaf DW was entered as g instead of mg
-  filter(treatment == "jolly_pot") %>% 
-  mutate(leaf_dry_biomass_g == as.numeric(leaf_dry_biomass_g))
-
-leaf_area_JollyG <- read_excel(data_path2, sheets_names2[1]) %>% 
-  dplyr::rename(leaf_area_cm2 = 9) %>% 
-  filter(experiment == "2nd_field_biomass", 
-         treatment == "jolly_p")
-
-sla_JollyG <- left_join(leaf_area_JollyG, leaf_biomass_JollyG, by = "plant_id") %>% 
-  mutate(sla_initial_units = leaf_area_cm2 / leaf_dry_biomass_g, 
-         dry_biomass_kg = ud.convert(leaf_dry_biomass_g, "g", "kg"), 
-         area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
-         SLA = area_m2 / dry_biomass_kg) %>% 
-  mutate(local_datetime = as.Date(`harvest_time`), 
-         treatment = "outdoor JollyG soil") %>% 
-  select(local_datetime, treatment, SLA) %>% 
-  mutate(statname = '')
+sla_JollyG <- greenhouse_outdoor_biomass %>%
+  filter(genotype == "ME034V-1",
+        exp_site == "Field", 
+        exp_number ==  2, 
+        !is.na(leaf_DW_g), 
+        !is.na(leaf_area_cm2),
+        treatment == "jolly_pot") %>%
+  mutate(sla_initial_units = leaf_area_cm2 / leaf_DW_g, 
+         leaf_DW_kg = ud.convert(leaf_DW_g, "g", "kg"), 
+         leaf_area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"), 
+         SLA = leaf_area_m2 / leaf_DW_kg,
+         Treatment = "outdoor JollyG soil",
+         local_datetime = harvest_date) %>% 
+  select(local_datetime, Treatment, SLA) 
 ```
 
-Combineand format all SLA values for upload. 
+Combine and format all SLA values for upload. 
 ```{r}
 sla <- bind_rows(sla_hightemp, sla_control, sla_gh, sla_5cm, sla_JollyG) %>%
-  mutate(site = case_when(treatment == "high light" ~ "Donald Danforth Plant Science Center Growth Chamber", 
-                               treatment == "high night temperature" ~ "Donald Danforth Plant Science Center Growth Chamber",
-                               treatment == "greenhouse" ~ "Donald Danforth Plant Science Center Greenhouse",
-                               treatment == "outdoor 5 cm density" ~ "Donald Danforth Plant Science Center Outdoor",
-                               treatment == "outdoor JollyG soil" ~ "Donald Danforth Plant Science Center Outdoor"),
+  mutate(site = case_when(Treatment == "high light" ~ "Donald Danforth Plant Science Center Growth Chamber", 
+                               Treatment == "high night temperature" ~ "Donald Danforth Plant Science Center Growth Chamber",
+                               Treatment == "greenhouse" ~ "Donald Danforth Plant Science Center Greenhouse",
+                               Treatment == "outdoor 5 cm density" ~ "Donald Danforth Plant Science Center Outdoor",
+                               Treatment == "outdoor JollyG soil" ~ "Donald Danforth Plant Science Center Outdoor"),
          species = "Setaria viridis",
          cultivar = "ME-034",
          citation_author = "Zhang, Gehan, LeBauer, Riemer, Tarin, Vargas",
          citation_year = "2018", 
          citation_title = "Unpublished DARPA experimental data",
          access_level = "2",
-         SLA = round(SLA, 2)) %>%
+         SLA = round(SLA, 2),
+         treatment = Treatment) %>%
   select(citation_author, citation_year, citation_title, 
          species, cultivar, site, treatment, local_datetime, 
          SLA, access_level)
-
 ```
 
 Save cleaned SLA as a .csv file in the `SLA` subfolder of `upload`. 
