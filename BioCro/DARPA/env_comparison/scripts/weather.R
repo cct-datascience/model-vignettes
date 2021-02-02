@@ -6,7 +6,7 @@ library(ggplot2)
 # Generate weather for 2020 (leap year)
 # Chamber data is generated for 365 days
 # Greenhouse data is partially generated, relying on nearby weather station for SolarR, for 365 days
-# Outdoor data is weather station data + irrigation, for 366 days
+# Outdoor data is weather station data + irrigation, for 365 days
 
 # Generate chamber (31_22_450) weather data 
 ch_weather <- data.frame(year = rep(2020, 365*24),
@@ -42,7 +42,8 @@ out_weather <- read_excel(data_path, sheets_names[13], range = cell_cols("A:J"))
                               rep(c(rep(0, 9), 5, rep(0, 14)), 2)), 52),
                         rep(c(rep(0, 9), 5, rep(0, 14)), 2)),
          precip = Precip + irrigation)%>%
-  select(year, doy, hour, SolarR, Temp, RH, WS, precip)
+  select(year, doy, hour, SolarR, Temp, RH, WS, precip) %>%
+  filter(doy != 366)
 
 # Outdoor weather data near Danforth
 # Source: St. Louis Science Center, Missouri Historical Agricultural Weather Database
