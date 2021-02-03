@@ -3,10 +3,10 @@ library(dplyr)
 library(udunits2)
 library(ggplot2)
 
-# Generate weather for 2020 (leap year)
-# Chamber data is generated for 365 days
-# Greenhouse data is partially generated, relying on nearby weather station for SolarR, for 365 days
-# Outdoor data is weather station data + irrigation, for 365 days
+# Generate weather for 2020 (leap year), but cut to 365 days to meet BioCro requirements
+# Chamber data is generated from settings
+# Greenhouse data is partially generated from T and RH time series, also relies on greenhouse roof weather station for SolarR
+# Outdoor data is weather station data + irrigation
 
 # Generate chamber (31_22_450) weather data 
 ch_weather <- data.frame(year = rep(2020, 365*24),
@@ -45,23 +45,16 @@ out_weather <- read_excel(data_path, sheets_names[13], range = cell_cols("A:J"))
   select(year, doy, hour, SolarR, Temp, RH, WS, precip) %>%
   filter(doy != 366)
 
-# Outdoor weather data near Danforth
-# Source: St. Louis Science Center, Missouri Historical Agricultural Weather Database
-sc_raw <- read.csv("~/sentinel-detection/data/raw_data/env/StLouisScienceCenter_2020_hourly.csv")
-
-sc <- sc_raw %>%
-  mutate(doy = rep(1:366, each = 24), 
-         hour = hour/100,
-         mon = as.character(as.Date(paste0(year, "-", month, "-01"))),
-         dt = as.POSIXct((`hour`+6)*60*60 + (day-1)*24*60*60, origin = mon, tz = "America/Chicago"), 
-         RH = RH/100, 
-         SolarR = SolarR/2.35e5*1e6) %>%
-  select(dt, year, doy, hour, SolarR, Temp, RH, WS, precip)
-  
+# Outdoor weather data on top of B greenhouses at Danforth
+gh_out <- read_excel(data_path, sheets_names[15], range = "K1:N8784") %>% 
+  rename(dt = "Date/Time",
+         temp_C = "WS1:Outdoor Temp.(°C)",
+         light_w_m2 = "WS1:Outdoor Light(W/m²)",
+         wind_km_h = "WS1:Wind Speed(km/h)")
   
 # Generate greenhouse (1st experiment) weather data from measured data
 # Greenhouse plants watered 3mm/day, 1.5 mm at 10 am and 3 pm
-# gh_light <- read_excel(data_path, sheets_names[22], range = "F1:J17") %>%
+# gh_light <- read_excel(data_path, sheets_names[23], range = "F1:J17") %>%
 #   rename(dt = `date/time`,
 #          light_1 = `manual_measure_light_intensity_umol/m2/s...4`,
 #          light_2 = `manual_measure_light_intensity_umol/m2/s...5`) %>%
@@ -82,26 +75,19 @@ sc <- sc_raw %>%
 #   theme_bw()
 
 
-gh_env <- read_excel(data_path, sheets_names[22], range = "A1:D1429") %>% 
-  mutate(dt = as.POSIXct(`date/time`, format = "%Y/%m/%d, %H:%M:%S", tz = "America/Chicago")) %>%
-  select(-`date/time`) %>%
-  relocate(dt) %>%
-  rename(temp_C = sensor_temperature_readings_celsius,
-         RH = `sensor_relative_humidity_readings_%`)
+gh_in <- read_excel(data_path, sheets_names[15], range = "A1:I8784") %>% 
+  select(1,2,7) %>%
+  rename(dt = "Date/Time",
+         temp_C = "GH2B_Climate_Temperature_°C",
+         RH = "GH2B_Climate_Humidity_%Rh")
 
-# ggplot(gh_env, aes(x = dt)) +
-#   geom_point(aes(y = temp_C, color = "Temp")) + 
-#   geom_point(aes(y = RH/2, color = "RH")) + 
-#   # scale_x_datetime(limits = c(as.POSIXct("2020-03-01"), as.POSIXct("2020-03-07")))+
-#   theme_bw()
-
-# Greenhouse 
+# Greenhouse, with irrigation 3 mm/day divided into 10 am and 3 pm watering
 gh_weather <- data.frame(year = rep(2020, 365*24),
                          doy = rep(1:365, each = 24),
                          hour = rep(seq(0, 23), 365), 
-                         SolarR = sc$SolarR[1:(365*24)],
-                         Temp = rep(gh_env$temp_C, length.out = 365*24),
-                         RH = rep(gh_env$RH/100, length.out = 365*24),
+                         SolarR = gh_out$light_w_m2[1:(365*24)],
+                         Temp = gh_in$temp_C[1:(365*24)],
+                         RH = gh_in$RH[1:(365*24)]/100,
                          WS = rep(0, times = 365*24), 
                          precip = rep(c(rep(0, 10), 1.5, rep(0, 4), 1.5, rep(0, 8)), 365))
 
