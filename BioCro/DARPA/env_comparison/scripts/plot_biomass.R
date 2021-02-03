@@ -1,38 +1,9 @@
-# ----------------------------------------------------------------------
 # Load required libraries
 # ----------------------------------------------------------------------
 library(readxl)
 library(udunits2)
 library(dplyr)
-library(data.table)
 library(tidyr)
-library(ggplot2)
-
-# The following code cleans up that biomass data, calculating number of days between treatment starting and biomass harvest, and converts biomass units from milligrams to megagrams per hectare (each plant grown in pot with 103 cm2 area). 
-
-# This also pulls in and cleans up the biomass data estimated from BioCro, then plots biomass measurements against this. 
-
-# Clean up biomass estimates
-load("/data/output/pecan_runs/env_comp_results/gh/out/SA-median/biocro_output.RData")
-timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
-rm(biocro_result)
-
-load("/data/output/pecan_runs/env_comp_results/gh/ensemble.ts.NOENSEMBLEID.TotLivBiom.2020.2020.Rdata")
-convert_biomass <- function(x) x / 0.4
-daily_biomass <- data.frame(timescale, t(ensemble.ts[["TotLivBiom"]])) %>% 
-  gather(ensemble, biomass, X1:X10) %>% 
-  mutate_at(vars(biomass), convert_biomass) %>% 
-  filter(hour == 12) %>% 
-  group_by(day) %>% 
-  summarise(mean = mean(biomass, na.rm = TRUE), 
-            median = median(biomass, na.rm = TRUE), 
-            sd = sd(biomass, na.rm = TRUE), 
-            lcl_50 = quantile(biomass, probs = c(0.25), na.rm = TRUE), 
-            ucl_50 = quantile(biomass, probs = c(0.75), na.rm = TRUE),
-            lcl_95 = quantile(biomass, probs = c(0.025), na.rm = TRUE), 
-            ucl_95 = quantile(biomass, probs = c(0.975), na.rm = TRUE))
-write.csv(daily_biomass, "temp_exps_inputs1/biomass_ests1.csv")
-rm(ensemble.ts)
 
 # Plot measured biomass against biomass estimates
 ggplot(data = daily_biomass) + 
@@ -133,7 +104,7 @@ timescale <- data.table(day = rep(biocro_result$doy, each = 24), hour = 0:23)
 rm(biocro_result)
 
 load("temp_exps_results/temp_exps_results3/ensemble.ts.NOENSEMBLEID.TVeg.2019.2019.Rdata")
-convert_transp <- function(x) ud.convert(x, "kg/m2/s", "kg/m2/h")
+
 daily_transp <- data.frame(timescale, t(ensemble.ts[["TVeg"]])) %>% 
   gather(ensemble, transpiration, X1:X100) %>% 
   mutate_at(vars(transpiration), convert_transp) %>% 

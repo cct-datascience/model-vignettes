@@ -1,9 +1,7 @@
 # ----------------------------------------------------------------------
 # Load required libraries
 # ----------------------------------------------------------------------
-library(PEcAn.all)
-library(PEcAn.utils)
-library(RCurl)
+# library(RCurl)
 
 #Manually load, until PR is merged
 devtools::load_all("~/pecan/base/utils")
@@ -12,7 +10,9 @@ devtools::load_all("~/pecan/base/workflow")
 devtools::load_all("~/pecan/base/settings")
 devtools::load_all("~/pecan/modules/meta.analysis")
 devtools::load_all("~/pecan/modules/uncertainty")
+devtools::load_all("~/pecan/base/all")
 # or load_all?
+library(PEcAn.all)
 
 # Add function for setting MA treatments
 source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")
@@ -43,17 +43,17 @@ for(trt in treatments){
   # Write model specific configs
   settings <- PEcAn.workflow::runModule.run.write.configs(settings)
   
-  # Start ecosystem model runs
+  # Run ecosystem model (in folders 'run' and 'out')
   PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
   
-  # Get results of model runs
+  # Get sensitivity and ensemble output of model runs
   runModule.get.results(settings)
   
   # Run ensemble analysis on model output.
   runModule.run.ensemble.analysis(settings, TRUE)
   
   # Run sensitivity analysis and variance decomposition on model output
-  runModule.run.sensitivity.analysis(settings)
+  PEcAn.uncertainty::runModule.run.sensitivity.analysis(settings)
   
   print(paste0("---------- PEcAn Workflow Complete for ", trt, " ----------"))
 }
