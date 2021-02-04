@@ -27,7 +27,7 @@
   </meta.analysis>
 
   <ensemble>
-    <size>1</size>
+    <size>10</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
@@ -36,9 +36,13 @@
   </samplingspace>
   </ensemble>
 
-<!--  <sensitivity.analysis>
+  <sensitivity.analysis>
+      <quantiles>
+          <sigma>-1</sigma>
+          <sigma>1</sigma>
+      </quantiles>
     <variable>NPP</variable>
-  </sensitivity.analysis> -->
+  </sensitivity.analysis>
 
   <model>
     <type>ED2</type>
@@ -56,14 +60,15 @@
     <phenol.scheme>0</phenol.scheme>
     <ed2in_tags>
       <PFT_1ST_CHECK>2</PFT_1ST_CHECK>
+      <IED_INIT_MODE>0</IED_INIT_MODE>
     </ed2in_tags>
   </model>
 
   <run>
     <site>
       <id>76</id>
-      <met.start>2004-01-01 00:00:00</met.start>
-      <met.end>2004-12-31 23:59:59</met.end>
+      <met.start>2004-07-01 00:00:00</met.start>
+      <met.end>2005-06-30 23:59:59</met.end>
     </site>
 
     <inputs>
@@ -77,8 +82,8 @@
       <thsum>/data/ed_inputs/</thsum>
     </inputs>
 
-    <start.date>2004/01/01</start.date>
-    <end.date>2004/12/31</end.date>
+    <start.date>2004/06/01</start.date>
+    <end.date>2005/06/30</end.date>
   </run>
   
   <host>

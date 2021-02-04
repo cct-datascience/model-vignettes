@@ -14,7 +14,7 @@ library(RCurl)
 # PEcAn Workflow
 # ----------------------------------------------------------------------
 # Open, read in, and modify settings file for PEcAn run.
-settings <- PEcAn.settings::read.settings("pecan.docker.ed2.xml") 
+settings <- PEcAn.settings::read.settings("ED2/pecan.docker.ed2.xml") 
 settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
 PEcAn.settings::write.settings(settings, outputfile = "pecan.CHECKED.xml")
 settings <- PEcAn.workflow::do_conversions(settings)
