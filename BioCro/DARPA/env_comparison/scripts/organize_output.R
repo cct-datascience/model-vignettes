@@ -167,19 +167,14 @@ for(v in variables){
   diff_stat <- all %>%
     select(-gh, -ch, -out) %>%
     group_by(day) %>%
-    # Reports the 2.5, 5, and 50 th percentile of each set of differences
-    summarize(gh_ch_025 = quantile(gh_ch, probs = 0.025),
-              gh_ch_05 = quantile(gh_ch, probs = 0.05),
-              gh_ch_50 = quantile(gh_ch, probs = 0.5),
-              out_ch_025 = quantile(out_ch, probs = 0.025),
-              out_ch_05 = quantile(out_ch, probs = 0.05),
-              out_ch_50 = quantile(out_ch, probs = 0.5),
-              gh_out_025 = quantile(gh_out, probs = 0.025),
-              gh_out_05 = quantile(gh_out, probs = 0.05),
-              gh_out_50 = quantile(gh_out, probs = 0.5))
+    # Reports the 2.5, 5, 50, 95, and 97.5th percentile of each set of differences
+    summarize(gh_ch = quantile(gh_ch, probs = c(0.025, 0.05, 0.5, 0.95, 0.975)),
+              out_ch = quantile(out_ch, probs = c(0.025, 0.05, 0.5, 0.95, 0.975)),
+              gh_out = quantile(gh_out, probs = c(0.025, 0.05, 0.5, 0.95, 0.975))) %>%
+    mutate(percentile = c("025", "050", "500", "950", "975")) %>%
+    relocate(day, percentile)
   
   write.csv(diff_stat, 
             paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_", v, ".csv"),
             row.names = F)
-  
 }
