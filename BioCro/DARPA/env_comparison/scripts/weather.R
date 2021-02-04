@@ -36,7 +36,7 @@ out_weather <- read_excel(data_path, sheets_names[13], range = cell_cols("A:J"))
          Precip = `PRECIP MM`) %>%
   mutate(doy = rep(1:366, each = 24), 
          RH = RH/100,
-         SolarR = SolarR/2.35e5*1e6) %>%
+         SolarR = SolarR/2.35e5*1e6) %>% # convert from W/m2 to PAR
   mutate(irrigation = c(rep(c(rep(c(rep(0, 9), 5, rep(0, 14)), 4),
                               rep(0, 24),
                               rep(c(rep(0, 9), 5, rep(0, 14)), 2)), 52),
@@ -50,7 +50,8 @@ gh_out <- read_excel(data_path, sheets_names[15], range = "K1:N8784") %>%
   rename(dt = "Date/Time",
          temp_C = "WS1:Outdoor Temp.(°C)",
          light_w_m2 = "WS1:Outdoor Light(W/m²)",
-         wind_km_h = "WS1:Wind Speed(km/h)")
+         wind_km_h = "WS1:Wind Speed(km/h)") %>%
+  mutate(SolarR = light_w_m2/2.35e5*1e6)
   
 # Generate greenhouse (1st experiment) weather data from measured data
 # Greenhouse plants watered 3mm/day, 1.5 mm at 10 am and 3 pm
@@ -85,7 +86,7 @@ gh_in <- read_excel(data_path, sheets_names[15], range = "A1:I8784") %>%
 gh_weather <- data.frame(year = rep(2020, 365*24),
                          doy = rep(1:365, each = 24),
                          hour = rep(seq(0, 23), 365), 
-                         SolarR = gh_out$light_w_m2[1:(365*24)],
+                         SolarR = gh_out$SolarR[1:(365*24)],
                          Temp = gh_in$temp_C[1:(365*24)],
                          RH = gh_in$RH[1:(365*24)]/100,
                          WS = rep(0, times = 365*24), 
