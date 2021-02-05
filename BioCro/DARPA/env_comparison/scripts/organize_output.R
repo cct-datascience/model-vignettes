@@ -178,3 +178,29 @@ for(v in variables){
             paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_", v, ".csv"),
             row.names = F)
 }
+
+# Collate variance decomposition variables across treatments
+
+for(v in variables) {
+  vd <- c()
+  for(trt in treatments) {
+    load(paste0("/data/output/pecan_runs/env_comp_results/", trt, 
+                "/sensitivity.results.NOENSEMBLEID.", v, ".2020.2020.Rdata"))
+    v_df1 <- sensitivity.results[["SetariaWT_ME034"]]$variance.decomposition.output
+    v_df2 <- data.frame(trait = names(v_df1$coef.vars), data.frame(v_df1))
+    v_df3 <- v_df2 %>% 
+      mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+             units = PEcAn.utils::trait.lookup(trait)$units, 
+             coef.vars = coef.vars * 100, 
+             sd = sqrt(variances),
+             sd_convert = convert_units(sd, variable = v),
+             treatment = trt) %>%
+      relocate(treatment)
+    rm(sensitivity.results)
+    
+    vd <- rbind.data.frame(vd, v_df3)
+    
+  }
+  save(vd, file = paste0("/data/output/pecan_runs/env_comp_results/var_decomp_", v, ".Rdata"))
+}
+
