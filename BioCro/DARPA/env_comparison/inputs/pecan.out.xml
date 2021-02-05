@@ -27,7 +27,7 @@
   </pfts>
 
   <ensemble>
-    <size>100</size>
+    <size>1000</size>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
   </ensemble>
