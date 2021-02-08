@@ -4,15 +4,27 @@
 # library(RCurl)
 
 #Manually load, until PR is merged
-devtools::load_all("~/pecan/base/utils")
-devtools::load_all("~/pecan/base/db")
-devtools::load_all("~/pecan/base/workflow")
-devtools::load_all("~/pecan/base/settings")
-devtools::load_all("~/pecan/modules/meta.analysis")
-devtools::load_all("~/pecan/modules/uncertainty")
+# On patch branch
+devtools::install("~/pecan/base/utils")
+devtools::install("~/pecan/base/db")
+devtools::install("~/pecan/base/settings")
+devtools::install("~/pecan/base/workflow")
+devtools::install("~/pecan/modules/meta.analysis")
+
+# On mstmip branch
+devtools::install("~/pecan/modules/uncertainty")
+
+library(PEcAn.utils)
+library(PEcAn.DB)
+library(PEcAn.workflow)
+library(PEcAn.settings)
+library(PEcAn.MA)
+library(PEcAn.uncertainty)
+library(PEcAn.all)
+
 devtools::load_all("~/pecan/base/all")
 # or load_all?
-library(PEcAn.all)
+# library(PEcAn.all)
 
 # Add function for setting MA treatments
 source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")
@@ -44,7 +56,11 @@ for(trt in treatments){
   settings <- PEcAn.workflow::runModule.run.write.configs(settings)
   
   # Run ecosystem model (in folders 'run' and 'out')
+  st <- proc.time()
   PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
+  en <- proc.time()
+  dur <- (en - st)/60/60
+  print(paste0(settings$ensemble$size, " ensembles completed in ", round(dur[3], 4), " hours"))
   
   # Get sensitivity and ensemble output of model runs
   runModule.get.results(settings)
