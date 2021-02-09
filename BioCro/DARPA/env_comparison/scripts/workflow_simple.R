@@ -33,7 +33,7 @@ source("~/model-vignettes/BioCro/DARPA/plot_MA.R")
 # ----------------------------------------------------------------------
 # PEcAn Workflow
 # ----------------------------------------------------------------------
-treatments <- c("ch", "gh", "out")
+treatments <- c("gh", "out")
 for(trt in treatments){
   
   # Open, read in, and modify settings file for PEcAn run
@@ -50,7 +50,9 @@ for(trt in treatments){
   
   # If treatment specific, set meta.analysis treatments and plot MA priors vs. posteriors
   set_MA_trt(settings)
-  plot_MA(settings)
+  if (settings$meta.analysis$update == TRUE) {
+    plot_MA(settings)
+  }
   
   # Write model specific configs
   settings <- PEcAn.workflow::runModule.run.write.configs(settings)
