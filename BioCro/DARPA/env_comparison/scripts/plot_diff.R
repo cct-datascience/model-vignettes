@@ -47,10 +47,12 @@ fig_biomass_diff <- ggplot() +
   geom_ribbon(data = biomass_diff, aes(day, ymin = p05, ymax = p095, fill = diff), alpha = 0.25) +
   geom_point(data = biomass_diff[biomass_diff$sig_05 == TRUE,], aes(day, y = p50, color = diff)) +
   scale_x_continuous("Day of Experiment", limits = c(0, 100)) + 
-  scale_y_continuous(expression(paste(Delta, " Total Biomass (kg ",  m^-2, ")")),
-                     limits = c(-0.05, 0.1)) +
+  scale_y_continuous(expression(paste(Delta, " Total Biomass (kg ",  m^-2, ")"))) +
   theme_classic()
+
+jpeg(filename = "../plots/biomass_diff.jpg", height = 5, width = 7, units = "in", res = 600)
 print(fig_biomass_diff)
+dev.off()
 
 fig_trans_diff <- ggplot() +
   geom_hline(yintercept = 0) +
@@ -58,7 +60,9 @@ fig_trans_diff <- ggplot() +
   geom_ribbon(data = trans_diff, aes(day, ymin = p05, ymax = p095, fill = diff), alpha = 0.25) +
   geom_point(data = trans_diff[trans_diff$sig_05 == TRUE,], aes(day, y = p50, color = diff)) +
   scale_x_continuous("Day of Experiment", limits = c(0, 100)) + 
-  scale_y_continuous(expression(paste(Delta, " Canopy Transpiration (kg ",  m^-2, " ", day^-1, ")")),
-                     limits = c(-1, 5)) +
+  scale_y_continuous(expression(paste(Delta, " Canopy Transpiration (kg ",  m^-2, " ", day^-1, ")"))) +
   theme_classic()
+
+jpeg(filename = "../plots/trans_diff.jpg", height = 5, width = 7, units = "in", res = 600)
 print(fig_trans_diff)
+dev.off()

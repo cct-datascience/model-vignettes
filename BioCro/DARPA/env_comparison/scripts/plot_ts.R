@@ -72,17 +72,25 @@ biomass_valid <- rbind(biomass_valid_ch, biomass_valid_gh_out) %>%
 # Plot measured biomass against biomass estimates
 fig_biomass_ts <- ggplot() +
   geom_line(data = biomass_ts, aes(day, y = median, color = treatment)) +
-  geom_ribbon(data = biomass_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), alpha = 0.5) +
+  geom_ribbon(data = biomass_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), 
+              alpha = 0.25) +
   geom_point(data = biomass_valid, aes(day, y = total_biomass_kg_m2, color = treatment)) +
   scale_x_continuous("Day of Experiment", limits = c(0, 100)) + 
   scale_y_continuous(expression(paste("Total Biomass (kg ",  m^-2, ")")), limits = c(0, 2)) +
   theme_classic()
+
+jpeg(filename = "../plots/biomass_ts.jpg", height = 5, width = 7, units = "in", res = 600)
 print(fig_biomass_ts)
+dev.off()
 
 fig_trans_ts <- ggplot() +
   geom_line(data = trans_ts, aes(day, y = median, color = treatment)) +
-  geom_ribbon(data = trans_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), alpha = 0.5) +
+  geom_ribbon(data = trans_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), 
+              alpha = 0.25) +
   scale_x_continuous("Day of Experiment") + 
   scale_y_continuous(expression(paste("Canopy Transpiration (kg ",  m^-2, " ", day^-1, ")"))) +
   theme_classic()
+
+jpeg(filename = "../plots/trans_ts.jpg", height = 5, width = 7, units = "in", res = 600)
 print(fig_trans_ts)
+dev.off()

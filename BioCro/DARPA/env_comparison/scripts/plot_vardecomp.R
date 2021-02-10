@@ -14,7 +14,7 @@ cv.b <- ggplot(data = vd) +
   coord_flip() +
   ggtitle("CV %") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
-  theme_classic(base_size = 12) +
+  theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.title.x=element_blank(),
         axis.title.y=element_blank()) +
@@ -27,7 +27,7 @@ el.b <- ggplot(data = vd) +
   coord_flip() +
   ggtitle("Elasticity") +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
-  theme_classic(base_size = 12) +
+  theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
@@ -42,15 +42,16 @@ vdecomp.b <- ggplot(data = vd) +
   ggtitle("Variance Explained (kg/m2)") +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
   scale_y_continuous(breaks = pretty(vd$sd_convert, n = 3)) +
-  theme_classic(base_size = 12) +
+  theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank(), 
         legend.position = c(0.8, 0.5))
 
+jpeg(filename = "../plots/biomass_vd.jpg", height = 5, width = 7, units = "in", res = 600)
 cowplot::plot_grid(cv.b, el.b, vdecomp.b, nrow = 1, rel_widths = c(1.5, 1, 1))
-
+dev.off()
 
 # Plot variance decomposition of transpiration
 load("/data/output/pecan_runs/env_comp_results/var_decomp_TVeg.Rdata")
@@ -62,7 +63,7 @@ cv.t <- ggplot(data = vd) +
   coord_flip() +
   ggtitle("CV %") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
-  theme_classic(base_size = 12) +
+  theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.title.x=element_blank(),
         axis.title.y=element_blank()) +
@@ -75,7 +76,7 @@ el.t <- ggplot(data = vd) +
   coord_flip() +
   ggtitle("Elasticity") +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
-  theme_classic(base_size = 12) +
+  theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
@@ -90,11 +91,13 @@ vdecomp.t <- ggplot(data = vd) +
   ggtitle(expression(paste("Variance Explained (kg ", m^2, " ", day^-1, ")"))) +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
   scale_y_continuous(breaks = pretty(vd$sd_convert, n = 3)) +
-  theme_classic(base_size = 12) +
+  theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank(), 
         legend.position = c(0.8, 0.5))
 
+jpeg(filename = "../plots/trans_vd.jpg", height = 5, width = 7, units = "in", res = 600)
 cowplot::plot_grid(cv.t, el.t, vdecomp.t, nrow = 1, rel_widths = c(1.5, 1, 1))
+dev.off()
