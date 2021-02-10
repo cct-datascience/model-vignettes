@@ -14,9 +14,8 @@ variables <- c("TotLivBiom", "TVeg")
 # Functions for conversion of biomass and transpiration units
 convert_units <- function(x, variable) {
   if (variable == "TotLivBiom") {
-    y = x / 0.4 # undo  biomass to C conversion in PEcAn
-    # Still have to convert from Mg/ha to kg/m2
-    return(ud.convert(y, "Mg/ha", "kg/m2"))
+    # undo  biomass to C conversion in PEcAn, already converted to kg/m2
+    return(x / 0.4)
   } else if (variable == "TVeg") {
     return(ud.convert(x, "kg/m2/s", "kg/m2/h"))
   }

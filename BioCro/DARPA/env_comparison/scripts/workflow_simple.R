@@ -5,20 +5,20 @@
 
 #Manually load, until PR is merged
 # On patch branch
-devtools::install("~/pecan/base/utils")
+# devtools::install("~/pecan/base/utils")
+# devtools::install("~/pecan/base/settings")
+# devtools::install("~/pecan/base/workflow")
+# devtools::install("~/pecan/modules/meta.analysis")
 devtools::install("~/pecan/base/db")
-devtools::install("~/pecan/base/settings")
-devtools::install("~/pecan/base/workflow")
-devtools::install("~/pecan/modules/meta.analysis")
 
 # On mstmip branch
 devtools::install("~/pecan/modules/uncertainty")
 
-library(PEcAn.utils)
+# library(PEcAn.utils)
+# library(PEcAn.workflow)
+# library(PEcAn.settings)
+# library(PEcAn.MA)
 library(PEcAn.DB)
-library(PEcAn.workflow)
-library(PEcAn.settings)
-library(PEcAn.MA)
 library(PEcAn.uncertainty)
 library(PEcAn.all)
 
@@ -33,7 +33,7 @@ source("~/model-vignettes/BioCro/DARPA/plot_MA.R")
 # ----------------------------------------------------------------------
 # PEcAn Workflow
 # ----------------------------------------------------------------------
-treatments <- c("gh", "out")
+treatments <- c("ch", "gh", "out")
 for(trt in treatments){
   
   # Open, read in, and modify settings file for PEcAn run
