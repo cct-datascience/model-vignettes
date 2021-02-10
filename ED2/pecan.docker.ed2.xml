@@ -15,7 +15,7 @@
   <pfts>
     <pft>
       <name>SetariaWT</name>
-      <ed2_pft_number>15</ed2_pft_number>
+      <ed2_pft_number>1</ed2_pft_number>
     </pft>
   </pfts>
 
@@ -82,14 +82,14 @@
       <thsum>/data/ed_inputs/</thsum>
     </inputs>
 
-    <start.date>2004/06/01</start.date>
+    <start.date>2004/07/01</start.date>
     <end.date>2005/06/30</end.date>
   </run>
   
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
-      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=2:mem=12gb -l walltime=1:0:0 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
+      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=4:mem=24gb -l walltime=8:0:0 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
       <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
       <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi</job.sh>

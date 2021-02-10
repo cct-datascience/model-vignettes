@@ -37,6 +37,13 @@ settings <- PEcAn.workflow::runModule.run.write.configs(settings)
 # Start ecosystem model runs
 PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
 
+# Do results post-processing
+for(folder in list.dirs("/data/tests/ed2/out/")){
+  model2netcdf.ED2(folder, settings$run$site$lat, settings$run$site$lon, settings$run$start.date, 
+                   settings$run$end.date, c('SetariaWT'))
+  
+}
+
 # Get results of model runs
 runModule.get.results(settings)
 
