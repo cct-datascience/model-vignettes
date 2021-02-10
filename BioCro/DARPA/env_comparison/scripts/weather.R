@@ -3,20 +3,23 @@ library(dplyr)
 library(udunits2)
 library(ggplot2)
 
-# Generate weather for 2020 (leap year), but cut to 365 days to meet BioCro requirements
+# Generate weather for 2020 (leap year), but cut to 80 days to meet BioCro requirements
 # Chamber data is generated from settings
 # Greenhouse data is partially generated from T and RH time series, also relies on greenhouse roof weather station for SolarR
 # Outdoor data is weather station data + irrigation
 
+# number of days
+n = 80
+
 # Generate chamber (31_22_450) weather data 
-ch_weather <- data.frame(year = rep(2020, 100*24),
-                         doy = rep(1:100, each = 24),
-                         hour = rep(seq(0, 23), 100), 
-                         SolarR = rep(c(rep(0, each = 8), rep(430, each = 12), rep(0, each = 4)), times = 100),
-                         Temp = rep(c(rep(22, each = 8), rep(31, each = 12), rep(22, each = 4)), times = 100),
-                         RH = rep(55.5 / 100,  times = 100*24), 
-                         WS = rep(0, times = 100*24), 
-                         precip = rep(c(0.000462963, rep(0, 23)), 100))
+ch_weather <- data.frame(year = rep(2020, n*24),
+                         doy = rep(1:n, each = 24),
+                         hour = rep(seq(0, 23), n), 
+                         SolarR = rep(c(rep(0, each = 8), rep(430, each = 12), rep(0, each = 4)), times = n),
+                         Temp = rep(c(rep(22, each = 8), rep(31, each = 12), rep(22, each = 4)), times = n),
+                         RH = rep(55.5 / 100,  times = n*24), 
+                         WS = rep(0, times = n*24), 
+                         precip = rep(c(0.000462963, rep(0, 23)), n))
 
 # Greenhouse and outdoor data started with 7 days in the growth chamber
 # Retrieve GH and Field sowing and transplant dates
@@ -29,22 +32,28 @@ exp_dates <- greenhouse_outdoor_biomass %>%
             transplant = unique(transplant_date)) %>%
   mutate(chamber_dur = difftime(transplant, sowing, units = "days"))
 
+# St. Louis Science Center data in the sentinel-detection repo
+# Potentiall used for gapfilling
+slsc <- read.csv("~/sentinel-detection/data/raw_data/env/StLouisScienceCenter_2020_hourly.csv") %>%
+  mutate(SolarR = SolarR/2.35e5*1e6) %>% # Convert from W/m2
+  slice_head(n = 8783)
 
 # Refer to weather files in sentinel-detection repo
 data_path <- "~/sentinel-detection/data/raw_data/biomass/field_and_greenhouse_experiments.xlsx"
 sheets_names <- excel_sheets(data_path)
 
 # Outdoor weather data on top of B greenhouses at Danforth
-gh_out <- read_excel(data_path, sheets_names[15], range = "K1:N8784") %>% 
+gh_out <- as.data.frame(read_excel(data_path, sheets_names[15], range = "K1:N8784")) %>% 
   rename(dt = "Date/Time",
          temp_C = "WS1:Outdoor Temp.(°C)",
          light_w_m2 = "WS1:Outdoor Light(W/m²)",
          wind_km_h = "WS1:Wind Speed(km/h)") %>%
   mutate(SolarR = light_w_m2/2.35e5*1e6) %>%
-  # Gapfilling 1 missing value with average of previous and subsequent hour
-  mutate(SolarR_lag = lag(SolarR),
-         SolarR_lead = lead(SolarR),
+  # Gapfilling 11 missing value with average of previous and subsequent hour
+  mutate(SolarR_lag = lag(temp_C),
+         SolarR_lead = lead(temp_C),
          SolarR  = ifelse(is.na(SolarR), (SolarR_lag + SolarR_lead)/2, SolarR))
+
 
 # Indoor temp and relative humidity
 gh_in <- read_excel(data_path, sheets_names[15], range = "A1:I8784") %>% 
@@ -61,16 +70,16 @@ gh_in <- read_excel(data_path, sheets_names[15], range = "A1:I8784") %>%
          RH  = ifelse(is.na(RH), (RH_lag + RH_lead)/2, RH))
 
 # Greenhouse, with irrigation 3 mm/day divided into 10 am and 3 pm watering
-# Use only 93 days starting from transplant date
+# Use only n-7 days starting from transplant date
 ind <- which(gh_in$dt == exp_dates$transplant[exp_dates$exp_site == "GH"])
-gh_comb <- data.frame(year = rep(2020, 93*24),
-                         doy = rep(8:100, each = 24),
-                         hour = rep(seq(0, 23), 93), 
-                         SolarR = gh_out$SolarR[ind:(ind + 93*24 - 1)],
-                         Temp = gh_in$temp_C[ind:(ind + 93*24 - 1)],
-                         RH = gh_in$RH[ind:(ind + 93*24 - 1)]/100,
-                         WS = rep(0, times = 93*24), 
-                         precip = rep(c(rep(0, 10), 1.5, rep(0, 4), 1.5, rep(0, 8)), 93))
+gh_comb <- data.frame(year = rep(2020, (n-7)*24),
+                         doy = rep(8:n, each = 24),
+                         hour = rep(seq(0, 23), (n-7)), 
+                         SolarR = gh_out$SolarR[ind:(ind + (n-7)*24 - 1)],
+                         Temp = gh_in$temp_C[ind:(ind + (n-7)*24 - 1)],
+                         RH = gh_in$RH[ind:(ind + (n-7)*24 - 1)]/100,
+                         WS = rep(0, times = (n-7)*24), 
+                         precip = rep(c(rep(0, 10), 1.5, rep(0, 4), 1.5, rep(0, 8)), (n-7)))
 
 # Add 7 days from ch_weather
 gh_weather <- rbind.data.frame(ch_weather[1:(7*24), ], gh_comb)
@@ -80,7 +89,7 @@ gh_weather <- rbind.data.frame(ch_weather[1:(7*24), ], gh_comb)
 # Source: Moscow Mills, Missouri Historical Agricultural Weather Database
 out_cella<- read_excel(data_path, sheets_names[13], range = cell_cols("A:J")) %>%
   mutate(mon = as.character(as.Date(paste0(YEAR, "-", MONTH, "-01"))),
-         dt = as.POSIXct((`HOUR  AVG`+6)*60*60 + (DAY-1)*24*60*60, origin = mon, tz = "America/Chicago")) %>%
+         dt = as.POSIXct((`HOUR  AVG`+6)*60*60 + (DAY-1)*24*60*60, origin = mon)) %>%
   rename(year = YEAR,
          hour = `HOUR  AVG`,
          SolarR = `SOLAR RAD. WATTS/M²`,
@@ -96,19 +105,19 @@ out_cella<- read_excel(data_path, sheets_names[13], range = cell_cols("A:J")) %>
                               rep(c(rep(0, 9), 5, rep(0, 14)), 2)), 52),
                         rep(c(rep(0, 9), 5, rep(0, 14)), 2)),
          precip = Precip + irrigation)%>%
-  select(year, doy, hour, SolarR, Temp, RH, WS, precip) %>%
+  select(dt, year, doy, hour, SolarR, Temp, RH, WS, precip) %>%
   filter(doy != 366)
 
 # Use only 93 days from transplanting
-ind <- which(gh_in$dt == exp_dates$transplant[exp_dates$exp_site == "Field"])
-out_comb <- data.frame(year = rep(2020, 93*24),
-                      doy = rep(8:100, each = 24),
-                      hour = rep(seq(0, 23), 93), 
-                      SolarR = out_cella$SolarR[ind:(ind + 93*24 - 1)],
-                      Temp = out_cella$Temp[ind:(ind + 93*24 - 1)],
-                      RH = out_cella$RH[ind:(ind + 93*24 - 1)]/100,
-                      WS = out_cella$WS[ind:(ind + 93*24 - 1)], 
-                      precip = out_cella$precip[ind:(ind + 93*24 - 1)])
+ind <- which(out_cella$dt == exp_dates$transplant[exp_dates$exp_site == "Field"])
+out_comb <- data.frame(year = rep(2020, (n-7)*24),
+                      doy = rep(8:n, each = 24),
+                      hour = rep(seq(0, 23), (n-7)), 
+                      SolarR = out_cella$SolarR[ind:(ind + (n-7)*24 - 1)],
+                      Temp = out_cella$Temp[ind:(ind + (n-7)*24 - 1)],
+                      RH = out_cella$RH[ind:(ind + (n-7)*24 - 1)],
+                      WS = out_cella$WS[ind:(ind + (n-7)*24 - 1)], 
+                      precip = out_cella$precip[ind:(ind + (n-7)*24 - 1)])
 
 # Add 7 days from ch_weather
 out_weather <- rbind.data.frame(ch_weather[1:(7*24), ], out_comb)

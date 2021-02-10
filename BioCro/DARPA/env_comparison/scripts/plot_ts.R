@@ -4,6 +4,7 @@ library(readxl)
 library(udunits2)
 library(dplyr)
 library(tidyr)
+library(ggplot2)
 
 # Organize 3 treatments into same figure
 treatments <- c("ch", "gh", "out")
