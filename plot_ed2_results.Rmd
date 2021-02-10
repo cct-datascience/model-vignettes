@@ -1,0 +1,108 @@
+---
+title: "Plot ED2 results"
+author: "Kristina Riemer, University of Arizona"
+output: github_document
+urlcolor: blue
+---
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+date <- as.character(Sys.Date())
+```
+
+### NPP time series
+
+```{r}
+days <- c(1:365)
+timescale <- data.table::data.table(day = rep(days, each = 24), hour = 0:23)
+
+load("/data/tests/ed2/ensemble.ts.NOENSEMBLEID.NPP.2004.2005.Rdata")
+daily_npp <- data.frame(timescale, t(ensemble.ts[["NPP"]])) %>%
+  gather(ensemble, npp, X1:X10) %>%
+  filter(hour == 12) %>%
+  group_by(day) %>%
+  summarise(mean = mean(npp, na.rm = TRUE),
+            median = median(npp, na.rm = TRUE),
+            sd = sd(npp, na.rm = TRUE),
+            lcl_50 = quantile(npp, probs = c(0.25), na.rm = TRUE),
+            ucl_50 = quantile(npp, probs = c(0.75), na.rm = TRUE),
+            lcl_95 = quantile(npp, probs = c(0.025), na.rm = TRUE),
+            ucl_95 = quantile(npp, probs = c(0.975), na.rm = TRUE)) %>% 
+    mutate(median = udunits2::ud.convert(median, "kg/m2/s", "kg/m2/yr"), 
+           lcl_50 = udunits2::ud.convert(lcl_50, "kg/m2/s", "kg/m2/yr"), 
+           ucl_50 = udunits2::ud.convert(ucl_50, "kg/m2/s", "kg/m2/yr"), 
+           lcl_95 = udunits2::ud.convert(lcl_95, "kg/m2/s", "kg/m2/yr"), 
+           ucl_95 = udunits2::ud.convert(ucl_95, "kg/m2/s", "kg/m2/yr"))
+
+npp_timeseries <- ggplot(data = daily_npp) +
+  geom_line(aes(day, y = median)) +
+  geom_ribbon(aes(day, ymin = lcl_95, ymax = ucl_95), alpha = 0.1) +
+  geom_ribbon(aes(day, ymin = lcl_50, ymax = ucl_50), alpha = 0.1) +
+  xlab("Day of Year") +
+  ylab("NPP (kg/m2/yr)") +
+  theme_classic()
+```
+
+### SA/VD
+
+```{r}
+load("/data/tests/ed2/sensitivity.results.NOENSEMBLEID.NPP.2004.2005.Rdata")
+sa_df1 <- sensitivity.results[["SetariaWT"]]$variance.decomposition.output
+sa_df2 <- data.frame(trait = names(sa_df1$coef.vars), data.frame(sa_df1))
+sa_df3 <- sa_df2 %>%
+  mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
+         units = PEcAn.utils::trait.lookup(trait)$units,
+         coef.vars = coef.vars * 100,
+         sd = sqrt(variances))
+
+fontsize = list(title = 18, axis = 14)
+theme_set(theme_minimal() +
+            theme(axis.text.x = element_text(size = fontsize$axis,
+                                             vjust = -1),
+                  axis.text.y = element_blank(),
+                  axis.ticks = element_blank(),
+                  axis.line = element_blank(),
+                  axis.title.x = element_blank(),
+                  axis.title.y = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.border = element_blank()))
+
+cv <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
+
+el <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+vd <- ggplot(data = sa_df3) +
+  geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Variance Explained") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
+
+npp_savd <- cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1))
+```
+
+### Save plots and rename results folder
+
+```{r}
+results_path <- paste0("/home/kristinariemer/model-vignettes/ED2/results/", date)
+dir.create(results_path)
+
+ggsave(paste0(results_path, "/npp_timeseries.png"),
+npp_timeseries, width = 10, height = 4)
+ggsave(paste0(results_path, "/npp_savd.png"),
+npp_savd, width = 15, height = 4)
+
+file.copy("/data/tests/ed2/", results_path, recursive = TRUE)
+```
