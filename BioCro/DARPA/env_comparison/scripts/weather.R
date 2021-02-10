@@ -40,14 +40,25 @@ gh_out <- read_excel(data_path, sheets_names[15], range = "K1:N8784") %>%
          temp_C = "WS1:Outdoor Temp.(°C)",
          light_w_m2 = "WS1:Outdoor Light(W/m²)",
          wind_km_h = "WS1:Wind Speed(km/h)") %>%
-  mutate(SolarR = light_w_m2/2.35e5*1e6)
+  mutate(SolarR = light_w_m2/2.35e5*1e6) %>%
+  # Gapfilling 1 missing value with average of previous and subsequent hour
+  mutate(SolarR_lag = lag(SolarR),
+         SolarR_lead = lead(SolarR),
+         SolarR  = ifelse(is.na(SolarR), (SolarR_lag + SolarR_lead)/2, SolarR))
 
 # Indoor temp and relative humidity
 gh_in <- read_excel(data_path, sheets_names[15], range = "A1:I8784") %>% 
   select(1,2,7) %>%
   rename(dt = "Date/Time",
          temp_C = "GH2B_Climate_Temperature_°C",
-         RH = "GH2B_Climate_Humidity_%Rh")
+         RH = "GH2B_Climate_Humidity_%Rh") %>%
+  # Gapfilling 1 missing value with average of previous and subsequent hour
+  mutate(temp_C_lag = lag(temp_C),
+         temp_C_lead = lead(temp_C),
+         RH_lag = lag(RH),
+         RH_lead = lead(RH),
+         temp_C  = ifelse(is.na(temp_C), (temp_C_lag + temp_C_lead)/2, temp_C),
+         RH  = ifelse(is.na(RH), (RH_lag + RH_lead)/2, RH))
 
 # Greenhouse, with irrigation 3 mm/day divided into 10 am and 3 pm watering
 # Use only 93 days starting from transplant date
@@ -102,6 +113,10 @@ out_comb <- data.frame(year = rep(2020, 93*24),
 # Add 7 days from ch_weather
 out_weather <- rbind.data.frame(ch_weather[1:(7*24), ], out_comb)
 
+# Check for completeness
+sum(!complete.cases(ch_weather))
+sum(!complete.cases(gh_weather))
+sum(!complete.cases(out_weather))
 
 # Write out weather files as csv
 write.csv(ch_weather, 
