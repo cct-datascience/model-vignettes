@@ -3,6 +3,9 @@
 library(ggplot2)
 library(cowplot)
 
+if(!dir.exists(paste0("../plots/"))){
+  dir.create(paste0("../plots/"), recursive = T)
+}
 
 # Plot variance decomposition of biomass
 load("/data/output/pecan_runs/env_comp_results/var_decomp_TotLivBiom.Rdata")

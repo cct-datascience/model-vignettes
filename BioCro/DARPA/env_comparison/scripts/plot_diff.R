@@ -6,8 +6,11 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-# Organize 3 treatments into same figure
+if(!dir.exists(paste0("../plots/"))){
+  dir.create(paste0("../plots/"), recursive = T)
+}
 
+# Organize 3 treatments into same figure
 biomass_diff <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TotLivBiom.csv")) %>%
   pivot_wider(names_from = percentile, values_from = c(gh_ch, out_ch, out_gh)) %>%
   pivot_longer(!day, names_to = c("first", "second", "level"), names_pattern = "(.*)_(.*)_(.*)",

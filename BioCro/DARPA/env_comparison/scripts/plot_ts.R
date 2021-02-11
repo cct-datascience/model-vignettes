@@ -6,6 +6,10 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
+if(!dir.exists(paste0("../plots/"))){
+  dir.create(paste0("../plots/"), recursive = T)
+}
+
 # Organize 3 treatments into same figure
 treatments <- c("ch", "gh", "out")
 
