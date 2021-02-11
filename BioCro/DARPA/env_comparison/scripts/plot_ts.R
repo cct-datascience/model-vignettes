@@ -42,7 +42,7 @@ biomass_valid_ch <- chamber_biomass %>%
          stem_DW_g = ud.convert(stem_DW_mg, "mg", "g"),
          leaf_DW_g = ud.convert(leaf_DW_mg, "mg", "g"),
          panicle_DW_g = ud.convert(panicle_DW_mg, "mg", "g")) %>%
-  select(location, plant_id, sowing_date, transplant_date, harvest_date,
+  dplyr::select(location, plant_id, sowing_date, transplant_date, harvest_date,
          stem_DW_g, leaf_DW_g, panicle_DW_g)
 
 biomass_valid_gh_out <- greenhouse_outdoor_biomass %>%
@@ -60,7 +60,7 @@ biomass_valid_gh_out <- greenhouse_outdoor_biomass %>%
            exp_site == "Field" & exp_number == 2) %>%
   mutate(location = case_when(exp_site == "GH" ~ "gh",
                               exp_site == "Field" ~ "out")) %>%
-  select(location, plant_id, sowing_date, transplant_date, harvest_date,
+  dplyr::select(location, plant_id, sowing_date, transplant_date, harvest_date,
          stem_DW_g, leaf_DW_g, panicle_DW_g)
 
 # Combine
@@ -76,8 +76,8 @@ fig_biomass_ts <- ggplot() +
   geom_ribbon(data = biomass_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), 
               alpha = 0.25) +
   geom_point(data = biomass_valid, aes(day, y = total_biomass_kg_m2, color = treatment)) +
-  scale_x_continuous("Day of Experiment", limits = c(0, 100)) + 
-  scale_y_continuous(expression(paste("Total Biomass (kg ",  m^-2, ")")), limits = c(0, 2)) +
+  scale_x_continuous("Day of Experiment") + 
+  scale_y_continuous(expression(paste("Total Biomass (kg ",  m^-2, ")"))) +
   theme_classic()
 
 jpeg(filename = "../plots/biomass_ts.jpg", height = 5, width = 7, units = "in", res = 600)

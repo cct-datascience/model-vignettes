@@ -96,8 +96,8 @@ for(v in variables){
       mutate(output = convert_units(output, variable = v),
              ensemble = as.numeric(ensemble)) %>%
       filter(hour == 12) %>% 
-      group_by(day, ensemble)%>%
-      select(-hour)
+      group_by(day, ensemble) %>%
+      dplyr::select(-hour)
   } else if (v == "TVeg") {
     ch <- data.frame(timescale, t(ensemble.ts[[v]])) %>%
       pivot_longer(cols = starts_with("X"), names_to = "ensemble",
@@ -119,7 +119,7 @@ for(v in variables){
              ensemble = as.numeric(ensemble)) %>%
       filter(hour == 12) %>% 
       group_by(day, ensemble)%>%
-      select(-hour)
+      dplyr::select(-hour)
   } else if (v == "TVeg") {
     gh <- data.frame(timescale, t(ensemble.ts[[v]])) %>%
       pivot_longer(cols = starts_with("X"), names_to = "ensemble",
@@ -140,7 +140,7 @@ for(v in variables){
              ensemble = as.numeric(ensemble)) %>%
       filter(hour == 12) %>% 
       group_by(day, ensemble) %>%
-      select(-hour)
+      dplyr::select(-hour)
   } else if (v == "TVeg") {
     out <- data.frame(timescale, t(ensemble.ts[[v]])) %>%
       pivot_longer(cols = starts_with("X"), names_to = "ensemble",
@@ -160,16 +160,16 @@ for(v in variables){
     # One-sided t-tests predictions
     mutate(gh_ch = gh - ch,
            out_ch = out - ch,
-           gh_out = gh - out)
+           out_gh = out - gh)
   
   # Summarize whether across ensembles, the differences are significant each day
   diff_stat <- all %>%
-    select(-gh, -ch, -out) %>%
+    dplyr::select(-gh, -ch, -out) %>%
     group_by(day) %>%
     # Reports the 2.5, 5, 50, 95, and 97.5th percentile of each set of differences
     summarize(gh_ch = quantile(gh_ch, probs = c(0.025, 0.05, 0.5, 0.95, 0.975)),
               out_ch = quantile(out_ch, probs = c(0.025, 0.05, 0.5, 0.95, 0.975)),
-              gh_out = quantile(gh_out, probs = c(0.025, 0.05, 0.5, 0.95, 0.975))) %>%
+              out_gh = quantile(out_gh, probs = c(0.025, 0.05, 0.5, 0.95, 0.975))) %>%
     mutate(percentile = c("025", "050", "500", "950", "975")) %>%
     relocate(day, percentile)
   
