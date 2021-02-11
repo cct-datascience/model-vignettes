@@ -14,6 +14,9 @@ devtools::install("~/pecan/base/db")
 # On mstmip branch
 devtools::install("~/pecan/modules/uncertainty")
 
+# Biocro increase-light-threshold branch
+devtools::install("~/biocro")
+
 # library(PEcAn.utils)
 # library(PEcAn.workflow)
 # library(PEcAn.settings)
@@ -21,8 +24,9 @@ devtools::install("~/pecan/modules/uncertainty")
 library(PEcAn.DB)
 library(PEcAn.uncertainty)
 library(PEcAn.all)
+library(BioCro)
 
-devtools::load_all("~/pecan/base/all")
+# devtools::load_all("~/pecan/base/all")
 # or load_all?
 # library(PEcAn.all)
 
