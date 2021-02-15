@@ -1,6 +1,6 @@
 <pecan>
 
-  <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1d</outdir>
+  <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1</outdir>
 
   <database>
     <bety>
@@ -12,14 +12,14 @@
       <write>FALSE</write>
     </bety>
 
-    <dbfiles>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1d/dbfiles</dbfiles>
+    <dbfiles>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1/dbfiles</dbfiles>
 
   </database>
 
   <pfts>
     <pft>
       <name>SetariaWT_ME034</name>
-      <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1d/pft/SetariaWT_ME034</outdir>
+      <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1/pft/SetariaWT_ME034</outdir>
       <constants>
         <file>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_inputs1/setaria.constants.xml</file>
       </constants>
