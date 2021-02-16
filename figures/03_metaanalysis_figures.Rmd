@@ -3,6 +3,8 @@ title: "Phase II report figures"
 author: "Jessica Guo"
 date: "2/15/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -16,6 +18,7 @@ The first figure of paramters should be two columns of 6 figures, the left side 
 ```{r}
 library(dplyr)
 library(ggplot2)
+library(RColorBrewer)
 library(cowplot)
 ```
 
@@ -48,17 +51,34 @@ gen_priors <- function(vec, n) {
 
 priors.df <- data.frame(prior = do.call(cbind, lapply(priors, gen_priors, n = 1000))) %>%
   tidyr::pivot_longer(cols = 1:6, names_to = "trait", names_prefix = "prior.") %>%
-  arrange(match(trait, traits))
+  arrange(match(trait, traits)) %>%
+  mutate(trt_name = "prior",
+         Trait = case_when(trait == "cuticular_cond" ~ "Cuticular~conductance~(µmol~m^{-2}~s^{-1})",
+                           trait == "leaf_respiration_rate_m2" ~ "Leaf~respiration~(µmol~m^{-2}~s^{-1})",
+                           trait == "quantum_efficiency" ~ "Quantum~efficiency",
+                           trait == "SLA" ~ "Specific~leaf~area~(m^{2}~kg^{-1})",
+                           trait == "stomatal_slope.BB" ~ "Stomatal~slope",
+                           trait == "Vcmax" ~ "V[cmax]~(µmol~m^{-2}~s^{-1})")) %>%
+  dplyr::select(trait, trt_name, value,  Trait)
               
+ggplot() +
+  stat_density(data = priors.df, aes(x = value, color = Trait), geom = "line") +
+  facet_wrap(~Trait, scales = "free")
 # Combine empirical jagged.data into single long format
 jagged <- jagged.data[traits]
 jag.df <- do.call(rbind, jagged) %>%
-  mutate(trait = rep(traits, unlist(lapply(jagged, nrow)))) %>%
-  relocate(trait)
+  mutate(trait = rep(traits, unlist(lapply(jagged, nrow))),
+         Trait = case_when(trait == "cuticular_cond" ~ "Cuticular~conductance~(µmol~m^{-2}~s^{-1})",
+                           trait == "leaf_respiration_rate_m2" ~ "Leaf~respiration~(µmol~m^{-2}~s^{-1})",
+                           trait == "quantum_efficiency" ~ "Quantum~efficiency",
+                           trait == "SLA" ~ "Specific~leaf~area~(m^{2}~kg^{-1})",
+                           trait == "stomatal_slope.BB" ~ "Stomatal~slope",
+                           trait == "Vcmax" ~ "V[cmax]~(µmol~m^{-2}~s^{-1})")) %>%
+  relocate(trait, Trait)
 
 # Combine mcmc output into single long format
 extract_mcmc <- function(mc) {
-  do.call(rbind, mc)[seq(1, 21336, by = 12),] # samples every 12th iteration
+  do.call(rbind, mc)[seq(1, 21336, by = 6),] # samples every 6th iteration
 }
 # Need a for loop because traits can have unique outputs
 mcmc.df <- c()
@@ -77,23 +97,108 @@ for(i in 1:6){
   
   mcmc.df <- rbind.data.frame(mcmc.df, temp)
 }
+mcmc.df <- mcmc.df %>%
+  mutate(Trait = case_when(trait == "cuticular_cond" ~ "Cuticular~conductance~(µmol~m^{-2}~s^{-1})",
+                           trait == "leaf_respiration_rate_m2" ~ "Leaf~respiration~(µmol~m^{-2}~s^{-1})",
+                           trait == "quantum_efficiency" ~ "Quantum~efficiency",
+                           trait == "SLA" ~ "Specific~leaf~area~(m^{2}~kg^{-1})",
+                           trait == "stomatal_slope.BB" ~ "Stomatal~slope",
+                           trait == "Vcmax" ~ "V[cmax]~(µmol~m^{-2}~s^{-1})"))
 
+# Prepare data for 2 sets of comparisons
+# Temp
+jag.temp <- jag.df %>%
+  filter(trt_name %in% c("regular night temperature", "high night temperature")) %>%
+  mutate(treatment = case_when(trt_name == "prior" ~ "prior",
+                               trt_name == "regular night temperature" ~ "control night T",
+                               trt_name == "high night temperature" ~ "high night T")) 
+jag.temp$treatment <- factor(jag.temp$treatment, levels = c("prior",
+                                                            "control night T", 
+                                                            "high night T"))
+mcmc.temp <- rbind(mcmc.df, priors.df) %>%
+  filter(trt_name %in% c("prior", "regular night temperature", "high night temperature")) %>%
+  mutate(treatment = case_when(trt_name == "prior" ~ "prior",
+                               trt_name == "regular night temperature" ~ "control night T",
+                               trt_name == "high night temperature" ~ "high night T")) %>%
+  group_by(Trait, treatment) %>%
+  filter(value < quantile(value, 0.95) & value > quantile(value, 0.05))
+mcmc.temp$treatment <- factor(mcmc.temp$treatment, levels = c("prior",
+                                                              "control night T", 
+                                                              "high night T"))  
+# Env
+jag.env <- jag.df %>%
+  filter(trt_name %in% c("high light", "greenhouse", "outdoor JollyG soil"))%>%
+  mutate(treatment = case_when(trt_name == "prior" ~ "prior",
+                               trt_name == "high light" ~ "chamber",
+                               trt_name == "greenhouse" ~ "greenhouse",
+                               trt_name == "outdoor JollyG soil" ~ "outdoor"))
+jag.env$treatment <- factor(jag.env$treatment, levels = c("prior",
+                                                            "chamber", 
+                                                            "greenhouse",
+                                                            "outdoor")) 
+mcmc.env <- rbind(mcmc.df, priors.df) %>%
+  filter(trt_name %in% c("prior", "high light", "greenhouse", "outdoor JollyG soil"))%>%
+  mutate(treatment = case_when(trt_name == "prior" ~ "prior",
+                               trt_name == "high light" ~ "chamber",
+                               trt_name == "greenhouse" ~ "greenhouse",
+                               trt_name == "outdoor JollyG soil" ~ "outdoor")) %>%
+  group_by(Trait, treatment) %>%
+  filter(value < quantile(value, 0.95) & value > quantile(value, 0.05))
+mcmc.env$treatment <- factor(mcmc.env$treatment, levels = c("prior",
+                                                            "chamber", 
+                                                            "greenhouse",
+                                                            "outdoor")) 
 
-
-cols <- brewer.pal(3, name = "Dark2")
-fig <- ggplot() +
-  stat_density(data = mc.out, aes(x = value, color = "posterior"), geom = "line") +
-  stat_density(data = mc.out, aes(x = prior, color = "prior"), geom = "line") +
-  geom_rug(data = jag, aes(x = Y), color = "red", length = unit(0.07, "npc")) +
-  scale_x_continuous(limits = c(0, upper)) +
-  facet_wrap(~trt_name, ncol = 1, scales = "free_y") +
-  theme_bw(base_size = 10) +
+cols <- brewer.pal(7, name = "Set1")
+fig_temp <- ggplot() +
+  stat_density(data = mcmc.temp, aes(x = value, color = treatment), 
+               position = "identity", geom = "line") +
+  geom_rug(data = jag.temp, aes(x = Y, color = treatment), 
+           alpha = 0.5,
+           length = unit(0.1, "npc")) +
+  facet_wrap(~Trait, ncol = 1, scales = "free", labeller = label_parsed) +
+  # scale_x_continuous(limits = c(0, upper)) +
+  theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         axis.text.y=element_blank(),
-        axis.ticks.y=element_blank()) +
-  scale_color_manual(values = cols[1:2]) +
-  guides(color = FALSE)
+        axis.ticks.y=element_blank(),
+        strip.background = element_blank(),
+        legend.position = c(0.78, 0.97),
+        legend.background = element_blank(),
+        legend.text = element_text(size=8),
+        legend.key.size = unit(0.3, "cm"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(7,1,2)])
+
+fig_env <- ggplot() +
+  stat_density(data = mcmc.env, aes(x = value, color = treatment),
+             geom = "line",position = "identity") + 
+  geom_rug(data = jag.env, aes(x = Y, color = treatment), 
+           alpha = 0.5, 
+           length = unit(0.1, "npc")) +
+  facet_wrap(~Trait, ncol = 1, scales = "free", labeller = label_parsed) +
+  # scale_x_continuous(limits = c(0, upper)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        strip.background = element_blank(),
+        legend.position = c(0.78, 0.97),
+        legend.background = element_blank(),
+        legend.text = element_text(size=8),
+        legend.key.size = unit(0.3, "cm"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(7,3,4,5)])
+
+jpeg(filename = "plots/Fig1_parameters.jpg", height = 8, width = 5,
+     units = "in", res = 600)
+plot_grid(fig_temp, fig_env, ncol = 2)
+dev.off()
+
 ```
 
 
