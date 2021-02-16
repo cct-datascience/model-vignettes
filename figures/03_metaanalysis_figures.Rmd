@@ -1,0 +1,99 @@
+---
+title: "Phase II report figures"
+author: "Jessica Guo"
+date: "2/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Parameters
+
+The first figure of paramters should be two columns of 6 figures, the left side contrasting high and low night temperatures and the right side contrasting chamber, greenhouse, and outdoor conditions.  
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+```
+
+Data are in the data folder and include four files. 
+```{r pressure, echo=FALSE}
+loc <- "~/../../data/output/pecan_runs/env_comp_results/ch/pft/SetariaWT_ME034/"
+# Prior distribution
+load(paste0(loc, "prior.distns.Rdata"))
+# Empirical data from BETYdb
+load(paste0(loc, "jagged.data.Rdata"))
+# Posterior samples
+load(paste0(loc, "trait.mcmc.Rdata"))
+# Match table
+load(paste0(loc, "trt.match.Rdata"))
+
+```
+
+```{r}
+# Turn all into lists of length n objects so plot_prior_posterior() will run evenly
+traits <- names(trt.match) # not all jagged data was processed, use to select relevant traits
+  
+# Combine prior.distns into single long format
+priors <- split(prior.distns, f = row.names(prior.distns))
+priors <- priors[traits]
+
+# Function to generate random priors
+gen_priors <- function(vec, n) {
+  do.call(paste0("r", vec$distn), list(n, vec$parama, vec$paramb))
+}
+
+priors.df <- data.frame(prior = do.call(cbind, lapply(priors, gen_priors, n = 1000))) %>%
+  tidyr::pivot_longer(cols = 1:6, names_to = "trait", names_prefix = "prior.") %>%
+  arrange(match(trait, traits))
+              
+# Combine empirical jagged.data into single long format
+jagged <- jagged.data[traits]
+jag.df <- do.call(rbind, jagged) %>%
+  mutate(trait = rep(traits, unlist(lapply(jagged, nrow)))) %>%
+  relocate(trait)
+
+# Combine mcmc output into single long format
+extract_mcmc <- function(mc) {
+  do.call(rbind, mc)[seq(1, 21336, by = 12),] # samples every 12th iteration
+}
+# Need a for loop because traits can have unique outputs
+mcmc.df <- c()
+for(i in 1:6){
+  temp <- data.frame(extract_mcmc(trait.mcmc[[i]])) %>% 
+  tidyr::pivot_longer(cols = everything(), names_to = "treatment") %>%
+    mutate(trait = traits[i],
+           trt_name = case_when(treatment == "global" ~ "global",
+                           treatment == "greenhouse" ~ "greenhouse",
+                           treatment == "high.night.temperature" ~ "high night temperature",
+                           treatment == "beta.o" ~ "high light",
+                           treatment == "regular.night.temperature" ~ "regular night temperature",
+                           treatment == "outdoor.5.cm.density" ~ "outdoor 5 cm density",
+           treatment == "outdoor.JollyG.soil" ~ "outdoor JollyG soil")) %>% 
+    dplyr::select(trait, trt_name, value)
+  
+  mcmc.df <- rbind.data.frame(mcmc.df, temp)
+}
+
+
+
+cols <- brewer.pal(3, name = "Dark2")
+fig <- ggplot() +
+  stat_density(data = mc.out, aes(x = value, color = "posterior"), geom = "line") +
+  stat_density(data = mc.out, aes(x = prior, color = "prior"), geom = "line") +
+  geom_rug(data = jag, aes(x = Y), color = "red", length = unit(0.07, "npc")) +
+  scale_x_continuous(limits = c(0, upper)) +
+  facet_wrap(~trt_name, ncol = 1, scales = "free_y") +
+  theme_bw(base_size = 10) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  scale_color_manual(values = cols[1:2]) +
+  guides(color = FALSE)
+```
+
+
