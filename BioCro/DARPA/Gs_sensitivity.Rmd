@@ -1,0 +1,64 @@
+---
+title: "How does duration of decreased stomatal slope affect transpiration and biomass?"
+author: "Author: Jessica Guo"
+---
+
+# Overview
+Recent data from the Gehan lab at Donald Danforth Plant Center demonstrated that in the psent-3 line, application of mandipropamid reduced leaf temperatures by an average of 0.18 °C for 48 hours. However, the Zhang lab demonstrated that Amax did not differ significantly between psent-3 and the wild type ME-034. Therefore, we conduct a sensitivity experiment on the duration of reduced stomatal conductance on Setaria biomass and transpiration, using the same set of physiological parameters as ME-034. 
+
+Here, we wrote a function 'BioCro_restart()' which runs BioCro in 3 pieces: 1) original parameter set, 2) stomatal slope and cuticular conductance reduced by a proportion, and 3) original parameter set. The final biomass of one run is retained as the initial biomass of the subsequent run, yielding smooth accumulation of biomass across the experiment. 
+
+```{r}
+library(BioCro)
+library(PEcAn.BIOCRO)
+library(dplyr)
+source("Gs_sensitivity_inputs/BioCro_restart.R")
+```
+
+
+First, we will use hourly weather data from 2 locations, St. Louis (MO) and Pueblo (CO) extracted and used previously in 'Gs_testing.Rmd' and 'regional_runs.Rmd'. 
+```{r}
+loc.coords <- data.frame(site = c("St. Louis, MO", "Pueblo, CO"),
+                         lat = c(38.625, 38.375), 
+                         lon = c(-90.125, -104.625))
+
+duration <- 1:21
+
+output.list <- list()
+for(loc in 1:nrow(loc.coords)) {
+  # Add met data
+  biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
+                            loc.coords$lat[loc], "-", loc.coords$lon[loc], ".2010.csv")
+  met <- read.csv(biocro_met_path) %>%
+    filter(year == 2010)
+  
+  # Add biocro xml
+  config_path <- paste0("Gs_testing_inputs/config_wt.xml")
+  config <- read.biocro.config(config_path)
+  
+  # List of output
+  output <- list()
+  for(i in 1:length(duration)) {
+    single <- BioCro_restart(met = met,
+                      config = config, 
+                      duration = duration[i],
+                      start_day = 50,
+                      end_day = 100,
+                      prop = 0.5)
+    ind <- as.vector(which(lapply(single, length) == (24*100)))
+    output[[i]] <- as.data.frame(do.call(cbind, single[ind])) %>%
+      mutate(duration = duration[i]) %>%
+      relocate(duration)
+  }
+  
+  # Combine across durations
+  output.list[[loc]] <- do.call(rbind.data.frame, output) %>%
+    mutate(location = loc.coords$site[loc]) %>%
+    relocate(location)
+  
+  print(paste0("Finished with ", loc.coords$site[loc]))
+}
+  
+output.df <- do.call(rbind.data.frame, output.list)
+```
+
