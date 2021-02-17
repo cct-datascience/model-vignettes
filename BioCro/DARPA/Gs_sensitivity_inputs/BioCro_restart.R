@@ -6,7 +6,6 @@ BioCro_restart <- function(met,
                            end_day = start_day * 2,
                            prop = 0.1){
   require(BioCro)
-  data("weather04")
 
   # First round of growth 
   res <- BioCro::BioGro(met, day1 = 1, dayn = start_day,
@@ -57,6 +56,10 @@ BioCro_restart <- function(met,
                          seneControl = l2n(config$pft$seneControl),
                          photoControl = l2n(config$pft$photoParms))
   
+  # Remove first element of res2 and res3; these are repeated as initial values
+  res2 <- lapply(res2, rem1)
+  res3 <- lapply(res3, rem1)
+  
   # Combine output
   out <- Map(c, Map(c, res, res2), res3)
   
@@ -64,7 +67,10 @@ BioCro_restart <- function(met,
 }
 
 # Function to obtain last element of vector
-last <- function(x)tail(x,1)
+last <- function(x) {tail(x,1)}
 
 # Function to convert list to numeric
-l2n <- function(x) lapply(x, as.numeric)
+l2n <- function(x) {lapply(x, as.numeric)}
+
+# Function to remove first element of vector
+rem1 <- function(x) {x[-1]}
