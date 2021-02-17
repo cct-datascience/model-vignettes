@@ -1,6 +1,8 @@
 ---
 title: "How does duration of decreased stomatal slope affect transpiration and biomass?"
 author: "Author: Jessica Guo"
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Overview
@@ -12,11 +14,13 @@ Here, we wrote a function 'BioCro_restart()' which runs BioCro in 3 pieces: 1) o
 library(BioCro)
 library(PEcAn.BIOCRO)
 library(dplyr)
+library(ggplot2)
+library(cowplot)
 source("Gs_sensitivity_inputs/BioCro_restart.R")
 ```
 
 
-First, we will use hourly weather data from 2 locations, St. Louis (MO) and Pueblo (CO) extracted and used previously in 'Gs_testing.Rmd' and 'regional_runs.Rmd'. 
+First, we will use hourly weather data from 2 locations, St. Louis (MO) and Pueblo (CO) extracted and used previously in 'Gs_testing.Rmd' and 'regional_runs.Rmd'. BioCro will be run for 100 days, with reduced stomatal parameters by 50% starting on day 20 for a duration of 1 to 21 days. Start run on June 1, 2010. 
 ```{r}
 loc.coords <- data.frame(site = c("St. Louis, MO", "Pueblo, CO"),
                          lat = c(38.625, 38.375), 
@@ -30,7 +34,7 @@ for(loc in 1:nrow(loc.coords)) {
   biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
                             loc.coords$lat[loc], "-", loc.coords$lon[loc], ".2010.csv")
   met <- read.csv(biocro_met_path) %>%
-    filter(year == 2010)
+    filter(year == 2010 & doy >= 152)
   
   # Add biocro xml
   config_path <- paste0("Gs_testing_inputs/config_wt.xml")
@@ -42,11 +46,11 @@ for(loc in 1:nrow(loc.coords)) {
     single <- BioCro_restart(met = met,
                       config = config, 
                       duration = duration[i],
-                      start_day = 50,
+                      start_day = 20,
                       end_day = 100,
                       prop = 0.5)
     ind <- as.vector(which(lapply(single, length) == (24*100)))
-    output[[i]] <- as.data.frame(do.call(cbind, single[ind])) %>%
+    output[[i]] <- do.call(cbind.data.frame, single[ind]) %>%
       mutate(duration = duration[i]) %>%
       relocate(duration)
   }
@@ -56,9 +60,84 @@ for(loc in 1:nrow(loc.coords)) {
     mutate(location = loc.coords$site[loc]) %>%
     relocate(location)
   
+  # Add instance of no reduction in gs parameters
+  control <- BioGro(met, day1 = 1, dayn = 100,
+                    soilControl = l2n(config$pft$soilControl),
+                    canopyControl = l2n(config$pft$canopyControl),
+                    phenoControl = l2n(config$pft$phenoParms),
+                    seneControl = l2n(config$pft$seneControl),
+                    photoControl = l2n(config$pft$photoParms))
+  temp <- do.call(cbind.data.frame, control[ind]) %>%
+      mutate(duration = 0,
+             location = loc.coords$site[loc]) %>%
+      relocate(location, duration)
+  output.list[[loc]] <- rbind.data.frame(temp, output.list[[loc]])
+  
   print(paste0("Finished with ", loc.coords$site[loc]))
 }
   
-output.df <- do.call(rbind.data.frame, output.list)
+output.df <- do.call(rbind.data.frame, output.list) %>%
+  mutate(total_biomass = Leaf + Stem + Root,
+         transpiration = CanopyTrans) %>%
+  group_by(location, duration, DayofYear) %>%
+  summarize(dailyBiomass = mean(total_biomass),
+            dailyT = sum(transpiration)) %>%
+  mutate(Date = seq(as.Date("2010-06-01"), as.Date("2010-09-08"), by = "day"))
 ```
 
+The output is now a single dataframe object, hour timeseries for 100 days across 2 locations and 21 durations, plus a control instance of no change in parameters. 
+
+One way to visualize this is biomass at the end of 100 days as a proportion of the control. 
+```{r}
+control <- output.df %>%
+  ungroup() %>%
+  filter(duration == 0) %>%
+  rename(controlBiomass = dailyBiomass,
+         controlT = dailyT) %>%
+  dplyr::select(location, DayofYear, controlBiomass, controlT)
+
+biomass_comp <- left_join(output.df %>% filter(duration != 0), control,
+                          by = c("location", "DayofYear")) %>%
+  mutate(biomassProp = dailyBiomass / controlBiomass,
+         tProp = dailyT / controlT)
+
+ggplot() +
+  geom_point(data = control, aes(x = DayofYear, y = controlT, color = "control")) +
+  geom_point(data = output.df[output.df$duration == 1,], 
+             aes(x = DayofYear, y = dailyT, color = "reduced")) +
+  facet_wrap(~location)
+
+ggplot() +
+  geom_point(data = control, aes(x = DayofYear, y = controlBiomass, color = "control")) +
+  geom_point(data = output.df[output.df$duration == 1,], 
+             aes(x = DayofYear, y = dailyBiomass, color = "reduced")) +
+  facet_wrap(~location)
+
+fig_biomass <- ggplot(biomass_comp, aes(x = Date)) +
+  geom_tile(aes(y = duration, fill = biomassProp)) +
+  facet_wrap(~location) +
+  scale_fill_gradient2(low = "goldenrod", mid = "lightgray", 
+                       high = "forestgreen", midpoint = 1) +
+  scale_y_continuous("Days reduced") +
+  theme_cowplot() +
+  theme(strip.background =element_blank(),
+        legend.title = element_blank(),
+        plot.title = element_text(size = 12),
+        axis.title.x = element_blank()) +
+  labs(title = "Biomass proportion")
+
+fig_trans <- ggplot(biomass_comp, aes(x = Date)) +
+  geom_tile(aes(y = duration, fill = tProp)) +
+  facet_wrap(~location) +
+  scale_fill_gradient2(low = "pink", mid = "lightgray", 
+                       high = "blueviolet", midpoint = 1) +
+  scale_y_continuous("Days reduced") +
+  theme_cowplot() +
+  theme(strip.background =element_blank(),
+        legend.title = element_blank(),
+        plot.title = element_text(size = 12),
+        axis.title.x = element_blank()) +
+  labs(title = "Transpiration proportion")
+
+plot_grid(fig_biomass, fig_trans, ncol = 1)
+```
