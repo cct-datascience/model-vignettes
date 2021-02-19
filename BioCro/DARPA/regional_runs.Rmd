@@ -8,6 +8,7 @@ urlcolor: blue
 ## Read in libraries
 
 ```{r}
+devtools::load_all('~/pecan/models/biocro')
 library(PEcAn.BIOCRO)
 library(ncdf4)
 library(PEcAn.all)
@@ -17,12 +18,13 @@ library(udunits2)
 library(ggplot2)
 library(gganimate)
 ```
+Here we combine Setaria WildType (ME034) with plants that have modified traits. One is with decreased stomatal conductance represented by a reduced slope in the slope parameter for the Ball Berry model of stomatal conductance. The second is for a dwarf plant.
 
-Decreased Stomatal Slope Regional Runs
+**Decreased Stomatal Slope Regional Runs**
 
 This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
 
-Changed Carbon Allocation Regional Runs
+**Changed Carbon Allocation Regional Runs**
 
 This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` 
 
@@ -41,7 +43,13 @@ met_stlew <- nc_open("/data/dbfiles/narr_subsets/stlew.nc")
 latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
                       lon = ncvar_get(met_stlew, "longitude"))
 
-dir.create("/data/output/biocro_regional_runs", recursive = TRUE, showWarnings = FALSE)
+outdir <- "/data/output/biocro_regional_runs"
+if(!dir.exists(outdir)){
+  dir.create("/data/output/biocro_regional_runs", 
+             recursive = TRUE, 
+             showWarnings = FALSE)
+}
+
 ```
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
@@ -68,7 +76,8 @@ estimate_biomass <- function(genotype){
     regional_run_results <- rbind(regional_run_results, regional_run_result_daily)
     print(point)
   }
-  results_path <- paste0("/data/output/biocro_regional_runs/stlew_", genotype, ".csv")
+  results_path <- paste0("/data/output/biocro_regional_runs/stlew_",
+                         genotype, ".csv")
   write.csv(regional_run_results, results_path)
 }
 lapply(genotypes, estimate_biomass)
