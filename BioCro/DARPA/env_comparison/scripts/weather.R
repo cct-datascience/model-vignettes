@@ -25,15 +25,18 @@ ch_weather <- data.frame(year = rep(2020, n*24),
 # Retrieve GH and Field sowing and transplant dates
 load("~/sentinel-detection/data/cleaned_data/biomass/greenhouse_outdoor_biomass.Rdata")
 exp_dates <- greenhouse_outdoor_biomass %>%
-  filter(exp_site == "GH"  & exp_number == 1 |
-           exp_site == "Field"  & exp_number == 2) %>%
+  filter(exp_site == "GH"  & exp_number == 1 & treatment == "pot" & 
+           is.na(panicle_bag_date) == T|
+           exp_site == "Field"  & exp_number == 2 & treatment == "jolly_pot" & 
+           is.na(panicle_bag_date) == T) %>%
   group_by(exp_site) %>%
   summarize(sowing = unique(sowing_date),
-            transplant = unique(transplant_date)) %>%
+            transplant = unique(transplant_date),
+            harvest = unique(harvest_date)) %>%
   mutate(chamber_dur = difftime(transplant, sowing, units = "days"))
 
 # St. Louis Science Center data in the sentinel-detection repo
-# Potentiall used for gapfilling
+# Potentially used for gapfilling
 slsc <- read.csv("~/sentinel-detection/data/raw_data/env/StLouisScienceCenter_2020_hourly.csv") %>%
   mutate(SolarR = SolarR/2.35e5*1e6) %>% # Convert from W/m2
   slice_head(n = 8783)
