@@ -21,6 +21,12 @@ BioCro_restart <- function(met,
   iStem <- last(res$Stem)
   iLeaf <- last(res$Leaf)
   
+  # If duration is set to zero, change to one and increase prop to 1
+  if(duration == 0) {
+    duration <- 1
+    prop <- 1
+  }
+  
   # Reduce stomatal parameters by prop
   photoP <- l2n(config$pft$photoParms)
   photoP$b0 <- photoP$b0 * prop
