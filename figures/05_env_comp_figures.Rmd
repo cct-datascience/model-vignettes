@@ -197,3 +197,106 @@ plot_grid(fig_ts, fig_diff, ncol = 2)
 dev.off()
 ```
 
+Finally, organize and plot variance decomposition for biomass and transpiration. 
+```{r}
+load("/data/output/pecan_runs/env_comp_results/var_decomp_TotLivBiom.Rdata")
+cols <- brewer.pal(7, name = "Set1")
+
+cv.b <- ggplot(data = vd) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, 
+                      col = treatment), 
+                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+el.b <- ggplot(data = vd) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, 
+                      col = treatment), 
+                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+vdecomp.b <- ggplot(data = vd) +
+  geom_pointrange(aes(x = trait.labels, y = sd_convert, ymin = 0, ymax = sd_convert, 
+                      col = treatment), 
+                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle(expression(paste("Var. explained (kg ", m^-2, ")"))) +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  scale_y_continuous(breaks = pretty(vd$sd_convert, n = 3)) +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank(), 
+        legend.position = c(0.8, 0.5),
+        legend.title = element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)])
+
+# Plot variance decomposition of transpiration
+load("/data/output/pecan_runs/env_comp_results/var_decomp_TVeg.Rdata")
+
+cv.t <- ggplot(data = vd) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, 
+                      col = treatment), 
+                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("CV %") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+el.t <- ggplot(data = vd) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, 
+                      col = treatment), 
+                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+vdecomp.t <- ggplot(data = vd) +
+  geom_pointrange(aes(x = trait.labels, y = sd_convert, ymin = 0, ymax = sd_convert, 
+                      col = treatment), 
+                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  ggtitle(expression(paste("Var. explained (kg ", m^-2, " ", d^-1, ")"))) +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  scale_y_continuous(breaks = pretty(vd$sd_convert, n = 3)) +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank(), 
+        legend.position = c(0.8, 0.5)) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)])
+
+jpeg(filename = "plots/Fig5_vardecomp.jpg", height = 8, width = 7, units = "in", res = 600)
+cowplot::plot_grid(cv.b, el.b, vdecomp.b, cv.t, el.t, vdecomp.t, nrow = 2, rel_widths = c(1.5, 1, 1.1))
+dev.off()
+```
