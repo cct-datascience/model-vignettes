@@ -24,21 +24,7 @@ library(RColorBrewer)
 library(cowplot)
 ```
 
-Data are in the data folder and include four files. 
-```{r pressure, echo=FALSE}
-loc <- "~/../../data/output/pecan_runs/env_comp_results/ch/pft/SetariaWT_ME034/"
-# Prior distribution
-load(paste0(loc, "prior.distns.Rdata"))
-# Empirical data from BETYdb
-load(paste0(loc, "jagged.data.Rdata"))
-# Posterior samples
-load(paste0(loc, "trait.mcmc.Rdata"))
-# Match table
-load(paste0(loc, "trt.match.Rdata"))
-
-```
-
-First, prepare model output and validation data for plotting 
+First, prepare model output and validation data for plotting timeseries of biomass and transpiration. 
 ```{r}
 # Organize 3 treatments into same figure
 treatments <- c("ch", "gh", "out")
@@ -107,80 +93,107 @@ biomass_valid <- rbind(biomass_valid_ch, biomass_valid_gh_out) %>%
          day = difftime(harvest_date, sowing_date, units = "days"))
 
 # Combine both Biomass and Transpiration time series
-all_ts <- rbind.data.frame(biomass_ts, trans_ts)
+all_ts <- rbind.data.frame(biomass_ts, trans_ts) %>%
+  mutate(Trait = case_when(trait == "biomass" ~ "Biomass~(kg~m^-2)",
+                           trait == "transpiration" ~ "Transpiration~(kg~m^-2~d^-1)"),
+         Treatment = case_when(treatment == "ch" ~ "Chamber",
+                               treatment == "gh" ~ "Greenhouse",
+                               treatment == "out" ~ "Outdoor"))
 
 ```
 
 Plot first set of time series panels. 
 ```{r}
 cols <- brewer.pal(7, name = "Set1")
-
-fig_biomass_ts <- ggplot() +
-  geom_line(data = all_ts, aes(day, y = median, color = treatment)) +
-  geom_ribbon(data = all_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), 
+fig_ts <- ggplot() +
+  geom_line(data = all_ts, aes(day, y = median, color = Treatment)) +
+  geom_ribbon(data = all_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = Treatment), 
               alpha = 0.25) +
-  # geom_point(data = biomass_valid, aes(day, y = total_biomass_kg_m2, color = treatment)) +
   scale_x_continuous("Day of Experiment") + 
-  # scale_y_continuous(expression(paste("Total Biomass (kg ",  m^-2, ")"))) +
-  facet_wrap(~trait, ncol = 1, scales = "free_y") +
-  theme_bw() +
+  facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
+  theme_bw(base_size = 12) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        axis.text.y=element_blank(),
-        strip.background = element_blank())
-
-jpeg(filename = "../plots/biomass_ts.jpg", height = 5, width = 7, units = "in", res = 600)
-print(fig_biomass_ts)
-dev.off()
-
-
-fig_temp <- ggplot() +
-  stat_density(data = mcmc.temp, aes(x = value, color = treatment), 
-               position = "identity", geom = "line") +
-  geom_rug(data = jag.temp, aes(x = Y, color = treatment), 
-           alpha = 0.5,
-           length = unit(0.1, "npc")) +
-  facet_wrap(~Trait, ncol = 3, scales = "free", labeller = label_parsed) +
-  theme_bw() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
+        axis.title.y = element_blank(),
         strip.background = element_blank(),
-        legend.position = c(0.24, 0.9),
-        legend.background = element_blank(),
-        legend.text = element_text(size=8),
-        legend.key.size = unit(0.3, "cm"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  scale_color_manual(name = NULL, values = cols[c(7,1,2)])
-
-fig_env <- ggplot() +
-  stat_density(data = mcmc.env, aes(x = value, color = treatment),
-             geom = "line",position = "identity") + 
-  geom_rug(data = jag.env, aes(x = Y, color = treatment), 
-           alpha = 0.5, 
-           length = unit(0.1, "npc")) +
-  facet_wrap(~Trait, ncol = 3, scales = "free", labeller = label_parsed) +
-  theme_bw() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        strip.background = element_blank(),
-        legend.position = c(0.24, 0.9),
-        legend.background = element_blank(),
-        legend.text = element_text(size=8),
-        legend.key.size = unit(0.3, "cm"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  scale_color_manual(name = NULL, values = cols[c(7,3,4,5)])
-
-jpeg(filename = "plots/Fig1_parameters.jpg", height = 7, width = 7,
-     units = "in", res = 600)
-plot_grid(fig_temp, fig_env, ncol = 1, labels = c('a', 'b'))
-dev.off()
-
+        strip.placement = "outside",
+        legend.title = element_blank(),
+        legend.position = c(0.23, 0.9),
+        legend.background = element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  scale_fill_manual(name = NULL, values = cols[c(4,3,5)])
 ```
 
+Second, organize model output and plot differences between treatments.
+
+```{r}
+# Organize 3 treatments into same figure
+biomass_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TotLivBiom.csv")) %>%
+  pivot_wider(names_from = percentile, values_from = c(gh_ch, out_ch, out_gh)) %>%
+  pivot_longer(!day, names_to = c("first", "second", "level"), names_pattern = "(.*)_(.*)_(.*)",
+               values_to = "percentile") %>%
+  mutate(diff = paste0(first, "_", second),
+         trait = "biomass") %>%
+  pivot_wider(names_from = level, values_from = percentile) %>%
+  rename(p025 = "25",
+         p05 = "50",
+         p50 = "500",
+         p095 = "950",
+         p975 = "975")
+
+trans_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TVeg.csv")) %>%
+  pivot_wider(names_from = percentile, values_from = c(gh_ch, out_ch, out_gh)) %>%
+  pivot_longer(!day, names_to = c("first", "second", "level"), names_pattern = "(.*)_(.*)_(.*)",
+               values_to = "percentile") %>%
+  mutate(diff = paste0(first, "_", second),
+         trait = "transpiration") %>%
+  pivot_wider(names_from = level, values_from = percentile) %>%
+  rename(p025 = "25",
+         p05 = "50",
+         p50 = "500",
+         p095 = "950",
+         p975 = "975")
+
+# Calculate when one-sided (.05) or two-sided (.025) t-test is significant
+# Assumes that the difference is positive
+biomass_df$sig_05 <- ifelse(biomass_df$p05 > 0, TRUE, FALSE)
+biomass_df$sig_025 <- ifelse(biomass_df$p025 > 0, TRUE, FALSE)
+
+trans_df$sig_05 <- ifelse(trans_df$p05 > 0, TRUE, FALSE)
+trans_df$sig_025 <- ifelse(trans_df$p025 > 0, TRUE, FALSE)
+
+all_df <- rbind.data.frame(biomass_df, trans_df) %>%
+  mutate(Trait = case_when(trait == "biomass" ~ "Delta~Biomass~(kg~m^-2)",
+                           trait == "transpiration" ~ "Delta~Transpiration~(kg~m^-2~d^-1)"),
+         Diff = case_when(diff == "gh_ch" ~ "gh - ch",
+                               diff == "out_ch" ~ "out - ch",
+                               diff == "out_gh" ~ "out - gh"))
+
+# Plot biomass treatment differences through time
+col2 <- brewer.pal(3, name = "Dark2")
+fig_diff <- ggplot() +
+  geom_hline(yintercept = 0) +
+  geom_line(data = all_df, aes(day, y = p50, color = Diff)) +
+  geom_ribbon(data = all_df, aes(day, ymin = p05, ymax = p095, fill = Diff), alpha = 0.25) +
+  geom_point(data = all_df[all_df$sig_05 == TRUE,], aes(day, y = p50, color = Diff)) +
+  scale_x_continuous("Day of Experiment") + 
+  facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.y = element_blank(),
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        legend.title = element_blank(),
+        legend.position = c(0.2, 0.9),
+        legend.background = element_blank()) +
+  scale_color_manual(name = NULL, values = col2[c(1,3,2)]) +
+  scale_fill_manual(name = NULL, values = col2[c(1,3,2)])
+```
+
+```{r}
+jpeg(filename = "plots/Fig4_ts.jpg", height = 5, width = 7, units = "in", res = 600)
+plot_grid(fig_ts, fig_diff, ncol = 2)
+dev.off()
+```
 
