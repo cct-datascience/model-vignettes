@@ -9,6 +9,10 @@ BioCro_restart <- function(met,
 
   # First round of growth 
   res <- BioCro::BioGro(met, day1 = 1, dayn = start_day,
+                        iRhizome = config$pft$iPlantControl$iRhizome,
+                        iLeaf = config$pft$iPlantControl$iLeaf,
+                        iStem = config$pft$iPlantControl$iStem,
+                        iRoot = config$pft$iPlantControl$iRoot,
                         soilControl = l2n(config$pft$soilControl),
                         canopyControl = l2n(config$pft$canopyControl),
                         phenoControl = l2n(config$pft$phenoParms),
