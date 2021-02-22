@@ -217,31 +217,42 @@ plot_grid(fig_biomass, fig_trans, ncol = 1)
 Another way is by plotting the biomass and transpiration proportions as a timeseries. 
 ```{r}
 cols <- brewer.pal(11, "Spectral")
+
+# add dataframe for rug 
+ticks <- data.frame(Duration = as.factor(1:11),
+                    Date = seq(as.Date("2010-05-31"), as.Date("2010-06-10"), by = "day"))
+
 fig_b_ts <- ggplot() +
-  geom_vline(xintercept = as.Date("2010-05-30")) +
-  geom_vline(xintercept = as.Date("2010-06-10"),  lty = 2, color = "gray") +
+  geom_vline(xintercept = as.Date("2010-05-30"), alpha = 0.5) +
+  geom_rug(data = ticks, aes(x = Date, color = Duration)) +
   geom_line(data = biomass_comp, 
              aes(x = Date, y = biomassProp, color = Duration)) +
-  scale_y_continuous("Biomass response") +
+  scale_y_continuous("Biomass response", breaks = seq(0.8, 1.2, 0.1), limits = c(0.7, 1.3)) +
   scale_x_date(limits = c(as.Date("2010-05-15"), as.Date("2010-07-09"))) +
   scale_color_manual(values = cols) +
   facet_wrap(~location)+
   theme_cowplot() +
   theme(axis.title.x = element_blank(),
-        legend.position = c(0.5, 0.5),
-        legend.title = element_blank())
+        # legend.position = c(0.05, 0.5),
+        # legend.title = element_blank(),
+        # legend.text = element_text(size = 10),
+        # legend.key.size = unit(0.3, "cm"),
+        strip.background = element_blank()) +
+  guides(color = FALSE)
 fig_b_ts
 
 fig_t_ts <- ggplot() +
-  geom_vline(xintercept = as.Date("2010-05-30")) +
-  geom_vline(xintercept = as.Date("2010-06-10"),  lty = 2, color = "gray") +
+  geom_vline(xintercept = as.Date("2010-05-30"), alpha = 0.5) +
+  geom_rug(data = ticks, aes(x = Date, color = Duration)) +
   geom_line(data = biomass_comp, 
              aes(x = Date, y = tProp, color = Duration)) +
-  scale_y_continuous("T response") +
+  scale_y_continuous("T response", breaks = seq(0.8, 1.2, 0.1), limits = c(0.7, 1.3)) +
   scale_x_date(limits = c(as.Date("2010-05-15"), as.Date("2010-07-09"))) +
   scale_color_manual(values = cols) +
   facet_wrap(~location)+
   theme_cowplot() +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank()) +
   guides(color = FALSE)
 fig_t_ts
 plot_grid(fig_b_ts, fig_t_ts, ncol = 1)
@@ -259,9 +270,12 @@ fig_b_ts <- ggplot() +
             aes(x = Date, y = dailyBiomass),
             color = "black") +
   scale_y_continuous(expression(paste("Biomass (kg ", m^-2, ")"))) +
+  scale_x_date(limits = c(as.Date("2010-05-15"), as.Date("2010-07-09"))) +
   scale_color_manual(values = cols) +
   facet_wrap(~location, scale = "free_y")+
   theme_cowplot() +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank()) +
   guides(color = FALSE)
 
 fig_t_ts <- ggplot() +
@@ -273,9 +287,12 @@ fig_t_ts <- ggplot() +
             aes(x = Date, y = dailyT),
             color = "black") +
   scale_y_continuous(expression(paste("T (kg ", m^-2, " ", day^-1, ")"))) +
+  scale_x_date(limits = c(as.Date("2010-05-15"), as.Date("2010-07-09"))) +
   scale_color_manual(values = cols) +
   facet_wrap(~location, scale = "free_y")+
   theme_cowplot() +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank()) +
   guides(color = FALSE)
 
 plot_grid(fig_b_ts, fig_t_ts, ncol = 1)
