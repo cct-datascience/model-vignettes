@@ -38,9 +38,9 @@ settings <- PEcAn.workflow::runModule.run.write.configs(settings)
 PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
 
 # Do results post-processing
-for(folder in list.dirs("/data/tests/ed2/out/")){
+for(folder in list.dirs("/data/tests/ed2/out", recursive = FALSE)){
   model2netcdf.ED2(folder, settings$run$site$lat, settings$run$site$lon, settings$run$start.date, 
-                   settings$run$end.date, c('SetariaWT'))
+                   settings$run$end.date, c('SetariaWT', 'ebifarm.c3grass'))
   
 }
 

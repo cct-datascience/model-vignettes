@@ -17,11 +17,15 @@
       <name>SetariaWT</name>
       <ed2_pft_number>1</ed2_pft_number>
     </pft>
+    <pft>
+      <name>ebifarm.c3grass</name>
+      <ed2_pft_number>5</ed2_pft_number>
+    </pft>
   </pfts>
 
   <meta.analysis>
     <iter>3000</iter>
-    <random.effects>FALSE</random.effects>
+    <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
     <update>TRUE</update>
   </meta.analysis>
@@ -89,7 +93,7 @@
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
-      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=4:mem=24gb -l walltime=8:0:0 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
+      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=20:mem=120gb -l walltime=04:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
       <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
       <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi</job.sh>
