@@ -33,7 +33,6 @@ load(paste0(loc, "jagged.data.Rdata"))
 load(paste0(loc, "trait.mcmc.Rdata"))
 # Match table
 load(paste0(loc, "trt.match.Rdata"))
-
 ```
 
 Combine files to produce a set of prior/posterior density plots for the temp_comparison experiment and the env_comparison experiment. 
@@ -172,7 +171,7 @@ fig_temp <- ggplot() +
         legend.key.size = unit(0.3, "cm"),
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  scale_color_manual(name = NULL, values = cols[c(7,1,2)])
+  scale_color_manual(name = NULL, values = cols[c(7,2,1)])
 
 fig_env <- ggplot() +
   stat_density(data = mcmc.env, aes(x = value, color = treatment),
@@ -193,13 +192,12 @@ fig_env <- ggplot() +
         legend.key.size = unit(0.3, "cm"),
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  scale_color_manual(name = NULL, values = cols[c(7,3,4,5)])
+  scale_color_manual(name = NULL, values = cols[c(7,4,3,5)])
 
 jpeg(filename = "plots/Fig1_parameters.jpg", height = 7, width = 7,
      units = "in", res = 600)
 plot_grid(fig_temp, fig_env, ncol = 1, labels = c('a', 'b'))
 dev.off()
-
 ```
 
 
