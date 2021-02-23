@@ -107,7 +107,7 @@ Plot first set of time series panels.
 cols <- brewer.pal(7, name = "Set1")
 fig_ts <- ggplot() +
   geom_line(data = all_ts, aes(day, y = median, color = Treatment)) +
-  geom_ribbon(data = all_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = Treatment), 
+  geom_ribbon(data = all_ts, aes(day, ymin = lcl_50, ymax = ucl_50, fill = Treatment), 
               alpha = 0.25) +
   scale_x_continuous("Day of Experiment") + 
   facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
@@ -137,8 +137,10 @@ biomass_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparis
   pivot_wider(names_from = level, values_from = percentile) %>%
   rename(p025 = "25",
          p05 = "50",
+         p25 = "250",
          p50 = "500",
-         p095 = "950",
+         p75 = "750",
+         p95 = "950",
          p975 = "975")
 
 trans_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TVeg.csv")) %>%
@@ -150,8 +152,10 @@ trans_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison
   pivot_wider(names_from = level, values_from = percentile) %>%
   rename(p025 = "25",
          p05 = "50",
+         p25 = "250",
          p50 = "500",
-         p095 = "950",
+         p75 = "750",
+         p95 = "950",
          p975 = "975")
 
 # Calculate when one-sided (.05) or two-sided (.025) t-test is significant
@@ -174,7 +178,7 @@ col2 <- brewer.pal(3, name = "Dark2")
 fig_diff <- ggplot() +
   geom_hline(yintercept = 0) +
   geom_line(data = all_df, aes(day, y = p50, color = Diff)) +
-  geom_ribbon(data = all_df, aes(day, ymin = p05, ymax = p095, fill = Diff), alpha = 0.25) +
+  geom_ribbon(data = all_df, aes(day, ymin = p25, ymax = p75, fill = Diff), alpha = 0.25) +
   geom_point(data = all_df[all_df$sig_05 == TRUE,], aes(day, y = p50, color = Diff)) +
   scale_x_continuous("Day of Experiment") + 
   facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
@@ -202,10 +206,19 @@ Finally, organize and plot variance decomposition for biomass and transpiration.
 load("/data/output/pecan_runs/env_comp_results/var_decomp_TotLivBiom.Rdata")
 cols <- brewer.pal(7, name = "Set1")
 
-cv.b <- ggplot(data = vd) +
+# Exclude Leaf Respiration Rate and Leaf C:N
+vd1 <- vd %>%
+  filter(trait != "c2n_leaf" & trait != "growth_respiration_coefficient") %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate(trait.labels = replace(trait.labels, trait == "extinction_coefficient_diffuse", 
+                                  "Light Extinction Coefficient"),
+         trait.labels = factor(trait.labels, levels = c("Vcmax", "Stomatal Slope BB", "Specific Leaf Area",
+                                                        "Quantum Efficiency", "Light Extinction Coefficient",
+                                                        "Leaf Respiration Rate", "Cuticular Conductance")))
+cv.b <- ggplot(data = vd1) +
   geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, 
                       col = treatment), 
-                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   ggtitle("CV %") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
@@ -216,10 +229,10 @@ cv.b <- ggplot(data = vd) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
   guides(col = FALSE)
 
-el.b <- ggplot(data = vd) +
+el.b <- ggplot(data = vd1) +
   geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, 
                       col = treatment), 
-                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   ggtitle("Elasticity") +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
@@ -231,10 +244,10 @@ el.b <- ggplot(data = vd) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
   guides(col = FALSE)
 
-vdecomp.b <- ggplot(data = vd) +
+vdecomp.b <- ggplot(data = vd1) +
   geom_pointrange(aes(x = trait.labels, y = sd_convert, ymin = 0, ymax = sd_convert, 
                       col = treatment), 
-                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   ggtitle(expression(paste("Var. explained (kg ", m^-2, ")"))) +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
@@ -244,17 +257,29 @@ vdecomp.b <- ggplot(data = vd) +
         axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank(), 
-        legend.position = c(0.8, 0.5),
-        legend.title = element_blank()) +
+        legend.position = c(0.9, 0.45),
+        legend.title = element_blank(),
+        legend.background = element_blank(),
+        legend.key.size = unit(0.4, "cm")) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)])
 
 # Plot variance decomposition of transpiration
 load("/data/output/pecan_runs/env_comp_results/var_decomp_TVeg.Rdata")
 
-cv.t <- ggplot(data = vd) +
+# Exclude Leaf Respiration Rate and Leaf C:N
+vd2 <- vd %>%
+  filter(trait != "c2n_leaf" & trait != "growth_respiration_coefficient") %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate(trait.labels = replace(trait.labels, trait == "extinction_coefficient_diffuse", 
+                                  "Light Extinction Coefficient"),
+         trait.labels = factor(trait.labels, levels = c("Vcmax", "Stomatal Slope BB", "Specific Leaf Area",
+                                                        "Quantum Efficiency", "Light Extinction Coefficient",
+                                                        "Leaf Respiration Rate", "Cuticular Conductance")))
+  
+cv.t <- ggplot(data = vd2) +
   geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, 
                       col = treatment), 
-                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   ggtitle("CV %") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
@@ -265,10 +290,10 @@ cv.t <- ggplot(data = vd) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
   guides(col = FALSE)
 
-el.t <- ggplot(data = vd) +
+el.t <- ggplot(data = vd2) +
   geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, 
                       col = treatment), 
-                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   ggtitle("Elasticity") +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
@@ -280,10 +305,10 @@ el.t <- ggplot(data = vd) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
   guides(col = FALSE)
 
-vdecomp.t <- ggplot(data = vd) +
+vdecomp.t <- ggplot(data = vd2) +
   geom_pointrange(aes(x = trait.labels, y = sd_convert, ymin = 0, ymax = sd_convert, 
                       col = treatment), 
-                  alpha = 0.5, size = 1, position = position_dodge(width = c(-0.4))) +
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   ggtitle(expression(paste("Var. explained (kg ", m^-2, " ", d^-1, ")"))) +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
@@ -293,10 +318,12 @@ vdecomp.t <- ggplot(data = vd) +
         axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank(), 
-        legend.position = c(0.8, 0.5)) +
+        legend.position = c(0.9, 0.45),
+        legend.background = element_blank(),
+        legend.key.size = unit(0.4, "cm")) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)])
 
-jpeg(filename = "plots/Fig5_vardecomp.jpg", height = 8, width = 7, units = "in", res = 600)
+jpeg(filename = "plots/Fig5_vardecomp.jpg", height = 5, width = 7, units = "in", res = 600)
 cowplot::plot_grid(cv.b, el.b, vdecomp.b, cv.t, el.t, vdecomp.t, nrow = 2, rel_widths = c(1.5, 1, 1.1))
 dev.off()
 ```
