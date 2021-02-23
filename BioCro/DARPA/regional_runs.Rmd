@@ -8,6 +8,7 @@ urlcolor: blue
 ## Read in libraries
 
 ```{r}
+devtools::load_all('~/pecan/models/biocro')
 library(PEcAn.BIOCRO)
 library(ncdf4)
 library(PEcAn.all)
@@ -17,12 +18,13 @@ library(udunits2)
 library(ggplot2)
 library(gganimate)
 ```
+Here we combine Setaria WildType (ME034) with plants that have modified traits. One is with decreased stomatal conductance represented by a reduced slope in the slope parameter for the Ball Berry model of stomatal conductance. The second is for a dwarf plant.
 
-Decreased Stomatal Slope Regional Runs
+**Decreased Stomatal Slope Regional Runs**
 
 This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
 
-Changed Carbon Allocation Regional Runs
+**Changed Carbon Allocation Regional Runs**
 
 This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` 
 
@@ -41,7 +43,13 @@ met_stlew <- nc_open("/data/dbfiles/narr_subsets/stlew.nc")
 latlon <- expand.grid(lat = ncvar_get(met_stlew, "latitude"), 
                       lon = ncvar_get(met_stlew, "longitude"))
 
-dir.create("/data/output/biocro_regional_runs", recursive = TRUE, showWarnings = FALSE)
+outdir <- "/data/output/biocro_regional_runs"
+if(!dir.exists(outdir)){
+  dir.create("/data/output/biocro_regional_runs", 
+             recursive = TRUE, 
+             showWarnings = FALSE)
+}
+
 ```
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
@@ -68,7 +76,8 @@ estimate_biomass <- function(genotype){
     regional_run_results <- rbind(regional_run_results, regional_run_result_daily)
     print(point)
   }
-  results_path <- paste0("/data/output/biocro_regional_runs/stlew_", genotype, ".csv")
+  results_path <- paste0("/data/output/biocro_regional_runs/stlew_",
+                         genotype, ".csv")
   write.csv(regional_run_results, results_path)
 }
 lapply(genotypes, estimate_biomass)
@@ -92,6 +101,8 @@ rr_results <- rr_results %>%
                                     "Mg/ha", "kg/m2"), 
          total_biomass = ifelse(total_biomass < 0, 0, total_biomass), 
          transpiration = ud.convert(CanopyTrans, "Mg/ha/hr", "kg/m2/hr"), 
+         evaporation = ud.convert(SoilEvaporation, "Mg/ha/hr", "kg/m2/hr"), 
+         T_ET = transpiration/ (transpiration + evaporation), 
          genotype_formal = case_when(
            genotype == "wt" ~ "Wild type", 
            genotype == "ss" ~ "Reduced stomatal conductance", 
@@ -288,4 +299,70 @@ trans_comp_2 <- ggplot() +
   lims(y = c(0, 15))
 
 cowplot::plot_grid(trans_comp_1, trans_comp_2, ncol = 1)
+```
+
+Comparison of the relative change in transpiration per pixel and over time. 
+```{r}
+wt <- rr_results %>%
+  filter(genotype == "wt") %>%
+  mutate(date = as.POSIXct(date)) %>% 
+  select(date, doy, lat, lon, latlon, total_biomass, transpiration, genotype_formal)
+  
+ss <- rr_results %>%
+  filter(genotype == "ss") %>%
+  mutate(date = as.POSIXct(date)) %>% 
+  select(date, doy, lat, lon, latlon, total_biomass, transpiration, genotype_formal)
+
+rr_relative <- wt %>%
+  mutate(trans_ss = ss$transpiration,
+         biomass_ss = ss$total_biomass) %>%
+  mutate(prop_trans = trans_ss/transpiration,
+         prop_biomass = biomass_ss/total_biomass)
+
+trans_prop_animation <- ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = rr_relative, aes(x = lon, y = lat, fill = prop_trans), 
+              alpha = 0.9) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "navyblue", 
+                       midpoint = 0.95, 
+                       breaks = seq(.5, 1.5, 0.5), 
+                       limits = c(0.45, 1.5)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+animate(trans_prop_animation, fps = 10, height = 150, width = 600)
+anim_save("stlew_trans_rel_prop.gif", animation = trans_prop_animation, 
+          path = "/data/output/biocro_regional_runs/", fps = 10, height = 150, width = 600)
+
+biomass_prop_animation <- ggplot() +
+  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = rr_relative, aes(x = lon, y = lat, fill = prop_biomass), 
+              alpha = 0.9) +
+  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "forestgreen", high = "darkgreen", 
+                       midpoint = 0.95, 
+                       breaks = seq(.25, 1.25, 0.5), 
+                       limits = c(0.25, 1.25)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+animate(biomass_prop_animation, fps = 10, height = 150, width = 600)
+anim_save("stlew_biomass_rel_prop.gif", animation = biomass_prop_animation, 
+          path = "/data/output/biocro_regional_runs/", fps = 10, height = 150, width = 600)
+
 ```
