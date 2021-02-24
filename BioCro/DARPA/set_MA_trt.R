@@ -17,20 +17,21 @@ set_MA_trt <- function(settings){
   load(file.path(fpath, "jagged.data.Rdata"))
   load(file.path(fpath, "trait.mcmc.Rdata"))
 
+
   #convert jagged.data into match table, only return traits for which there is an associated mcmc output
   trt.match <- lapply(jagged.data, collapse)[names(trait.mcmc)]
   
   #save trt.match, 2 places
-  if(settings$meta.analysis$update == TRUE) {
-    save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trt.match.Rdata"))
-  }
+  # if(settings$meta.analysis$update == TRUE) {
+  #   save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trt.match.Rdata"))
+  # }
   save(trt.match, file = file.path(settings$pfts$pft$outdir, "trt.match.Rdata"))
 
   
   #save existing trait.mcmc with different name, 2 places
-  if(settings$meta.analysis$update == TRUE) {
-    save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.original.Rdata"))
-  }
+  # if(settings$meta.analysis$update == TRUE) {
+  #   save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.original.Rdata"))
+  # }
   save(trait.mcmc, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.original.Rdata"))
 
   #create new trait.mcmc of combined random effects
@@ -48,9 +49,9 @@ set_MA_trt <- function(settings){
   
   #rename as trait.mcmc and save as "trait.mcmc.Rdata", 2 places
   trait.mcmc <- final.trait.mcmc
-  if(settings$meta.analysis$update == TRUE) {
-    save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata"))
-  }
+  # if(settings$meta.analysis$update == TRUE) {
+  #   save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata"))
+  # }
   save(trait.mcmc, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.Rdata"))
 }
 
