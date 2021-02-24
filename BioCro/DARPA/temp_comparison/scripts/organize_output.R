@@ -142,8 +142,8 @@ for(v in variables){
     dplyr::select(-rn, -hn) %>%
     group_by(day) %>%
     # Reports the 2.5, 5, 50, 95, and 97.5th percentile of each set of differences
-    summarize(rn_hn = quantile(rn_hn, probs = c(0.025, 0.05, 0.5, 0.95, 0.975))) %>%
-    mutate(percentile = c("025", "050", "500", "950", "975")) %>%
+    summarize(rn_hn = quantile(rn_hn, probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975))) %>%
+    mutate(percentile = c("025", "050", "250", "500", "750", "950", "975")) %>%
     relocate(day, percentile)
   
   write.csv(diff_stat, 
