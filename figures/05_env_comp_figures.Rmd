@@ -90,7 +90,11 @@ biomass_valid <- rbind(biomass_valid_ch, biomass_valid_gh_out) %>%
   rename(treatment = location) %>%
   mutate(total_biomass_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103,
                                           "g/cm2", "kg/m2"),
-         day = difftime(harvest_date, sowing_date, units = "days"))
+         day = difftime(harvest_date, sowing_date, units = "days"),
+         Trait = "Biomass~(kg~m^-2)",
+         Treatment = case_when(treatment == "ch" ~ "Chamber",
+                               treatment == "gh" ~ "Greenhouse",
+                               treatment == "out" ~ "Outdoor"))
 
 # Combine both Biomass and Transpiration time series
 all_ts <- rbind.data.frame(biomass_ts, trans_ts) %>%
@@ -109,6 +113,7 @@ fig_ts <- ggplot() +
   geom_line(data = all_ts, aes(day, y = median, color = Treatment)) +
   geom_ribbon(data = all_ts, aes(day, ymin = lcl_50, ymax = ucl_50, fill = Treatment), 
               alpha = 0.25) +
+  geom_point(data = biomass_valid, aes(x = day, y = total_biomass_kg_m2, color = Treatment)) +
   scale_x_continuous("Day of Experiment") + 
   facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
   theme_bw(base_size = 12) +
@@ -174,7 +179,7 @@ all_df <- rbind.data.frame(biomass_df, trans_df) %>%
                                diff == "out_gh" ~ "out - gh"))
 
 # Plot biomass treatment differences through time
-col2 <- brewer.pal(3, name = "Dark2")
+col2 <- brewer.pal(7, name = "Accent")
 fig_diff <- ggplot() +
   geom_hline(yintercept = 0) +
   geom_line(data = all_df, aes(day, y = p50, color = Diff)) +
@@ -191,8 +196,8 @@ fig_diff <- ggplot() +
         legend.title = element_blank(),
         legend.position = c(0.2, 0.9),
         legend.background = element_blank()) +
-  scale_color_manual(name = NULL, values = col2[c(1,3,2)]) +
-  scale_fill_manual(name = NULL, values = col2[c(1,3,2)])
+  scale_color_manual(name = NULL, values = col2[c(5,7,6)]) +
+  scale_fill_manual(name = NULL, values = col2[c(5,7,6)])
 ```
 
 ```{r}
@@ -220,11 +225,10 @@ cv.b <- ggplot(data = vd1) +
                       col = treatment), 
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle("CV %") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous("CV (%)") +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank(),
         axis.title.y=element_blank()) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
   guides(col = FALSE)
@@ -234,11 +238,10 @@ el.b <- ggplot(data = vd1) +
                       col = treatment), 
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle("Elasticity") +
+  scale_y_continuous("Elasticity") +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank()) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
@@ -249,12 +252,11 @@ vdecomp.b <- ggplot(data = vd1) +
                       col = treatment), 
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle(expression(paste("Var. explained (kg ", m^-2, ")"))) +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
-  scale_y_continuous(breaks = pretty(vd$sd_convert, n = 3)) +
+  scale_y_continuous(expression(paste("Var. explained (kg ", m^-2, ")")), 
+                     breaks = pretty(vd$sd_convert, n = 3)) +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank(), 
         legend.position = c(0.9, 0.45),
@@ -281,11 +283,10 @@ cv.t <- ggplot(data = vd2) +
                       col = treatment), 
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle("CV %") +
+  scale_y_continuous("CV (%)") +
   geom_hline(aes(yintercept = 0), size = 0.1) +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank(),
         axis.title.y=element_blank()) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
   guides(col = FALSE)
@@ -295,11 +296,10 @@ el.t <- ggplot(data = vd2) +
                       col = treatment), 
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle("Elasticity") +
+  scale_y_continuous("Elasticity") +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank()) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
@@ -310,20 +310,22 @@ vdecomp.t <- ggplot(data = vd2) +
                       col = treatment), 
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
-  ggtitle(expression(paste("Var. explained (kg ", m^-2, " ", d^-1, ")"))) +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
-  scale_y_continuous(breaks = pretty(vd$sd_convert, n = 3)) +
+  scale_y_continuous(expression(paste("Var. explained (kg ", m^-2, " ", d^-1, ")")), 
+                     breaks = pretty(vd$sd_convert, n = 3)) +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank(),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank(), 
-        legend.position = c(0.9, 0.45),
+        legend.position = c(0.9, 0.6),
         legend.background = element_blank(),
         legend.key.size = unit(0.4, "cm")) +
   scale_color_manual(name = NULL, values = cols[c(4,3,5)])
 
 jpeg(filename = "plots/Fig5_vardecomp.jpg", height = 5, width = 7, units = "in", res = 600)
-cowplot::plot_grid(cv.b, el.b, vdecomp.b, cv.t, el.t, vdecomp.t, nrow = 2, rel_widths = c(1.5, 1, 1.1))
+cowplot::plot_grid(cv.b, el.b, vdecomp.b, cv.t, el.t, vdecomp.t, nrow = 2, rel_widths = c(1.5, 1, 1.1),
+                   labels = c("Biomass", "", "", "Transpiration", "", ""),
+                   align = "h", hjust = 0, vjust = 1,
+                   label_size = 10)
 dev.off()
 ```
