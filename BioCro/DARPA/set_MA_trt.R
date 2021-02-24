@@ -12,23 +12,28 @@ set_MA_trt <- function(settings){
   postid <- settings$pfts$pft$posteriorid
   fname <- PEcAn.DB::dbfile.file(type = "Posterior", id = postid, con = con)
   fpath <- gsub(paste0(postid, "\\/.*"), postid, fname)
-
+  
   #load jagged.data and trait.mcmc
   load(file.path(fpath, "jagged.data.Rdata"))
   load(file.path(fpath, "trait.mcmc.Rdata"))
-
+  
+  
   #convert jagged.data into match table, only return traits for which there is an associated mcmc output
   trt.match <- lapply(jagged.data, collapse)[names(trait.mcmc)]
   
   #save trt.match, 2 places
-  # save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trt.match.Rdata"))
+  # if(settings$meta.analysis$update == TRUE) {
+  #   save(trt.match, file = file.path(settings$database$dbfiles, "posterior", postid, "trt.match.Rdata"))
+  # }
   save(trt.match, file = file.path(settings$pfts$pft$outdir, "trt.match.Rdata"))
-
+  
   
   #save existing trait.mcmc with different name, 2 places
-  # save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.original.Rdata"))
+  # if(settings$meta.analysis$update == TRUE) {
+  #   save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.original.Rdata"))
+  # }
   save(trait.mcmc, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.original.Rdata"))
-
+  
   #create new trait.mcmc of combined random effects
   new.trait.mcmc <- mapply(FUN = RE_combine, mc = trait.mcmc, trt = trt.match, 
                            SIMPLIFY = FALSE)
@@ -36,7 +41,7 @@ set_MA_trt <- function(settings){
   #identify target site and treatment
   target.site <- settings$run$site$id
   target.trt <- settings$meta.analysis$treatment
-
+  
   #label target site/treatment "beta.o"
   final.trait.mcmc <- mapply(FUN = rename_cols, trait.mcmc = new.trait.mcmc, trt = trt.match,
                              MoreArgs = list(target.site = target.site, target.trt = target.trt),
@@ -44,15 +49,17 @@ set_MA_trt <- function(settings){
   
   #rename as trait.mcmc and save as "trait.mcmc.Rdata", 2 places
   trait.mcmc <- final.trait.mcmc
-  # save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata"))
+  # if(settings$meta.analysis$update == TRUE) {
+  #   save(trait.mcmc, file = file.path(settings$database$dbfiles, "posterior", postid, "trait.mcmc.Rdata"))
+  # }
   save(trait.mcmc, file = file.path(settings$pfts$pft$outdir, "trait.mcmc.Rdata"))
 }
 
 #Returns unique combination of site, trt, and ghs for matching purposes
 collapse <- function(jagged){
   match <- unique(jagged[,c("site", "trt", "ghs", 
-                          "site_id", "treatment_id", "greenhouse", 
-                          "trt_name", "trt_num")])
+                            "site_id", "treatment_id", "greenhouse", 
+                            "trt_name", "trt_num")])
   colnames(match)[colnames(match) %in% c("trt", "trt_num")] <- c("trt_control", "trt")
   row.names(match) <- NULL
   return(match)
@@ -74,8 +81,8 @@ RE_combine <- function(mc, trt){
       col_ind[i,j] <- if(length(index) == 1){
         index
       } else {
-          NA
-        }
+        NA
+      }
     }
   }
   #add index for "beta.o", which is universal across treatments
@@ -102,7 +109,7 @@ rename_cols <- function(trait.mcmc, trt, target.site, target.trt){
   if (any(trt$trt_name %in% target.trt)) {
     ind <- which(trt$site_id == target.site & trt$trt_name == target.trt) + 1 # specific to site and treatment
   } else if (any(trt$site_id == target.site)){
-   ind <- which(trt$site_id == target.site & trt$trt_control == "control") + 1 # specific to site (control treatment)
+    ind <- which(trt$site_id == target.site & trt$trt_control == "control") + 1 # specific to site (control treatment)
   } else {
     ind <- 1 # no site or treatment, using global beta.o
   }
