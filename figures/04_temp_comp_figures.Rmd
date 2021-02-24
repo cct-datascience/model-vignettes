@@ -1,0 +1,300 @@
+---
+title: "Phase II report figures"
+author: "Jessica Guo"
+date: "2/15/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Biomass and transpiration ts and diff figures
+
+Create a panel of time-series and difference figures for the temperature comparison experiment. Use same colors as in 03_metaanalysis_figures.Rmd for the time series, but new colors for the differences. 
+```{r}
+library(readxl)
+library(udunits2)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(RColorBrewer)
+library(cowplot)
+```
+
+First, prepare model output and validation data for plotting timeseries of biomass and transpiration. 
+```{r}
+# Organize 2 treatments into same figure
+treatments <- c("rn", "hn")
+
+biomass_ts <- c()
+trans_ts <- c()
+for (trt in treatments) {
+  data_in <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/", trt, 
+                        "/ensemble_ts_summary_TotLivBiom.csv")) %>%
+    mutate(treatment = trt,
+           trait = "biomass") %>%
+    relocate(treatment)
+  biomass_ts <- rbind(biomass_ts, data_in)
+  
+  data_in <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/", trt, 
+                         "/ensemble_ts_summary_TVeg.csv")) %>%
+    mutate(treatment = trt,
+           trait = "transpiration") %>%
+    relocate(treatment)
+  trans_ts <- rbind(trans_ts, data_in)
+}
+
+# Bring in validation biomass
+load("~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
+
+biomass_valid <- chamber_biomass %>%
+  filter(genotype == "ME034V-1" &
+           treatment %in% c(NA, "control") &
+           temp %in% c("31/22", "31/31") &
+           light == 250 &
+           !is.na(stem_DW_mg) &
+           !is.na(leaf_DW_mg) &
+           !is.na(panicle_DW_mg)) %>%
+  rename(plant_id = plantID) %>%
+  mutate(location = case_when(temp == "31/22" ~ "rn", 
+                              temp == "31/31" ~ "hn"),
+         stem_DW_g = ud.convert(stem_DW_mg, "mg", "g"),
+         leaf_DW_g = ud.convert(leaf_DW_mg, "mg", "g"),
+         panicle_DW_g = ud.convert(panicle_DW_mg, "mg", "g")) %>%
+  dplyr::select(location, plant_id, sowing_date, transplant_date, harvest_date,
+         stem_DW_g, leaf_DW_g, panicle_DW_g) %>%
+  rename(treatment = location) %>%
+  mutate(total_biomass_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103,
+                                          "g/cm2", "kg/m2"),
+         day = difftime(harvest_date, sowing_date, units = "days"),
+         Trait = "Biomass~(kg~m^-2)",
+         Treatment = case_when(treatment == "rn" ~ "Control night T",
+                               treatment == "hn" ~ "High night T"))
+
+# Combine both Biomass and Transpiration time series
+all_ts <- rbind.data.frame(biomass_ts, trans_ts) %>%
+  mutate(Trait = case_when(trait == "biomass" ~ "Biomass~(kg~m^-2)",
+                           trait == "transpiration" ~ "Transpiration~(kg~m^-2~d^-1)"),
+         Treatment = case_when(treatment == "rn" ~ "Control night T",
+                               treatment == "hn" ~ "High night T"))
+
+```
+
+Plot first set of time series panels. 
+```{r}
+cols <- brewer.pal(7, name = "Set1")
+fig_ts <- ggplot() +
+  geom_line(data = all_ts, aes(day, y = median, color = Treatment)) +
+  geom_ribbon(data = all_ts, aes(day, ymin = lcl_50, ymax = ucl_50, fill = Treatment), 
+              alpha = 0.25) +
+  geom_point(data = biomass_valid, aes(x = day, y = total_biomass_kg_m2, color = Treatment)) +
+  scale_x_continuous("Day of Experiment") + 
+  facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.y = element_blank(),
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        legend.title = element_blank(),
+        legend.position = c(0.25, 0.9),
+        legend.background = element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(2,1)]) +
+  scale_fill_manual(name = NULL, values = cols[c(2,1)])
+```
+
+Second, organize model output and plot differences between treatments.
+
+```{r}
+# Organize 2 treatments into same figure
+biomass_df <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/comparison_diff_TotLivBiom.csv")) %>%
+  pivot_wider(names_from = percentile, values_from = c(rn_hn)) %>%
+  mutate(diff = "rn_hn",
+         trait = "biomass") %>%
+  rename(p025 = "25",
+         p05 = "50",
+         p25 = "250",
+         p50 = "500",
+         p75 = "750",
+         p95 = "950",
+         p975 = "975")
+
+trans_df <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/comparison_diff_TVeg.csv")) %>%
+  pivot_wider(names_from = percentile, values_from = c(rn_hn)) %>%
+  mutate(diff = "rn_hn",
+         trait = "transpiration") %>%
+  rename(p025 = "25",
+         p05 = "50",
+         p25 = "250",
+         p50 = "500",
+         p75 = "750",
+         p95 = "950",
+         p975 = "975")
+
+# Calculate when one-sided (.05) or two-sided (.025) t-test is significant
+# Assumes that the difference is positive
+biomass_df$sig_05 <- ifelse(biomass_df$p05 > 0, TRUE, FALSE)
+biomass_df$sig_025 <- ifelse(biomass_df$p025 > 0, TRUE, FALSE)
+
+trans_df$sig_05 <- ifelse(trans_df$p05 > 0, TRUE, FALSE)
+trans_df$sig_025 <- ifelse(trans_df$p025 > 0, TRUE, FALSE)
+
+all_df <- rbind.data.frame(biomass_df, trans_df) %>%
+  mutate(Trait = case_when(trait == "biomass" ~ "Delta~Biomass~(kg~m^-2)",
+                           trait == "transpiration" ~ "Delta~Transpiration~(kg~m^-2~d^-1)"),
+         Diff = case_when(diff == "rn_hn" ~ "cn - hn"))
+
+# Plot biomass treatment differences through time
+col2 <- brewer.pal(3, name = "Dark2")
+fig_diff <- ggplot() +
+  geom_hline(yintercept = 0) +
+  geom_line(data = all_df, aes(day, y = p50, color = Diff)) +
+  geom_ribbon(data = all_df, aes(day, ymin = p25, ymax = p75, fill = Diff), alpha = 0.25) +
+  geom_point(data = all_df[all_df$sig_05 == TRUE,], aes(day, y = p50, color = Diff)) +
+  scale_x_continuous("Day of Experiment") + 
+  facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.y = element_blank(),
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        legend.title = element_blank(),
+        legend.position = c(0.2, 0.9),
+        legend.background = element_blank()) +
+  scale_color_manual(name = NULL, values = col2[3]) +
+  scale_fill_manual(name = NULL, values = col2[3])
+```
+
+```{r}
+jpeg(filename = "plots/Fig2_ts.jpg", height = 5, width = 7, units = "in", res = 600)
+plot_grid(fig_ts, fig_diff, ncol = 2)
+dev.off()
+```
+
+Finally, organize and plot variance decomposition for biomass and transpiration. 
+```{r}
+load("/data/output/pecan_runs/env_comp_results/var_decomp_TotLivBiom.Rdata")
+cols <- brewer.pal(7, name = "Set1")
+
+# Exclude Leaf Respiration Rate and Leaf C:N
+vd1 <- vd %>%
+  filter(trait != "c2n_leaf" & trait != "growth_respiration_coefficient") %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate(trait.labels = replace(trait.labels, trait == "extinction_coefficient_diffuse", 
+                                  "Light Extinction Coefficient"),
+         trait.labels = factor(trait.labels, levels = c("Vcmax", "Stomatal Slope BB", "Specific Leaf Area",
+                                                        "Quantum Efficiency", "Light Extinction Coefficient",
+                                                        "Leaf Respiration Rate", "Cuticular Conductance")))
+cv.b <- ggplot(data = vd1) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, 
+                      col = treatment), 
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  scale_y_continuous("CV (%)") +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+el.b <- ggplot(data = vd1) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, 
+                      col = treatment), 
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  scale_y_continuous("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+vdecomp.b <- ggplot(data = vd1) +
+  geom_pointrange(aes(x = trait.labels, y = sd_convert, ymin = 0, ymax = sd_convert, 
+                      col = treatment), 
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  scale_y_continuous(expression(paste("Var. explained (kg ", m^-2, ")")), 
+                     breaks = pretty(vd$sd_convert, n = 3)) +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank(), 
+        legend.position = c(0.9, 0.45),
+        legend.title = element_blank(),
+        legend.background = element_blank(),
+        legend.key.size = unit(0.4, "cm")) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)])
+
+# Plot variance decomposition of transpiration
+load("/data/output/pecan_runs/env_comp_results/var_decomp_TVeg.Rdata")
+
+# Exclude Leaf Respiration Rate and Leaf C:N
+vd2 <- vd %>%
+  filter(trait != "c2n_leaf" & trait != "growth_respiration_coefficient") %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate(trait.labels = replace(trait.labels, trait == "extinction_coefficient_diffuse", 
+                                  "Light Extinction Coefficient"),
+         trait.labels = factor(trait.labels, levels = c("Vcmax", "Stomatal Slope BB", "Specific Leaf Area",
+                                                        "Quantum Efficiency", "Light Extinction Coefficient",
+                                                        "Leaf Respiration Rate", "Cuticular Conductance")))
+  
+cv.t <- ggplot(data = vd2) +
+  geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, 
+                      col = treatment), 
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  scale_y_continuous("CV (%)") +
+  geom_hline(aes(yintercept = 0), size = 0.1) +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+el.t <- ggplot(data = vd2) +
+  geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities, 
+                      col = treatment), 
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  scale_y_continuous("Elasticity") +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank()) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)]) +
+  guides(col = FALSE)
+
+vdecomp.t <- ggplot(data = vd2) +
+  geom_pointrange(aes(x = trait.labels, y = sd_convert, ymin = 0, ymax = sd_convert, 
+                      col = treatment), 
+                  alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
+  coord_flip() +
+  geom_hline(aes(yintercept = 0), size = 0.1)  +
+  scale_y_continuous(expression(paste("Var. explained (kg ", m^-2, " ", d^-1, ")")), 
+                     breaks = pretty(vd$sd_convert, n = 3)) +
+  theme_classic(base_size = 10) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.y=element_blank(), 
+        axis.text.y=element_blank(), 
+        legend.position = c(0.9, 0.6),
+        legend.background = element_blank(),
+        legend.key.size = unit(0.4, "cm")) +
+  scale_color_manual(name = NULL, values = cols[c(4,3,5)])
+
+jpeg(filename = "plots/Fig5_vardecomp.jpg", height = 5, width = 7, units = "in", res = 600)
+cowplot::plot_grid(cv.b, el.b, vdecomp.b, cv.t, el.t, vdecomp.t, nrow = 2, rel_widths = c(1.5, 1, 1.1),
+                   labels = c("Biomass", "", "", "Transpiration", "", ""),
+                   align = "h", hjust = 0, vjust = 1,
+                   label_size = 10)
+dev.off()
+```
