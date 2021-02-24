@@ -224,7 +224,7 @@ vdecomp.b <- ggplot(data = vd1) +
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
-  scale_y_continuous(expression(paste("Var. explained (kg ", m^-2, ")")), 
+  scale_y_continuous(expression(paste("SD explained (kg ", m^-2, ")")), 
                      breaks = pretty(vd$sd_convert, n = 3)) +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
@@ -283,7 +283,7 @@ vdecomp.t <- ggplot(data = vd2) +
                   alpha = 0.5, size = 0.75, position = position_dodge(width = c(-0.4))) +
   coord_flip() +
   geom_hline(aes(yintercept = 0), size = 0.1)  +
-  scale_y_continuous(expression(paste("Var. explained (kg ", m^-2, " ", d^-1, ")")), 
+  scale_y_continuous(expression(paste("SD explained (kg ", m^-2, " ", d^-1, ")")), 
                      breaks = pretty(vd$sd_convert, n = 3)) +
   theme_classic(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5),
