@@ -30,6 +30,11 @@
     <size>1000</size>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
+    <samplingspace>
+      <parameters>
+        <method>lhc</method>
+      </parameters>
+  </samplingspace>
   </ensemble>
 
   <meta.analysis>
