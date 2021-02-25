@@ -90,7 +90,7 @@ fig_ts <- ggplot() +
   geom_line(data = all_ts, aes(day, y = median, color = Treatment)) +
   geom_ribbon(data = all_ts, aes(day, ymin = lcl_50, ymax = ucl_50, fill = Treatment), 
               alpha = 0.25) +
-  geom_point(data = biomass_valid, aes(x = day, y = total_biomass_kg_m2, color = Treatment)) +
+  # geom_point(data = biomass_valid, aes(x = day, y = total_biomass_kg_m2, color = Treatment)) +
   scale_x_continuous("Day of Experiment") + 
   facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
   theme_bw(base_size = 12) +
