@@ -60,7 +60,6 @@ for(r in regions){
              showWarnings = FALSE)
   }
 }
-
 ```
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
@@ -70,6 +69,7 @@ The BioCro model is then run for each location of interest, using the config fil
 The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. These are saved as csv files. 
 
 ```{r}
+# Only run ONCE
 inputs <- expand.grid(genotype = genotypes, region = regions)
 for(i in 3:nrow(inputs)) {
   genotype <- inputs$genotype[i]
@@ -98,6 +98,7 @@ for(i in 3:nrow(inputs)) {
 The csv files are read in, combined, and cleaned/modified for later plotting. First, combine for biomass and transpiration time series for all genotypes and regions. 
 
 ```{r}
+inputs <- expand.grid(genotype = genotypes, region = regions)
 rr_ts <- c()
 for(i in 1:nrow(inputs)){
   genotype <- inputs$genotype[i]
@@ -174,15 +175,15 @@ ggplot(rr_rel, aes(x = date, y = prop_trans, group = latlon, color = latlon)) +
 The final GIF of estimated biomass/transpiration values for the `r nrow(grids$stlew)` locations on a map of the United States, running through each day's values. 
 
 ```{r}
-gif_background <- map_data("state")
-city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
+na_background <- map_data("state")
+STL_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
 
 biomass_ts <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = na_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = rr_ts[rr_ts$region == "stlew",], aes(x = lon, y = lat, fill = total_biomass), 
               alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  geom_point(data = STL_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
                        midpoint = 1, 
                        breaks = seq(-10, 10, 0.4), 
@@ -202,11 +203,11 @@ anim_save("biomass_ts.gif", animation = biomass_ts,
           path = outdir$stlew, fps = 10, height = 300, width = 600)
 
 transpiration_ts <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = na_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = rr_ts[rr_ts$region == "stlew",], aes(x = lon, y = lat, fill = transpiration), 
               alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  geom_point(data = STL_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
                        midpoint = 7.5, 
                        breaks = seq(0, 20, 5), 
@@ -231,20 +232,21 @@ anim_save("trans_ts.gif", animation = transpiration_ts,
 The final GIF of estimated biomass/transpiration values for the `r nrow(grids$chiruss)` locations on a map of Eurasia, running through each day's values. 
 
 ```{r}
-gif_background <- map_data("state")
-city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
+EA_background <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia" | region == "Kazakhstan" | region == "Mongolia")
+URU_coords <- data.frame(name = "Urumuqi", lon = 87.6168, lat = 43.8256)
 
 biomass_ts <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = EA_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = rr_ts[rr_ts$region == "chiruss",], aes(x = lon, y = lat, fill = total_biomass), 
               alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  geom_point(data = URU_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "yellow", mid = "yellowgreen", high = "darkgreen", 
                        midpoint = 1, 
                        breaks = seq(-10, 10, 0.4), 
                        limits = c(0, 2)) +
-  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  coord_cartesian(xlim = c(31, 186), ylim = c(20, 80)) +
   facet_wrap(~genotype_formal, ncol = 1) +
   theme_classic(base_size = 20) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
@@ -254,21 +256,21 @@ biomass_ts <- ggplot() +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
-# animate(biomass_ts, fps = 10, height = 150, width = 600)
+# animate(biomass_ts, fps = 10, height = 600, width = 600)
 anim_save("biomass_ts.gif", animation = biomass_ts, 
-          path = outdir$chiruss, fps = 10, height = 150, width = 600)
+          path = outdir$chiruss, fps = 10, height = 600, width = 600)
 
 transpiration_ts <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = EA_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = rr_ts[rr_ts$region == "chiruss",], aes(x = lon, y = lat, fill = transpiration), 
               alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
+  geom_point(data = URU_coords, aes(x = lon, y = lat)) +
   scale_fill_gradient2(low = "lightblue", mid = "blue", high = "navyblue", 
                        midpoint = 7.5, 
                        breaks = seq(0, 20, 5), 
                        limits = c(0, 15)) +
-  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  coord_cartesian(xlim = c(31, 186), ylim = c(20, 80)) +
   facet_wrap(~genotype_formal, ncol = 1) +
   theme_classic(base_size = 20) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
@@ -278,29 +280,31 @@ transpiration_ts <- ggplot() +
   transition_manual(doy) +
   ggtitle('Day: {current_frame}')
 
-# animate(transpiration_ts, fps = 10, height = 150, width = 600)
+# animate(transpiration_ts, fps = 10, height = 600, width = 600)
 anim_save("trans_ts.gif", animation = transpiration_ts, 
-          path = outdir$chiruss, fps = 10, height = 150, width = 600)
+          path = outdir$chiruss, fps = 10, height = 600, width = 600)
 
 ```
 
 ## Relative biomass and transpiration proportions
 
+### N. America
+
 Comparison of the relative change in biomass and transpiration per pixel and over time. 
 ```{r}
-gif_background <- map_data("state")
-city_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
+NA_background <- map_data("state")
+STL_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
 
 trans_prop <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = NA_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = rr_rel[rr_rel$region == "stlew",], aes(x = lon, y = lat, fill = prop_trans), 
               alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "navyblue", 
-                       midpoint = 0.95, 
-                       breaks = seq(.5, 1.5, 0.5), 
-                       limits = c(0.45, 1.5)) +
+  geom_point(data = STL_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "darkblue", 
+                       midpoint = 1, 
+                       breaks = c(0.3, 1, 1.2), 
+                       limits = c(0.3, 1.2)) +
   coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
   theme_classic(base_size = 12) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
@@ -315,15 +319,15 @@ anim_save("trans_rel_prop.gif", animation = trans_prop,
           path = outdir$stlew, fps = 10, height = 150, width = 600)
 
 biomass_prop <- ggplot() +
-  geom_polygon(data = gif_background, aes(x = long, y = lat, group = group), 
+  geom_polygon(data = NA_background, aes(x = long, y = lat, group = group), 
                fill = "white", color = "black") +
   geom_raster(data = rr_rel[rr_rel$region == "stlew",], aes(x = lon, y = lat, fill = prop_biomass), 
               alpha = 0.9) +
-  geom_point(data = city_coords, aes(x = lon, y = lat)) +
-  scale_fill_gradient2(low = "maroon", mid = "forestgreen", high = "darkgreen", 
-                       midpoint = 0.95, 
-                       breaks = seq(.25, 1.25, 0.5), 
-                       limits = c(0.25, 1.25)) +
+  geom_point(data = STL_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "yellowgreen", high = "forestgreen", 
+                       midpoint = 1, 
+                       breaks = c(0.2, 1, 1.2), 
+                       limits = c(0.2, 1.2)) +
   coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
   theme_classic(base_size = 12) +
   theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
@@ -337,6 +341,183 @@ biomass_prop <- ggplot() +
 anim_save("biomass_rel_prop.gif", animation = biomass_prop, 
           path = outdir$stlew, fps = 10, height = 150, width = 600)
 ```
+
+### Eurasia
+
+Comparison of the relative change in biomass and transpiration per pixel and over time. 
+```{r}
+EA_background <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia" | region == "Kazakhstan" | region == "Mongolia")
+URU_coords <- data.frame(name = "Urumuqi", lon = 87.6168, lat = 43.8256)
+
+trans_prop <- ggplot() +
+  geom_polygon(data = EA_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = rr_rel[rr_rel$region == "chiruss",], aes(x = lon, y = lat, fill = prop_trans), 
+              alpha = 0.9) +
+  geom_point(data = URU_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "navyblue", 
+                       midpoint = 1, 
+                       breaks = c(0.6, 1, 1.2), 
+                       limits = c(0.6, 1.2)) +
+  coord_cartesian(xlim = c(85, 99), ylim = c(25, 80)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+# animate(trans_prop, fps = 10, height = 500, width = 250)
+anim_save("trans_rel_prop.gif", animation = trans_prop, 
+          path = outdir$chiruss, fps = 10, height = 500, width = 250)
+
+biomass_prop <- ggplot() +
+  geom_polygon(data = EA_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = rr_rel[rr_rel$region == "chiruss",], aes(x = lon, y = lat, fill = prop_biomass), 
+              alpha = 0.9) +
+  geom_point(data = URU_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "yellowgreen", high = "darkgreen", 
+                       midpoint = 1, 
+                       breaks = c(0.6, 1, 1.2), 
+                       limits = c(0.6, 1.2)) +
+  coord_cartesian(xlim = c(80, 99), ylim = c(25, 80)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  transition_manual(doy) +
+  ggtitle('Day: {current_frame}')
+
+# animate(biomass_prop, fps = 10, height = 300, width = 150)
+anim_save("biomass_rel_prop.gif", animation = biomass_prop, 
+          path = outdir$chiruss, fps = 10, height = 500, width = 250)
+```
+
+## Static time series of relative differences
+
+### N. America
+```{r}
+NA_static <- rr_rel[rr_rel$region == "stlew",] %>%
+  mutate(mon = format(as.Date(date), "%m"), 
+         day = format(as.Date(date), "%d")) %>%
+  filter(day == "01")
+
+NA_background <- map_data("state")
+STL_coords <- data.frame(name = "St. Louis", lon = -90.199402, lat = 38.627003)
+
+trans_grid <- ggplot() +
+  geom_polygon(data = NA_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = NA_static[NA_static$region == "stlew",], aes(x = lon, y = lat, fill = prop_trans), 
+              alpha = 0.9) +
+  geom_point(data = STL_coords, aes(x = lon, y = lat), size = 0.5) +
+  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "darkblue", 
+                       midpoint = 1, 
+                       breaks = c(0.3, 1, 1.2), 
+                       limits = c(0.3, 1.2)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  scale_y_continuous(breaks = seq(36,40, 2)) +
+  facet_wrap(~mon, ncol = 3) +
+  theme_bw(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey"),
+        strip.background = element_blank()) +
+  labs(x = "", y = "", fill = "")
+jpeg(filename = paste0(outdir$stlew, "/trans_rel_grid.jpeg"), 
+     height = 3.5, width = 8,  units = "in", res = 600)
+print(trans_grid)
+dev.off()
+
+biomass_grid <- ggplot() +
+  geom_polygon(data = NA_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = NA_static[NA_static$region == "stlew",], aes(x = lon, y = lat, fill = prop_biomass), 
+              alpha = 0.9) +
+  geom_point(data = STL_coords, aes(x = lon, y = lat), size = 0.5) +
+  scale_fill_gradient2(low = "maroon", mid = "yellowgreen", high = "forestgreen", 
+                       midpoint = 1, 
+                       breaks = c(0.2, 1, 1.2), 
+                       limits = c(0.2, 1.2)) +
+  coord_cartesian(xlim = c(-113, -80), ylim = c(36, 40.5)) +
+  scale_y_continuous(breaks = seq(36,40, 2)) +
+  facet_wrap(~mon, ncol = 3) +
+  theme_bw(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey"),
+        strip.background = element_blank()) +
+  labs(x = "", y = "", fill = "")
+jpeg(filename = paste0(outdir$stlew, "/biomass_rel_grid.jpeg"), 
+     height = 3.5, width = 8,  units = "in", res = 600)
+print(biomass_grid)
+dev.off()
+```
+
+### Eurasia
+```{r}
+EA_static <- rr_rel[rr_rel$region == "chiruss",] %>%
+  mutate(mon = format(as.Date(date), "%m"), 
+         day = format(as.Date(date), "%d")) %>%
+  filter(day == "01")
+
+EA_background <- map_data("world") %>% 
+  filter(region == "China" | region == "Russia" | region == "Kazakhstan" | region == "Mongolia")
+URU_coords <- data.frame(name = "Urumuqi", lon = 87.6168, lat = 43.8256)
+
+trans_grid <- ggplot() +
+  geom_polygon(data = EA_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = EA_static[EA_static$region == "chiruss",], aes(x = lon, y = lat, fill = prop_trans), 
+              alpha = 0.9) +
+  geom_point(data = URU_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "navyblue", 
+                       midpoint = 1, 
+                       breaks = c(0.6, 1, 1.2), 
+                       limits = c(0.6, 1.2)) +
+  coord_cartesian(xlim = c(85, 99), ylim = c(25, 80)) +
+  facet_wrap(~mon, ncol = 6) +
+  theme_bw(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey"),
+        strip.background = element_blank()) +
+  labs(x = "", y = "", fill = "") 
+
+jpeg(filename = paste0(outdir$chiruss, "/trans_rel_grid.jpeg"), 
+     height = 6, width = 6,  units = "in", res = 600)
+print(trans_grid)
+dev.off()
+
+biomass_grid <- ggplot() +
+  geom_polygon(data = EA_background, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = EA_static[EA_static$region == "chiruss",], aes(x = lon, y = lat, fill = prop_biomass), 
+              alpha = 0.9) +
+  geom_point(data = URU_coords, aes(x = lon, y = lat)) +
+  scale_fill_gradient2(low = "maroon", mid = "yellowgreen", high = "darkgreen", 
+                       midpoint = 1, 
+                       breaks = c(0.6, 1, 1.2), 
+                       limits = c(0.6, 1.2)) +
+  coord_cartesian(xlim = c(85, 99), ylim = c(25, 80)) +
+  facet_wrap(~mon, ncol = 6) +
+  theme_bw(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey"),
+        strip.background = element_blank()) +
+  labs(x = "", y = "", fill = "") 
+
+jpeg(filename = paste0(outdir$chiruss, "/biomass_rel_grid.jpeg"), 
+     height = 6, width = 6,  units = "in", res = 600)
+print(biomass_grid)
+dev.off()
+```
+
 
 ## Comparisons
 
