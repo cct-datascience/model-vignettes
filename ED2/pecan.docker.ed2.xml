@@ -14,7 +14,7 @@
   </database>
   <pfts>
     <pft>
-      <name>SetariaWT</name>
+      <name>SetariaWT_reduceStom</name>
       <ed2_pft_number>1</ed2_pft_number>
     </pft>
     <pft>
@@ -31,7 +31,7 @@
   </meta.analysis>
 
   <ensemble>
-    <size>10</size>
+    <size>100</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
@@ -71,7 +71,7 @@
   <run>
     <site>
       <id>76</id>
-      <met.start>2004-07-01 00:00:00</met.start>
+      <met.start>2004-04-01 00:00:00</met.start>
       <met.end>2005-06-30 23:59:59</met.end>
     </site>
 
@@ -86,14 +86,14 @@
       <thsum>/data/ed_inputs/</thsum>
     </inputs>
 
-    <start.date>2004/07/01</start.date>
+    <start.date>2004/04/01</start.date>
     <end.date>2005/06/30</end.date>
   </run>
   
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
-      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=20:mem=120gb -l walltime=04:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
+      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=24:mem=144gb -l walltime=10:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
       <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
       <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi</job.sh>

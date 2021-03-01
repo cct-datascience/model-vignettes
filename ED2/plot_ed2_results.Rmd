@@ -52,14 +52,86 @@ npp_timeseries <- ggplot(data = daily_npp) +
 
 ### NPP time series by PFT
 
-```{r}
-library(dplyr)
-library(ggplot2)
+Setaria WT & C3 grass
 
+```{r}
 ensembles_npps <- c()
-for(ensemble in 1:10){ 
+for(ensemble in 1:100){ 
+  if(ensemble < 10){
+    ens_num <- paste0("00", ensemble)
+  } else if(ensemble >= 10 & ensemble < 100){
+    ens_num <- paste0("0", ensemble)
+  } else {
+    ens_num <- ensemble
+  }
+  #ens_path <- paste0("/data/tests/ed2/out/ENS-00", ens_num, "-76")
+  ens_path <- paste0(results_path, "/ed2/out/ENS-00", ens_num, "-76")
+  print(ens_path)
+  ens_e_files <- Sys.glob(file.path(ens_path, c("analysis-E-*", ".*h5")))
+  ensemble_npp <- c()
+  for(file in ens_e_files){
+    ens_month_file <- ncdf4::nc_open(file)
+    ens_month_npp <- ncdf4::ncvar_get(ens_month_file, "MMEAN_NPP_CO")
+    ens_month_nplant <- ncdf4::ncvar_get(ens_month_file, "NPLANT")
+    ens_month_total_npp <- ens_month_npp * ens_month_nplant
+    ens_month_pft <- ncdf4::ncvar_get(ens_month_file, "PFT")
+    ens_month_df <- data.frame(npp = ens_month_total_npp, pft = ens_month_pft) %>%
+      group_by(pft) %>%
+      summarize(npp = mean(npp)) %>%
+      mutate(date = substr(file, 93, 99),
+             ensemble = ensemble)
+    ensemble_npp <- bind_rows(ensemble_npp, ens_month_df)
+    ncdf4::nc_close(ens_month_file)
+  }
+  ensembles_npps <- bind_rows(ensembles_npps, ensemble_npp)
+}
+
+write.csv(ensembles_npps, paste0(results_path, "/ensemble_values.csv"), row.names = FALSE)
+
+npp_summary <- ensembles_npps %>% 
+  mutate(date = as.POSIXct(as.Date(paste0(date, "-01"))), 
+         pft = case_when(pft == 1 ~ "Setaria (wild type)", 
+                         pft == 5 ~ "C3 grass"), 
+         pft = as.factor(pft)) %>% 
+  group_by(pft, date) %>% 
+  summarize(mean = mean(npp, na.rm = TRUE),
+            median = median(npp, na.rm = TRUE),
+            sd = sd(npp, na.rm = TRUE),
+            lcl_50 = quantile(npp, probs = c(0.25), 
+                              na.rm = TRUE, names = FALSE),
+            ucl_50 = quantile(npp, probs = c(0.75), 
+                              na.rm = TRUE, names = FALSE),
+            lcl_95 = quantile(npp, probs = c(0.025), 
+                              na.rm = TRUE, names = FALSE),
+            ucl_95 = quantile(npp, probs = c(0.975), 
+                              na.rm = TRUE, names = FALSE)) %>% 
+  rename(Species = pft)
+
+npp_ci <- ggplot(data = npp_summary) +
+  geom_line(aes(x = date, y = median, color = Species)) +
+  #geom_ribbon(aes(date, ymin = lcl_95, ymax = ucl_95, fill = pft), alpha = 0.1) +
+  geom_ribbon(aes(date, ymin = lcl_50, ymax = ucl_50, fill = Species), alpha = 0.4) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  xlab("Month") +
+  ylab("NPP (kgC/m2/yr)") +
+  theme_classic()
+
+npp_rel <- ggplot(npp_summary, aes(x = date, y = median, fill = Species)) +
+  geom_area() +
+  xlab("Month") +
+  ylab("NPP (kg/m2/yr)") +
+  theme_classic()
+
+ggsave(paste0(results_path, "/npp_ci.png"), npp_ci, width = 6, height = 3)
+ggsave(paste0(results_path, "/npp_rel.png"), npp_rel, width = 10, height = 4)
+```
+Three grasses
+
+```{r}
+ensembles_npps <- c()
+for(ensemble in 1:100){ 
   ens_num <- ifelse(ensemble < 10, paste0(0, ensemble), ensemble)
-  ens_path <- paste0("/data/tests/ed2/out/ENS-000", ens_num, "-76")
+  ens_path <- paste0("/data/tests/ed2_threegrasses/out/ENS-000", ens_num, "-76")
   ens_e_files <- Sys.glob(file.path(ens_path, c("analysis-E-*", ".*h5")))
   ensemble_npp <- c()
   for(file in ens_e_files){
@@ -71,7 +143,7 @@ for(ensemble in 1:10){
     ens_month_df <- data.frame(npp = ens_month_total_npp, pft = ens_month_pft) %>% 
       group_by(pft) %>% 
       summarize(npp = mean(npp)) %>% 
-      mutate(date = substr(file, 45, 51), 
+      mutate(date = substr(file, 58, 64), 
              ensemble = ensemble)
     ensemble_npp <- bind_rows(ensemble_npp, ens_month_df)
     ncdf4::nc_close(ens_month_file)
@@ -202,7 +274,8 @@ for(pft in names(sensitivity.results)){
     mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
            units = PEcAn.utils::trait.lookup(trait)$units,
            coef.vars = coef.vars * 100,
-           sd = sqrt(variances))
+           sd = sqrt(variances)) %>% 
+    filter(trait != "water_conductance")
   
   fontsize = list(title = 18, axis = 14)
   theme_set(theme_minimal() +
@@ -238,22 +311,13 @@ for(pft in names(sensitivity.results)){
     scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
   
   npp_savd <- cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1))
-  #ggsave(paste0(results_path, "/npp_savd_", pft, ".png"), npp_savd, 
-   #      width = 15, height = 4)
+  ggsave(paste0(results_path, "/npp_savd_", pft, ".png"), npp_savd, 
+         width = 15, height = 4)
 }
 ```
-
-
-
 
 ### Save plots and rename results folder
 
 ```{r}
-
-
-ggsave(paste0(results_path, "/npp_timeseries.png"),
-npp_timeseries, width = 10, height = 4)
-
-
 file.copy("/data/tests/ed2/", results_path, recursive = TRUE)
 ```
