@@ -5,14 +5,21 @@ output: github_document
 urlcolor: blue
 ---
 
+### Read in libraries
+
 ```{r}
 library(tidyr)
 library(dplyr)
 library(ggplot2)
+```
+
+### Move most recent results to final folder
+```{r}
 date <- as.character(Sys.Date())
 
 results_path <- paste0("/home/kristinariemer/model-vignettes/ED2/results/", date)
 dir.create(results_path)
+file.copy("/data/tests/ed2/", results_path, recursive = TRUE)
 ```
 
 ### NPP time series
@@ -90,7 +97,7 @@ write.csv(ensembles_npps, paste0(results_path, "/ensemble_values.csv"), row.name
 
 npp_summary <- ensembles_npps %>% 
   mutate(date = as.POSIXct(as.Date(paste0(date, "-01"))), 
-         pft = case_when(pft == 1 ~ "Setaria (wild type)", 
+         pft = case_when(pft == 1 ~ "Setaria (triggered)", 
                          pft == 5 ~ "C3 grass"), 
          pft = as.factor(pft)) %>% 
   group_by(pft, date) %>% 
@@ -265,7 +272,7 @@ ggplot(biomass_median, aes(x = date, y = median, fill = PFT)) +
 ### SA/VD
 
 ```{r}
-load("/data/tests/ed2/sensitivity.results.NOENSEMBLEID.NPP.2004.2005.Rdata")
+load(paste0(results_path, "/ed2/sensitivity.results.NOENSEMBLEID.NPP.2004.2005.Rdata"))
 
 for(pft in names(sensitivity.results)){
   sa_df1 <- sensitivity.results[[pft]]$variance.decomposition.output
@@ -314,10 +321,4 @@ for(pft in names(sensitivity.results)){
   ggsave(paste0(results_path, "/npp_savd_", pft, ".png"), npp_savd, 
          width = 15, height = 4)
 }
-```
-
-### Save plots and rename results folder
-
-```{r}
-file.copy("/data/tests/ed2/", results_path, recursive = TRUE)
 ```

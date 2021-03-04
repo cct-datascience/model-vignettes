@@ -50,7 +50,7 @@
 
   <model>
     <type>ED2</type>
-    <binary>/home/u29/kristinariemer/pecan/ed2_2.2.0_singularity.sh</binary>
+    <binary>/groups/dlebauer/ed2_results/global_inputs/ed2_2.2.0_singularity.sh</binary>
     <id>14</id>
     <edin>/pecan/models/ed/inst/ED2IN.r2.2.0</edin>
     <config.header>
@@ -93,12 +93,13 @@
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
+      <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
       <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=24:mem=144gb -l walltime=10:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
       <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
       <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi</job.sh>
       <modellauncher>
-        <binary>/home/u29/kristinariemer/pecan/pecan/contrib/modellauncher/modellauncher</binary>
+        <binary>/groups/dlebauer/ed2_results/pecan/contrib/modellauncher/modellauncher</binary>
         <qsub.extra>-q standard</qsub.extra>
       </modellauncher>
   </host>

@@ -34,13 +34,19 @@ PEcAn.MA::runModule.run.meta.analysis(settings)
 # Write model specific configs
 settings <- PEcAn.workflow::runModule.run.write.configs(settings)
 
+# Manual rsync of run folder to HPC, replacing DATE
+#rsync '-a' '-q' '--delete' '/data/tests/ed2/run' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE'
+
 # Start ecosystem model runs
 PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
+
+# Manual rsync of out folder back to Welsch, replacing DATE
+#rsync '-az' '-q' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE/out' '/data/tests/ed2'
 
 # Do results post-processing
 for(folder in list.dirs("/data/tests/ed2/out", recursive = FALSE)){
   model2netcdf.ED2(folder, settings$run$site$lat, settings$run$site$lon, settings$run$start.date, 
-                   settings$run$end.date, c('SetariaWT', 'ebifarm.c3grass'))
+                   settings$run$end.date, unlist(purrr::map(settings$pfts, 1)))
   
 }
 
