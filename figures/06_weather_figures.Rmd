@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(BioCro)
 library(dplyr)
 library(ggplot2)
+library(cowplot)
 ```
 
 # Show differences between treatment weather conditions
@@ -53,19 +54,62 @@ out <- read.csv("../BioCro/DARPA/env_comparison/inputs/weather.out.2020.csv") %>
 #   mutate(dt = as.POSIXct((doy-1)*24*60*60 + hour*60*60, origin = "2004-01-01"),
 #          trt = "Urbana, IL")
 
+# Combine sites
 all_wide <- rbind.data.frame(gh, out) %>%
-  relocate(trt, dt)
-all_long <- all_wide %>%
-  tidyr::pivot_longer(!c(trt, dt, year, doy, hour), names_to = "Variable", values_to = "Value") %>%
-  filter(Variable %in% c("precip", "RH", "Temp"))
+  relocate(trt, dt) %>%
+  mutate(rh = RH*100)
 
+# Remove ppt
+ppt <- all_wide %>%
+  select(1:5, precip) %>%
+  group_by(trt, doy) %>%
+  summarise(ppt = sum(precip),
+            date = unique(as.Date(dt)),
+            day = weekdays(date)) %>%
+  mutate(irrigation = case_when(trt == "Greenhouse" & ppt == 3 ~ ppt,
+                                trt == "Outdoor" & day != "Sunday" ~ 5,
+                                trt == "Outdoor" & day == "Sunday" ~ 0),
+         rain = ppt - irrigation)
+
+all_long <- all_wide %>%
+  select(-precip) %>%
+  left_join(ppt, by = c("trt", "doy")) %>%
+  select(-ppt, -date, -day) %>%
+  mutate(irrigation = ifelse(hour %in% 0:11, irrigation, NA),
+         irrigation = ifelse(irrigation == 0, NA, irrigation),
+         rain = ifelse(hour %in% 12:23, rain, NA),
+         rain = ifelse(rain == 0, NA, rain)) %>%
+  tidyr::pivot_longer(!c(trt, dt, year, doy, hour), names_to = "Variable", values_to = "Value") %>%
+  filter(Variable %in% c("irrigation", "rain", "rh", "Temp")) %>%
+  mutate(var = case_when(Variable == "irrigation" ~ "PPT~(mm~d^-1)",
+                         Variable == "rain" ~ "PPT~(mm~d^-1)",
+                         Variable == "rh" ~ "RH~('%')",
+                         Variable == "Temp" ~ "T~(degree*C)"))
 ```
 
 Plot long data in facets by location. 
 ```{r}
-fig_gh <- ggplot(all_long[all_long$trt == "gh",], aes(x = dt, y = Value)) +
-  geom_point(alpha = 0.25) +
+fig_both<- ggplot(all_long,aes(x = dt, y = Value)) +
+  geom_bar(data = subset(all_long, var == "PPT~(mm~d^-1)"), 
+           aes(fill = Variable, color = Variable), stat = "identity") +
+  geom_line(data = subset(all_long, var != "PPT~(mm~d^-1)"), size = 0.25) +
   theme_bw(base_size = 12) +
-  facet_wrap(~Variable, ncol = 1, scales = "free")
-print(fig_gh)
+  facet_grid(cols = vars(trt), rows = vars(var), scales = "free", 
+             switch = "y", labeller = label_parsed) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        strip.text = element_text(size = 12), 
+        legend.title = element_blank(),
+        legend.position = c(0.08, 0.95),
+        legend.background = element_blank(),
+        legend.key.size = unit(0.4, "cm"))
+
+jpeg(filename = "plots/Fig0_weather.jpg", height = 5, width = 7, units = "in", res = 600)
+print(fig_both)
+dev.off()
 ```
