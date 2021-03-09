@@ -29,7 +29,7 @@ Simple case inputs:
 - 10 ensemble runs and +/- 1 SD sensitivity analysis
 - Outputs written to `/data/tests/ed2`
 - Model runs results on HPC in `/groups/dlebauer/ed2_results/pecan_remote`
-- Takes x hours w/ x cores on one node
+- Takes ~1 hour w/ 24 cores on one node (walltime is 2 hours just in case)
 
 ### Set up HPC
 
@@ -102,15 +102,6 @@ runModule.run.sensitivity.analysis(settings)
 
 ### Get plots w/ postprocessing
 
-(maybe don't do this part?)
-```{r}
-date <- as.character(Sys.Date())
-
-results_path <- paste0("/home/kristinariemer/model-vignettes/ED2/results/", date)
-dir.create(results_path)
-file.copy("/data/tests/ed2/", results_path, recursive = TRUE)
-```
-
 ```{r}
 ensembles_npps <- c()
 for(ensemble in 1:100){ 
@@ -121,8 +112,7 @@ for(ensemble in 1:100){
   } else {
     ens_num <- ensemble
   }
-  #ens_path <- paste0("/data/tests/ed2/out/ENS-00", ens_num, "-76")
-  ens_path <- paste0(results_path, "/ed2/out/ENS-00", ens_num, "-76")
+  ens_path <- paste0("/data/tests/ed2/out/ENS-00", ens_num, "-76")
   print(ens_path)
   ens_e_files <- Sys.glob(file.path(ens_path, c("analysis-E-*", ".*h5")))
   ensemble_npp <- c()
@@ -135,7 +125,7 @@ for(ensemble in 1:100){
     ens_month_df <- data.frame(npp = ens_month_total_npp, pft = ens_month_pft) %>%
       group_by(pft) %>%
       summarize(npp = mean(npp)) %>%
-      mutate(date = substr(file, 93, 99),
+      mutate(date = substr(file, 45, 51),
              ensemble = ensemble)
     ensemble_npp <- bind_rows(ensemble_npp, ens_month_df)
     ncdf4::nc_close(ens_month_file)
@@ -143,11 +133,9 @@ for(ensemble in 1:100){
   ensembles_npps <- bind_rows(ensembles_npps, ensemble_npp)
 }
 
-write.csv(ensembles_npps, paste0(results_path, "/ensemble_values.csv"), row.names = FALSE)
-
 npp_summary <- ensembles_npps %>% 
   mutate(date = as.POSIXct(as.Date(paste0(date, "-01"))), 
-         pft = case_when(pft == 1 ~ "Setaria (triggered)", 
+         pft = case_when(pft == 1 ~ "Setaria (wild type)", 
                          pft == 5 ~ "C3 grass"), 
          pft = as.factor(pft)) %>% 
   group_by(pft, date) %>% 
@@ -164,27 +152,17 @@ npp_summary <- ensembles_npps %>%
                               na.rm = TRUE, names = FALSE)) %>% 
   rename(Species = pft)
 
-npp_ci <- ggplot(data = npp_summary) +
+ggplot(data = npp_summary) +
   geom_line(aes(x = date, y = median, color = Species)) +
-  #geom_ribbon(aes(date, ymin = lcl_95, ymax = ucl_95, fill = pft), alpha = 0.1) +
   geom_ribbon(aes(date, ymin = lcl_50, ymax = ucl_50, fill = Species), alpha = 0.4) +
   scale_x_datetime(labels = scales::date_format("%b")) +
   xlab("Month") +
   ylab("NPP (kgC/m2/yr)") +
   theme_classic()
-
-npp_rel <- ggplot(npp_summary, aes(x = date, y = median, fill = Species)) +
-  geom_area() +
-  xlab("Month") +
-  ylab("NPP (kg/m2/yr)") +
-  theme_classic()
-
-# ggsave(paste0(results_path, "/npp_ci.png"), npp_ci, width = 6, height = 3)
-# ggsave(paste0(results_path, "/npp_rel.png"), npp_rel, width = 10, height = 4)
 ```
 
 ```{r}
-load(paste0(results_path, "/ed2/sensitivity.results.NOENSEMBLEID.NPP.2004.2005.Rdata"))
+load("/data/tests/ed2/sensitivity.results.NOENSEMBLEID.NPP.2004.2004.Rdata")
 
 for(pft in names(sensitivity.results)){
   sa_df1 <- sensitivity.results[[pft]]$variance.decomposition.output
@@ -229,8 +207,6 @@ for(pft in names(sensitivity.results)){
     geom_hline(aes(yintercept = 0), size = 0.1) +
     scale_y_continuous(breaks = pretty(sa_df3$sd, n = 3))
   
-  npp_savd <- cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1))
-  # ggsave(paste0(results_path, "/npp_savd_", pft, ".png"), npp_savd, 
-  #        width = 15, height = 4)
+  print(cowplot::plot_grid(cv, el, vd, nrow = 1, rel_widths = c(2, 1, 1)))
 }
 ```

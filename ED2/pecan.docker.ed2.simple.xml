@@ -94,7 +94,7 @@
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
-      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=24:mem=144gb -l walltime=00:03:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
+      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=24:mem=144gb -l walltime=02:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
       <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
       <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi</job.sh>
