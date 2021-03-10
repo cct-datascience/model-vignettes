@@ -73,10 +73,10 @@ Finally, once all three or four functions above are run and output parameter fil
 params <- data.frame()
 
 # Create vector of filenames
-fnames <- c(paste0("../../sentinel-detection/data/derived_data/ACi/", list.files("../../sentinel-detection/data/derived_data/ACi", pattern = "csv")),
-            paste0("../../sentinel-detection/data/derived_data/AQ/", list.files("../../sentinel-detection/data/derived_data/AQ", pattern = "csv")), 
-            paste0("../../sentinel-detection/data/derived_data/stomatal/", list.files("../../sentinel-detection/data/derived_data/stomatal", pattern = "csv")),
-            paste0("../../sentinel-detection/data/derived_data/Rd/", list.files("../../sentinel-detection/data/derived_data/Rd", pattern = "csv")))
+fnames <- c(paste0("~/sentinel-detection/data/derived_data/ACi/", list.files("~/sentinel-detection/data/derived_data/ACi", pattern = "csv")),
+            paste0("~/sentinel-detection/data/derived_data/AQ/", list.files("~/sentinel-detection/data/derived_data/AQ", pattern = "csv")), 
+            paste0("~/sentinel-detection/data/derived_data/stomatal/", list.files("~/sentinel-detection/data/derived_data/stomatal", pattern = "csv")),
+            paste0("~/sentinel-detection/data/derived_data/Rd/", list.files("~/sentinel-detection/data/derived_data/Rd", pattern = "csv")))
 
 
 for(i in 1:length(fnames)){
@@ -87,6 +87,6 @@ for(i in 1:length(fnames)){
 
 # Combine parameters with experiment metadata
 params2 <- left_join(params, expDF, by = "ID")
-write.csv(params2, file = "../../sentinel-detection/data/derived_data/parameters_data.csv", row.names = F)
+write.csv(params2, file = "~/sentinel-detection/data/derived_data/parameters_data.csv", row.names = F)
 ```
 
