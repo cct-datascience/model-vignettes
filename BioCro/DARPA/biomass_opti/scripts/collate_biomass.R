@@ -1,10 +1,14 @@
 ### Organize biomass for two sets of biomass optimization runs
+library(dplyr)
+library(udunits2)
+library(ggplot2)
+library(BioCro)
 
 load("~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
 load("~/sentinel-detection/data/cleaned_data/biomass/greenhouse_outdoor_biomass.Rdata")
 
-# Find chamber treatment with most measurements over time
-ch <- chamber_biomass %>%
+# Ascertain the number of total vs. aboveground biomass by treatment 
+ch.count <- chamber_biomass %>%
   filter(genotype == "ME034V-1",treatment %in% c(NA, "control")) %>%
   mutate(day = as.numeric(difftime(harvest_date, sowing_date, "days")),
          biomassTot = (leaf_DW_mg + stem_DW_mg + panicle_DW_mg + root_DW_mg) / 1000,
@@ -16,7 +20,7 @@ ch <- chamber_biomass %>%
   summarize(n_Tot = sum(!is.na(biomassTot)),
             n_Abv = sum(!is.na(biomassAbv)))
 # Find outdoor and gh jolly G pots
-out <- greenhouse_outdoor_biomass %>%
+out.count <- greenhouse_outdoor_biomass %>%
   filter(genotype == "ME034V-1") %>%
   mutate(day = as.numeric(difftime(harvest_date, sowing_date, "days")),
          biomassTot = (leaf_DW_g + stem_DW_g + panicle_DW_g + root_DW_g) / 1000,
@@ -27,31 +31,42 @@ out <- greenhouse_outdoor_biomass %>%
   summarize(n_Tot = sum(!is.na(biomassTot)),
             n_Abv = sum(!is.na(biomassAbv)))
 
+# Use the 22/22 treatment from experiment two, convert output to Mg/ha to match units from BioCro
+ch.raw <- chamber_biomass %>%
+  filter(genotype == "ME034V-1" & treatment %in% c(NA, "control") & exp_number == "2" & temp == "22/22") %>%
+  mutate(day = as.numeric(difftime(harvest_date, sowing_date, "days")),
+         biomass_mg = (leaf_DW_mg + stem_DW_mg + panicle_DW_mg + root_DW_mg),
+         biomassTot = ud.convert(biomass_mg/103, "mg/cm2", "Mg/ha"))
 
+ch.sum <- ch.raw %>% 
+  group_by(day) %>% 
+  summarize(biom_mean = mean(biomassTot),
+            biom_median = median(biomassTot), 
+            biom_sd = sd(biomassTot)) %>% 
+  mutate(sd_high = biom_mean + biom_sd, 
+         sd_low = biom_mean - biom_sd)
 
-#biomass includes all 4 organs - missing root_DW_mg yields an NA for biomass
-
-ggplot(ch, aes(x = day, y = biomass, col = as.factor(light))) +
+# Plot raw and summarized totals
+ggplot(ch.raw, aes(x = day, y = biomassTot)) +
   geom_point() +
-  scale_y_continuous("Total biomass (g)") +
-  facet_wrap(~temp, ncol = 2, scales = "free") +
+  scale_y_continuous("Total biomass (Mg/ha)") +
+  theme_bw()
+ggplot(ch.sum, aes(x = day, y = biom_mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = sd_low, ymax = sd_high), width = 0) +
+  scale_y_continuous("Mean biomass (Mg/ha)") +
   theme_bw()
 
-ggplot(ch, aes(x = day, y = biomass, col = as.factor(temp))) +
-  geom_point() +
-  scale_y_continuous("Total biomass (g)") +
-  facet_wrap(~as.factor(light), ncol = 2, scales = "free") +
-  theme_bw()
+# Summarize by organ
+ch.organ <- ch.raw %>%
+  select(day, Stem = stem_DW_mg, Leaf = leaf_DW_mg, Root = root_DW_mg, Grain = panicle_DW_mg) %>%
+  group_by(day) %>%
+  summarize_at(vars(Stem:Grain), median)
 
-ggplot(ch[ch$exp_number == 2,], aes(x = day, y = biomass, col = as.factor(temp))) +
-  geom_point() +
-  scale_y_continuous("Total biomass (g)") +
-  theme_bw()
-
-ggplot(ch[ch$temp == "22/22",], aes(x = day, y = biomass, col = as.factor(exp_number))) +
-  geom_point() +
-  scale_y_continuous("Total biomass (g)") +
-  theme_bw()
-
-
-
+# Calculate gdd or thermaltime
+weather_only_run <- BioGro(opt_weather, day1 = 1, dayn = 365)
+weather_only_run_df <- as.data.frame(unclass(weather_only_run)[1:11]) %>%
+  select(Hour, DayofYear, ThermalT) %>% 
+  filter(Hour == 0, 
+         DayofYear %in% biomass_data_single$days_grown) %>% 
+  mutate(days_grown = DayofYear)
