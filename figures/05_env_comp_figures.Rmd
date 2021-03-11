@@ -58,14 +58,16 @@ biomass_valid_ch <- chamber_biomass %>%
            light == 430 &
            !is.na(stem_DW_mg) &
            !is.na(leaf_DW_mg) &
-           !is.na(panicle_DW_mg)) %>%
+           !is.na(panicle_DW_mg) &
+           !is.na(root_DW_mg)) %>%
   rename(plant_id = plantID) %>%
   mutate(location = "ch",
          stem_DW_g = ud.convert(stem_DW_mg, "mg", "g"),
          leaf_DW_g = ud.convert(leaf_DW_mg, "mg", "g"),
-         panicle_DW_g = ud.convert(panicle_DW_mg, "mg", "g")) %>%
+         panicle_DW_g = ud.convert(panicle_DW_mg, "mg", "g"),
+         root_DW_g = ud.convert(root_DW_mg, "mg", "g"),) %>%
   dplyr::select(location, plant_id, sowing_date, transplant_date, harvest_date,
-         stem_DW_g, leaf_DW_g, panicle_DW_g)
+         stem_DW_g, leaf_DW_g, panicle_DW_g, root_DW_g)
 
 biomass_valid_gh_out <- greenhouse_outdoor_biomass %>%
   filter(genotype == "ME034V-1" &
@@ -73,22 +75,24 @@ biomass_valid_gh_out <- greenhouse_outdoor_biomass %>%
            !is.na(stem_DW_g) &
            !is.na(leaf_DW_g) &
            !is.na(panicle_DW_g) & 
+           !is.na(root_DW_g) & 
            exp_site == "GH" & exp_number == 1 |
            genotype == "ME034V-1" &
            treatment %in% c("pot", "jolly_pot") &
            !is.na(stem_DW_g) &
            !is.na(leaf_DW_g) &
-           !is.na(panicle_DW_g) & 
+           !is.na(panicle_DW_g) &
+           !is.na(root_DW_g) &
            exp_site == "Field" & exp_number == 2) %>%
   mutate(location = case_when(exp_site == "GH" ~ "gh",
                               exp_site == "Field" ~ "out")) %>%
   dplyr::select(location, plant_id, sowing_date, transplant_date, harvest_date,
-         stem_DW_g, leaf_DW_g, panicle_DW_g)
+         stem_DW_g, leaf_DW_g, panicle_DW_g, root_DW_g)
 
 # Combine 2 kinds of validation data
 biomass_valid <- rbind(biomass_valid_ch, biomass_valid_gh_out) %>%
   rename(treatment = location) %>%
-  mutate(total_biomass_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103,
+  mutate(total_biomass_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g + root_DW_g)/103,
                                           "g/cm2", "kg/m2"),
          day = difftime(harvest_date, sowing_date, units = "days"),
          Trait = "Biomass~(kg~m^-2)",
