@@ -5,7 +5,7 @@ load("~/sentinel-detection/data/cleaned_data/biomass/greenhouse_outdoor_biomass.
 
 # Find chamber treatment with most measurements over time
 ch <- chamber_biomass %>%
-  filter(genotype == "ME034V-1") %>%
+  filter(genotype == "ME034V-1",treatment %in% c(NA, "control")) %>%
   mutate(day = as.numeric(difftime(harvest_date, sowing_date, "days")),
          biomassTot = (leaf_DW_mg + stem_DW_mg + panicle_DW_mg + root_DW_mg) / 1000,
          biomassAbv = (leaf_DW_mg + stem_DW_mg + panicle_DW_mg) / 1000,
