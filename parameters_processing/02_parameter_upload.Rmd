@@ -1,6 +1,6 @@
 ---
 title: "Prepare Parameter Data for Upload to BETYdb"
-author: "Kristina Riemer, University of Arizona"
+author: "Kristina Riemer, Jessica Guo"
 output: github_document
 urlcolor: blue
 ---
@@ -19,7 +19,7 @@ library(udunits2)
 
 Read in parameters data from [sentinel-detection repository](https://github.com/danforthcenter/sentinel-detection), which should be cloned into the same folder as model-vignettes repo. 
 ```{r}
-all_parameters <- read.csv("../../sentinel-detection/data/derived_data/parameters_data.csv",
+all_parameters <- read.csv("~/sentinel-detection/data/derived_data/parameters_data.csv",
                            stringsAsFactors = F)
 ```
 
@@ -47,7 +47,7 @@ First, manage the chamber experiment parameters:
 ```{r}
 upload_parameters <- all_parameters %>% 
   filter(Genotype == "ME034", 
-         trait %in% c("vmax", "Rd", "AQY", "theta_lc", "g1BB", "g0BB")) %>% 
+         trait %in% c("vmax", "Rd", "AQY", "theta_lc", "g1BB", "g0BB", "g1L", "g0L")) %>% 
   mutate(date = as.POSIXct(as.character(Date), format = "%Y%m%d"), 
          treatment = case_when(Treatment == "31_22_250" ~ "regular night temperature", 
                                Treatment == "31_31_250" ~ "high night temperature", 
@@ -66,7 +66,9 @@ upload_parameters <- all_parameters %>%
                            trait == "AQY" ~ "quantum_efficiency",
                            trait == "theta_lc" ~ "theta", 
                            trait == "g1BB" ~ "stomatal_slope.BB",
-                           trait == "g0BB" ~ "cuticular_cond"),
+                           trait == "g0BB" ~ "cuticular_cond",
+                           trait == "g1L" ~ "stomatal_slope",
+                           trait == "g0L" ~ ""),
          mean = case_when(trait == "g0BB" ~ round(ud.convert(Value, "mol/m2/s", "umol/m2/s"), 0),
                           TRUE ~ round(Value, 3)),
          SE = case_when(trait == "g0BB" ~ round(ud.convert(SE, "mol/m2/s", "umol/m2/s"), 0),
