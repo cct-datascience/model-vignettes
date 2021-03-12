@@ -142,7 +142,7 @@ d.ch.organ.prop <- ch.organ %>%
 # 1640 Kernel Growth initiation
 
 # Read in xml
-config <- PEcAn.BIOCRO::read.biocro.config(file.path("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/config.xml"))
+config <- PEcAn.BIOCRO::read.biocro.config(file.path("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml"))
 
 config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))] <- c("150",
                                                                      "310", 
@@ -174,5 +174,5 @@ config$pft$phenoParms[grep("kGrain", names(config$pft$phenoParms))] <- as.charac
 
 # Write out to xml file
 config.xml <- PEcAn.settings::listToXml(config, "config")
-XML::saveXML(config.xml, file = "~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/config.xml", 
+XML::saveXML(config.xml, file = "~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml", 
              indent = TRUE)

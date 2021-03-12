@@ -13,5 +13,5 @@ write.csv(ch_weather, "../inputs/ch_weather.csv", row.names = FALSE)
 
 # Copy the BioCro config for the most matching treatment to the biomass_opti/inputs folder
 from_path <- "~/../../data/output/pecan_runs/env_comp_results/ch/run/SA-median/config.xml"
-to_path <- "~/model-vignettes/BioCro/DARPA/biomass_opti/inputs"
+to_path <- "~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml"
 file.copy(from_path, to_path, overwrite = TRUE)
