@@ -6,6 +6,7 @@ library(BioCro)
 
 load("~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
 load("~/sentinel-detection/data/cleaned_data/biomass/greenhouse_outdoor_biomass.Rdata")
+ch_weather <- read.csv("../inputs/ch_weather.csv")
 
 # Ascertain the number of total vs. aboveground biomass by treatment 
 ch.count <- chamber_biomass %>%
@@ -57,16 +58,38 @@ ggplot(ch.sum, aes(x = day, y = biom_mean)) +
   scale_y_continuous("Mean biomass (Mg/ha)") +
   theme_bw()
 
-# Summarize by organ
-ch.organ <- ch.raw %>%
-  select(day, Stem = stem_DW_mg, Leaf = leaf_DW_mg, Root = root_DW_mg, Grain = panicle_DW_mg) %>%
-  group_by(day) %>%
-  summarize_at(vars(Stem:Grain), median)
-
 # Calculate gdd or thermaltime
-weather_only_run <- BioGro(opt_weather, day1 = 1, dayn = 365)
-weather_only_run_df <- as.data.frame(unclass(weather_only_run)[1:11]) %>%
+ThermalT.df <- as.data.frame(unclass(BioGro(ch_weather, day1 = 1, dayn = 365))[1:11]) %>%
   select(Hour, DayofYear, ThermalT) %>% 
   filter(Hour == 0, 
-         DayofYear %in% biomass_data_single$days_grown) %>% 
-  mutate(days_grown = DayofYear)
+         DayofYear %in% ch.organ$day) %>% 
+  rename(day = DayofYear) %>%
+  select(day, ThermalT)
+
+# Summarize by organ
+ch.organ <- ch.raw %>%
+  select(day, stem_DW_mg, leaf_DW_mg, root_DW_mg, panicle_DW_mg) %>%
+  mutate(Stem = ud.convert(stem_DW_mg/103, "mg/cm2", "Mg/ha"),
+         Leaf = ud.convert(leaf_DW_mg/103, "mg/cm2", "Mg/ha"),
+         Root = ud.convert(root_DW_mg/103, "mg/cm2", "Mg/ha"),
+         Rhizome = 0,
+         Grain = ud.convert(panicle_DW_mg/103, "mg/cm2", "Mg/ha")) %>%
+  group_by(day) %>%
+  summarize_at(vars(Stem:Grain), median) %>%
+  left_join(ThermalT.df) %>%
+  # mutate(Grain = ifelse(day < 47, 0, Grain)) %>%
+  select(-day) %>%
+  relocate(ThermalT)
+
+# Plot and save out
+ch.organ.plot <- ch.organ %>% 
+  tidyr::pivot_longer(Stem:Grain) %>%
+  mutate(name = factor(name, levels = c("Grain", "Leaf", "Stem", "Root", "Rhizome"))) %>%
+  ggplot() +
+  geom_bar(aes(x = ThermalT, y = value, fill = name), position = "fill", stat = "identity") +
+  ylab("Total biomass (Mg/ha)") +
+  theme_bw()
+print(ch.organ.plot)
+
+write.csv(ch.organ, "../inputs/ch_biomass.csv", row.names = FALSE)
+
