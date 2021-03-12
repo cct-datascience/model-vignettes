@@ -81,15 +81,98 @@ ch.organ <- ch.raw %>%
   select(-day) %>%
   relocate(ThermalT)
 
-# Plot and save out
-ch.organ.plot <- ch.organ %>% 
+# Write out biomass values for optimization routine
+write.csv(ch.organ, "../inputs/ch_biomass.csv", row.names = FALSE)
+
+# Plot proportions of biomass
+ch.organ.prop <- ch.organ %>% 
   tidyr::pivot_longer(Stem:Grain) %>%
   mutate(name = factor(name, levels = c("Grain", "Leaf", "Stem", "Root", "Rhizome"))) %>%
   ggplot() +
   geom_bar(aes(x = ThermalT, y = value, fill = name), position = "fill", stat = "identity") +
   ylab("Total biomass (Mg/ha)") +
   theme_bw()
-print(ch.organ.plot)
+print(ch.organ.prop)
 
-write.csv(ch.organ, "../inputs/ch_biomass.csv", row.names = FALSE)
+# Plot proportions of derivatives
+d.ch.organ.prop <- ch.organ %>%
+  mutate(dStem = Stem - lag(Stem, n = 1),
+         dLeaf = Leaf - lag(Leaf, n = 1),
+         dRoot = Root - lag(Root, n = 1),
+         dGrain = Grain - lag(Grain, n = 1)) %>%
+  tidyr::pivot_longer(dStem:dGrain) %>%
+  mutate(name = factor(name, levels = c("dGrain", "dLeaf", "dStem", "dRoot"))) %>%
+  ggplot() +
+  geom_bar(aes(x = ThermalT, y = value, fill = name), position = "stack", stat = "identity") +
+  scale_y_continuous(expression(paste(Delta, " biomass"))) +
+  theme_bw()
+print(d.ch.organ.prop)
 
+# Calculate starting values for kLeaf, kStem, kRoot, kGrain, and kRhizome
+# Setting kRhizome to a very small number
+kRhizome <- 0.0001
+
+d.ch.organ.prop <- ch.organ %>%
+  mutate(dStem = Stem - lag(Stem, n = 1),
+         dLeaf = Leaf - lag(Leaf, n = 1),
+         dRoot = Root - lag(Root, n = 1),
+         dGrain = Grain - lag(Grain, n = 1)) %>%
+  select(ThermalT, dStem:dGrain) %>%
+  slice(-1) %>%
+  mutate(Tot = dStem + dLeaf + dRoot + dGrain,
+         pStem = round(dStem / Tot, 3),
+         pLeaf = round(dLeaf / Tot, 3),
+         pRoot = round(dRoot / Tot, 3),
+         pGrain = round(dGrain / Tot, 3),
+         pRhizome = kRhizome, 
+         Sum = pStem + pLeaf + pRoot + pGrain + pRhizome, 
+         Diff = 1 - Sum,
+         pStem2 = pStem + Diff,
+         Sum2 = pStem2 + pLeaf + pRoot + pGrain + pRhizome) %>%
+  slice(rep(1, each = 2), rep(2:n(), each = 1))
+
+# Changing config.xml from biomass_opti/inputs folder
+# First, adjust time points based on Nielsen et al. 2016, Applied Engineering in Agriculture, Fig. 2b
+# Hay millet phenological stages (S. italica, the domesticated version of S. viridis)
+# 150 Leaf Growth initiation
+# 310 Tiller Bud Growth initiation
+# 640 Internode Elongation initiation
+# 790 Flag leaf initiation
+# 990 Flag leaf end
+# 1640 Kernel Growth initiation
+
+# Read in xml
+config <- PEcAn.BIOCRO::read.biocro.config(file.path("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/config.xml"))
+
+config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))] <- c("150",
+                                                                     "310", 
+                                                                     "640",
+                                                                     "790",
+                                                                     "990",
+                                                                     "1640")
+
+# Second, set seneParms starting with leaf senescence just after physiological maturity (2340 gdds)
+# equivalent to 500 less than the default
+config$pft$seneControl  <- c("2500",
+                             "3000",
+                             "3500",
+                             "3500")
+
+# Third, adjust the k Parms as indicated by biomass data
+config$pft$phenoParms[grep("kLeaf", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pLeaf)
+config$pft$phenoParms[grep("kStem", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pStem2)
+config$pft$phenoParms[grep("kRoot", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pRoot)
+config$pft$phenoParms[grep("kRhizome", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pRhizome)
+
+# Add 5 additional kGrain values
+config$pft$phenoParms$kGrain6 <- NULL
+for(i in 1:6){
+  config$pft$phenoParms$foo <- NA
+  names(config$pft$phenoParms)[length(names(config$pft$phenoParms))] <- paste0("kGrain", i)
+}
+config$pft$phenoParms[grep("kGrain", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pGrain)
+
+# Write out to xml file
+config.xml <- PEcAn.settings::listToXml(config, "config")
+XML::saveXML(config.xml, file = "~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/config.xml", 
+             indent = TRUE)
