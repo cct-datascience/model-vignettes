@@ -26,7 +26,7 @@
    <nlayers>10</nlayers>
    <kd>0.463773145205566</kd>
    <chi.l>1</chi.l>
-   <mResp/>
+   <mResp>0.02,0.03</mResp>
    <heightFactor>3</heightFactor>
    <leafwidth>0.04</leafwidth>
    <eteq>0</eteq>

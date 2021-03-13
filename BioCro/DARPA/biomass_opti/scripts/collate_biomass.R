@@ -62,7 +62,7 @@ ggplot(ch.sum, aes(x = day, y = biom_mean)) +
 ThermalT.df <- as.data.frame(unclass(BioGro(ch_weather, day1 = 1, dayn = 365))[1:11]) %>%
   select(Hour, DayofYear, ThermalT) %>% 
   filter(Hour == 0, 
-         DayofYear %in% ch.organ$day) %>% 
+         DayofYear %in% ch.raw$day) %>% 
   rename(day = DayofYear) %>%
   select(day, ThermalT)
 
@@ -142,7 +142,7 @@ d.ch.organ.prop <- ch.organ %>%
 # 1640 Kernel Growth initiation
 
 # Read in xml
-config <- PEcAn.BIOCRO::read.biocro.config(file.path("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml"))
+config <- XML::xmlToList(xmlParse("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml"))
 
 config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))] <- c("150",
                                                                      "310", 
