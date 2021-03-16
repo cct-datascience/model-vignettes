@@ -116,8 +116,9 @@ d.ch.organ.prop <- ch.organ %>%
   mutate(dStem = Stem - lag(Stem, n = 1),
          dLeaf = Leaf - lag(Leaf, n = 1),
          dRoot = Root - lag(Root, n = 1),
-         dGrain = Grain - lag(Grain, n = 1)) %>%
-  select(ThermalT, dStem:dGrain) %>%
+         dGrain.int = Grain - lag(Grain, n = 1),
+         dGrain = ifelse(ThermalT > 1400, dGrain.int, 0)) %>%
+  select(ThermalT, dStem:dRoot, dGrain) %>%
   slice(-1) %>%
   mutate(Tot = dStem + dLeaf + dRoot + dGrain,
          pStem = round(dStem / Tot, 3),
@@ -163,14 +164,15 @@ config$pft$phenoParms[grep("kLeaf", names(config$pft$phenoParms))] <- as.charact
 config$pft$phenoParms[grep("kStem", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pStem2)
 config$pft$phenoParms[grep("kRoot", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pRoot)
 config$pft$phenoParms[grep("kRhizome", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pRhizome)
+config$pft$phenoParms["kGrain6"] <- as.character(d.ch.organ.prop$pGrain)
 
-# Add 5 additional kGrain values
-config$pft$phenoParms$kGrain6 <- NULL
-for(i in 1:6){
-  config$pft$phenoParms$foo <- NA
-  names(config$pft$phenoParms)[length(names(config$pft$phenoParms))] <- paste0("kGrain", i)
-}
-config$pft$phenoParms[grep("kGrain", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pGrain)
+# # Add 5 additional kGrain values
+# config$pft$phenoParms$kGrain6 <- NULL
+# for(i in 1:6){
+#   config$pft$phenoParms$foo <- NA
+#   names(config$pft$phenoParms)[length(names(config$pft$phenoParms))] <- paste0("kGrain", i)
+# }
+# config$pft$phenoParms[grep("kGrain", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pGrain)
 
 # Write out to xml file
 config.xml <- PEcAn.settings::listToXml(config, "config")
