@@ -81,9 +81,6 @@ ch.organ <- ch.raw %>%
   select(-day) %>%
   relocate(ThermalT)
 
-# Write out biomass values for optimization routine
-write.csv(ch.organ, "../inputs/ch_biomass.csv", row.names = FALSE)
-
 # Plot proportions of biomass
 ch.organ.prop <- ch.organ %>% 
   tidyr::pivot_longer(Stem:Grain) %>%
@@ -94,8 +91,23 @@ ch.organ.prop <- ch.organ %>%
   theme_bw()
 print(ch.organ.prop)
 
+# Assign 75% of panicle biomass to stem and 25% to leaf but only for first 3 time points
+# Then take the former Grain amount at 3rd time point and redistribute similarly for time points 4-6
+ch.reassign <- ch.organ %>%
+  mutate(Leaf = ifelse(ThermalT < 800, Leaf + 0.25 * Grain, Leaf),
+         Stem = ifelse(ThermalT < 800, Stem + 0.75 * Grain, Stem),
+         Grain2 = ifelse(ThermalT < 800, 0, Grain)) %>%
+  mutate(Grain3 = ifelse(ThermalT > 800, Grain2 - Grain[3], Grain2),
+         Leaf = ifelse(ThermalT > 800, Leaf + 0.25 * Grain[3], Leaf),
+         Stem = ifelse(ThermalT > 800, Stem + 0.75 * Grain[3], Stem)) %>%
+  select(-Grain, -Grain2) %>%
+  rename(Grain = Grain3)
+
+# Write out biomass values for optimization routine, with Grain reassigned as above
+write.csv(ch.reassign, "../inputs/ch_biomass.csv", row.names = FALSE)
+
 # Plot proportions of derivatives
-d.ch.organ.prop <- ch.organ %>%
+fig.d.ch.organ.prop <- ch.reassign %>%
   mutate(dStem = Stem - lag(Stem, n = 1),
          dLeaf = Leaf - lag(Leaf, n = 1),
          dRoot = Root - lag(Root, n = 1),
@@ -106,19 +118,19 @@ d.ch.organ.prop <- ch.organ %>%
   geom_bar(aes(x = ThermalT, y = value, fill = name), position = "stack", stat = "identity") +
   scale_y_continuous(expression(paste(Delta, " biomass"))) +
   theme_bw()
-print(d.ch.organ.prop)
+print(fig.d.ch.organ.prop)
 
 # Calculate starting values for kLeaf, kStem, kRoot, kGrain, and kRhizome
+# Only use first 4 biomass values, due to tp6 = 900 now
 # Setting kRhizome to a very small number
 kRhizome <- 0.0001
 
-d.ch.organ.prop <- ch.organ %>%
+d.ch.organ.prop <- ch.reassign[1:4,] %>%
   mutate(dStem = Stem - lag(Stem, n = 1),
          dLeaf = Leaf - lag(Leaf, n = 1),
          dRoot = Root - lag(Root, n = 1),
-         dGrain.int = Grain - lag(Grain, n = 1),
-         dGrain = ifelse(ThermalT > 1400, dGrain.int, 0)) %>%
-  select(ThermalT, dStem:dRoot, dGrain) %>%
+         dGrain = Grain - lag(Grain, n = 1)) %>%
+  select(ThermalT, dStem:dGrain) %>%
   slice(-1) %>%
   mutate(Tot = dStem + dLeaf + dRoot + dGrain,
          pStem = round(dStem / Tot, 3),
@@ -130,7 +142,7 @@ d.ch.organ.prop <- ch.organ %>%
          Diff = 1 - Sum,
          pStem2 = pStem + Diff,
          Sum2 = pStem2 + pLeaf + pRoot + pGrain + pRhizome) %>%
-  slice(rep(1, each = 2), rep(2:n(), each = 1))
+  slice(rep(1, each = 4), rep(2:n(), each = 1))
 
 # Changing config.xml from biomass_opti/inputs folder
 # First, adjust time points based on Nielsen et al. 2016, Applied Engineering in Agriculture, Fig. 2b
@@ -139,18 +151,19 @@ d.ch.organ.prop <- ch.organ %>%
 # 310 Tiller Bud Growth initiation
 # 640 Internode Elongation initiation
 # 790 Flag leaf initiation
+# Floret Primordium Initiation
 # 990 Flag leaf end
-# 1640 Kernel Growth initiation
+# 1400 Rachis elongation end
 
 # Read in xml
-config <- XML::xmlToList(xmlParse("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml"))
+config <- XML::xmlToList(XML::xmlParse("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml"))
 
-config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))] <- c("150",
-                                                                     "310", 
+config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))] <- c("1",
+                                                                     "2", 
+                                                                     "3",
+                                                                     "150",
                                                                      "640",
-                                                                     "790",
-                                                                     "990",
-                                                                     "1640")
+                                                                     "900")
 
 # Second, set seneParms starting with leaf senescence just after physiological maturity (2340 gdds)
 # equivalent to 500 less than the default
@@ -164,7 +177,7 @@ config$pft$phenoParms[grep("kLeaf", names(config$pft$phenoParms))] <- as.charact
 config$pft$phenoParms[grep("kStem", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pStem2)
 config$pft$phenoParms[grep("kRoot", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pRoot)
 config$pft$phenoParms[grep("kRhizome", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pRhizome)
-config$pft$phenoParms["kGrain6"] <- as.character(d.ch.organ.prop$pGrain)
+config$pft$phenoParms["kGrain6"] <- as.character(d.ch.organ.prop$pGrain[6])
 
 # # Add 5 additional kGrain values
 # config$pft$phenoParms$kGrain6 <- NULL

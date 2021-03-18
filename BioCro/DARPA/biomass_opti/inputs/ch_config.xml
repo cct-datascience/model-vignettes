@@ -77,42 +77,37 @@
    <rsdf>0.44</rsdf>
   </soilControl>
   <phenoParms>
-   <tp1>150</tp1>
-   <tp2>310</tp2>
-   <tp3>640</tp3>
-   <tp4>790</tp4>
-   <tp5>990</tp5>
-   <tp6>1640</tp6>
-   <kStem1>0.3729</kStem1>
-   <kLeaf1>0.429</kLeaf1>
+   <tp1>1</tp1>
+   <tp2>2</tp2>
+   <tp3>3</tp3>
+   <tp4>150</tp4>
+   <tp5>640</tp5>
+   <tp6>900</tp6>
+   <kStem1>0.4299</kStem1>
+   <kLeaf1>0.447</kLeaf1>
    <kRoot1>0.123</kRoot1>
    <kRhizome1>1e-04</kRhizome1>
-   <kStem2>0.3729</kStem2>
-   <kLeaf2>0.429</kLeaf2>
+   <kStem2>0.4299</kStem2>
+   <kLeaf2>0.447</kLeaf2>
    <kRoot2>0.123</kRoot2>
    <kRhizome2>1e-04</kRhizome2>
-   <kStem3>0.3909</kStem3>
-   <kLeaf3>0.247</kLeaf3>
-   <kRoot3>0.119</kRoot3>
+   <kStem3>0.4299</kStem3>
+   <kLeaf3>0.447</kLeaf3>
+   <kRoot3>0.123</kRoot3>
    <kRhizome3>1e-04</kRhizome3>
-   <kStem4>0.3849</kStem4>
-   <kLeaf4>0.111</kLeaf4>
-   <kRoot4>0.068</kRoot4>
+   <kStem4>0.4299</kStem4>
+   <kLeaf4>0.447</kLeaf4>
+   <kRoot4>0.123</kRoot4>
    <kRhizome4>1e-04</kRhizome4>
-   <kStem5>0.0979</kStem5>
-   <kLeaf5>0.028</kLeaf5>
-   <kRoot5>-0.018</kRoot5>
+   <kStem5>0.5729</kStem5>
+   <kLeaf5>0.308</kLeaf5>
+   <kRoot5>0.119</kRoot5>
    <kRhizome5>1e-04</kRhizome5>
-   <kStem6>0.0968999999999999</kStem6>
-   <kLeaf6>-0.08</kLeaf6>
-   <kRoot6>0.091</kRoot6>
+   <kStem6>0.3849</kStem6>
+   <kLeaf6>0.111</kLeaf6>
+   <kRoot6>0.068</kRoot6>
    <kRhizome6>1e-04</kRhizome6>
-   <kGrain1>0.075</kGrain1>
-   <kGrain2>0.075</kGrain2>
-   <kGrain3>0.243</kGrain3>
-   <kGrain4>0.436</kGrain4>
-   <kGrain5>0.892</kGrain5>
-   <kGrain6>0.892</kGrain6>
+   <kGrain6>0.436</kGrain6>
   </phenoParms>
  </pft>
 </config>
