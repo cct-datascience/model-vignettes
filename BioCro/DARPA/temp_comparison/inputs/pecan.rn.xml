@@ -21,7 +21,7 @@
       <name>SetariaWT_ME034</name>
       <outdir>/data/output/pecan_runs/temp_comp_results/rn/pft/SetariaWT_ME034</outdir>
       <constants>
-        <file>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_comparison/inputs/setaria.constants.xml</file>
+        <file>~/model-vignettes/BioCro/DARPA/temp_comparison/inputs/setaria.constants.xml</file>
       </constants>
     </pft>
   </pfts>
@@ -63,7 +63,7 @@
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_comparison/inputs/weather.rn</path>
+        <path>~/model-vignettes/BioCro/DARPA/temp_comparison/inputs/weather.rn</path>
       </met>
     </inputs>
       <start.date>2019/01/01</start.date>
