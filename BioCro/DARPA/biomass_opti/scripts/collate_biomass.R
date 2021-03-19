@@ -167,14 +167,14 @@ config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))] <- c("1",
                                                                      "3",
                                                                      "490",
                                                                      "790",
-                                                                     "900")
+                                                                     "990")
 
 # Second, set seneParms starting with leaf senescence just after physiological maturity (2340 gdds)
 # equivalent to 500 less than the default
-config$pft$seneControl  <- c("2500",
-                             "3000",
-                             "3500",
-                             "3500")
+config$pft$seneControl[grep("sen", names(config$pft$seneControl))]  <- c("2500",
+                                                                         "3000",
+                                                                         "3500",
+                                                                         "3500")
 
 # Third, adjust the k Parms as indicated by biomass data
 config$pft$phenoParms[grep("kLeaf", names(config$pft$phenoParms))] <- as.character(d.ch.organ.prop$pLeaf)

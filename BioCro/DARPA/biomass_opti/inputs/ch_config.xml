@@ -56,7 +56,12 @@
   <phenoControl>
    <Tbase>0</Tbase>
   </phenoControl>
-  <seneControl/>
+  <seneControl>
+   <senLeaf>2500</senLeaf>
+   <senStem>3000</senStem>
+   <senRoot>3500</senRoot>
+   <senRhizome>3500</senRhizome>
+  </seneControl>
   <soilControl>
    <FieldC>-1</FieldC>
    <WiltP>-1</WiltP>
@@ -82,7 +87,7 @@
    <tp3>3</tp3>
    <tp4>490</tp4>
    <tp5>790</tp5>
-   <tp6>900</tp6>
+   <tp6>990</tp6>
    <kStem1>0.4299</kStem1>
    <kLeaf1>0.447</kLeaf1>
    <kRoot1>0.123</kRoot1>
