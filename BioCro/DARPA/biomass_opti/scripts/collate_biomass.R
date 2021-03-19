@@ -93,6 +93,7 @@ print(ch.organ.prop)
 
 # Assign 75% of panicle biomass to stem and 25% to leaf but only for first 3 time points
 # Then take the former Grain amount at 3rd time point and redistribute similarly for time points 4-6
+# Or, not
 ch.reassign <- ch.organ %>%
   mutate(Leaf = ifelse(ThermalT < 800, Leaf + 0.25 * Grain, Leaf),
          Stem = ifelse(ThermalT < 800, Stem + 0.75 * Grain, Stem),
@@ -101,7 +102,9 @@ ch.reassign <- ch.organ %>%
          Leaf = ifelse(ThermalT > 800, Leaf + 0.25 * Grain[3], Leaf),
          Stem = ifelse(ThermalT > 800, Stem + 0.75 * Grain[3], Stem)) %>%
   select(-Grain, -Grain2) %>%
-  rename(Grain = Grain3)
+  rename(Grain = Grain3) 
+  # select(-Grain, ) %>%
+  # rename(Grain = Grain2) 
 
 # Write out biomass values for optimization routine, with Grain reassigned as above
 write.csv(ch.reassign, "../inputs/ch_biomass.csv", row.names = FALSE)
@@ -149,6 +152,7 @@ d.ch.organ.prop <- ch.reassign[1:4,] %>%
 # Hay millet phenological stages (S. italica, the domesticated version of S. viridis)
 # 150 Leaf Growth initiation
 # 310 Tiller Bud Growth initiation
+# 490 Rachis elongation initiation
 # 640 Internode Elongation initiation
 # 790 Flag leaf initiation
 # Floret Primordium Initiation
@@ -161,8 +165,8 @@ config <- XML::xmlToList(XML::xmlParse("~/model-vignettes/BioCro/DARPA/biomass_o
 config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))] <- c("1",
                                                                      "2", 
                                                                      "3",
-                                                                     "150",
-                                                                     "640",
+                                                                     "490",
+                                                                     "790",
                                                                      "900")
 
 # Second, set seneParms starting with leaf senescence just after physiological maturity (2340 gdds)
@@ -191,3 +195,4 @@ config$pft$phenoParms["kGrain6"] <- as.character(d.ch.organ.prop$pGrain[6])
 config.xml <- PEcAn.settings::listToXml(config, "config")
 XML::saveXML(config.xml, file = "~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml", 
              indent = TRUE)
+

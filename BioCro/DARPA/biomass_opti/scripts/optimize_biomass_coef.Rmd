@@ -3,6 +3,8 @@ title: "Optimizing Setaria Biomass Coefficients from BioCro v0.95"
 author: "Kristina Riemer, Jessica Guo"
 output: github_document
 urlcolor: blue
+editor_options: 
+  chunk_output_type: console
 ---
 
 ### Walkthrough for optimizing using `DEoptim`
@@ -42,74 +44,56 @@ opt_biomass <- read.csv("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_b
 
 We want biomass estimates from `BioGro` (i.e., ttt) to be as close to the actual biomass values as possible (i.e., opt_biomass). Will be optimizing over the parameters, which are the biomass coefficients. 
 
-To allow grain to accumulate prior to the final timestep, create an updated phenoParms function. 
-```{r}
-library(BioCro)
-phenoParms <- function(tp1=562, tp2=1312, tp3=2063, tp4=2676, tp5=3211, tp6=7000,
-                       kStem1=0.37, kLeaf1=0.33, kRoot1=0.3, kRhizome1=-8e-4, 
-                       kStem2=0.85, kLeaf2=0.14, kRoot2=0.01, kRhizome2=-5e-4, 
-                       kStem3=0.63, kLeaf3=0.01, kRoot3=0.01, kRhizome3=0.35, 
-                       kStem4=0.63, kLeaf4=0.01, kRoot4=0.01, kRhizome4=0.35, 
-                       kStem5=0.63, kLeaf5=0.01, kRoot5=0.01, kRhizome5=0.35, 
-                       kStem6=0.63, kLeaf6=0.01, kRoot6=0.01, kRhizome6=0.35, 
-                       kGrain1 = 0, kGrain2 = 0, kGrain3 = 0, kGrain4 = 0, kGrain5=0, kGrain6=0){
-  list(tp1=tp1, tp2=tp2, tp3=tp3, tp4=tp4, tp5=tp5, tp6=tp6,
-       kStem1=kStem1, kLeaf1=kLeaf1, kRoot1=kRoot1, kRhizome1=kRhizome1, 
-       kStem2=kStem2, kLeaf2=kLeaf2, kRoot2=kRoot2, kRhizome2=kRhizome2, 
-       kStem3=kStem3, kLeaf3=kLeaf3, kRoot3=kRoot3, kRhizome3=kRhizome3, 
-       kStem4=kStem4, kLeaf4=kLeaf4, kRoot4=kRoot4, kRhizome4=kRhizome4, 
-       kStem5=kStem5, kLeaf5=kLeaf5, kRoot5=kRoot5, kRhizome5=kRhizome5, 
-       kStem6=kStem6, kLeaf6=kLeaf6, kRoot6=kRoot6, kRhizome6=kRhizome6, 
-       kGrain1=kGrain1, kGrain2=kGrain2, kGrain3=kGrain3, kGrain4=kGrain4, kGrain5=kGrain5, kGrain6=kGrain6)
-}
-valid_dbp <- function(x, tol = 1) return(x)
-```
 
-First create objective function `opfn`, and include parameter values to test if this function by itself works. 
+First create objective function `opfn`, and include parameter values to test if this function by itself works. The objective function to be minimized is the residual sum of squares. 
 ```{r, message=FALSE}
+library(BioCro)
+
 opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){ 
-  optimizingParms[1:4] <- optimizingParms[1:4]/sum(optimizingParms[1:4])
-  optimizingParms[5:8] <- optimizingParms[5:8]/sum(optimizingParms[5:8])
-  optimizingParms[9:12] <- optimizingParms[9:12]/sum(optimizingParms[9:12])
-  optimizingParms[13:16] <- optimizingParms[13:16]/sum(optimizingParms[13:16])
-  optimizingParms[17:20] <- optimizingParms[17:20]/sum(optimizingParms[17:20])
-  optimizingParms[21:24] <- optimizingParms[21:24]/sum(optimizingParms[21:24])
+  optimizingParms[1:3] <- optimizingParms[1:3]/sum(optimizingParms[1:3], rhizomeParms[1])
+  optimizingParms[4:6] <- optimizingParms[4:6]/sum(optimizingParms[4:6], rhizomeParms[2])
+  optimizingParms[7:9] <- optimizingParms[7:9]/sum(optimizingParms[7:9], rhizomeParms[3])
+  optimizingParms[10:12] <- optimizingParms[10:12]/sum(optimizingParms[10:12], rhizomeParms[4])
+  optimizingParms[13:15] <- optimizingParms[13:15]/sum(optimizingParms[13:15], rhizomeParms[5])
+  optimizingParms[16:19] <- optimizingParms[16:19]/sum(optimizingParms[16:19], rhizomeParms[6])
   params_list <- phenoParms(tp1 = thermaltimeParms[1], 
                            tp2 = thermaltimeParms[2], 
                            tp3 = thermaltimeParms[3], 
                            tp4 = thermaltimeParms[4], 
                            tp5 = thermaltimeParms[5], 
                            tp6 = thermaltimeParms[6], 
+                           
                            kStem1 = optimizingParms[1], 
-                           kLeaf1 = optimizingParms[2],
-                           kRoot1 = optimizingParms[3],
-                           kGrain1 = optimizingParms[4],
-                           kStem2 = optimizingParms[5], 
-                           kLeaf2 = optimizingParms[6],
-                           kRoot2 = optimizingParms[7],
-                           kGrain2 = optimizingParms[8],
-                           kStem3 = optimizingParms[9], 
-                           kLeaf3 = optimizingParms[10],
-                           kRoot3 = optimizingParms[11],
-                           kGrain3 = optimizingParms[12],
-                           kStem4 = optimizingParms[13], 
-                           kLeaf4 = optimizingParms[14],
-                           kRoot4 = optimizingParms[15],
-                           kGrain4 = optimizingParms[16],
-                           kStem5 = optimizingParms[17], 
-                           kLeaf5 = optimizingParms[18],
-                           kRoot5 = optimizingParms[19],
-                           kGrain5 = optimizingParms[20],
-                           kStem6 = optimizingParms[21], 
-                           kLeaf6 = optimizingParms[22],
-                           kRoot6 = optimizingParms[23],
-                           kGrain6 = optimizingParms[24],
+                           kLeaf1 = optimizingParms[2], 
+                           kRoot1 = optimizingParms[3], 
                            kRhizome1 = rhizomeParms[1], 
+                           
+                           kStem2 = optimizingParms[4], 
+                           kLeaf2 = optimizingParms[5], 
+                           kRoot2 = optimizingParms[6], 
                            kRhizome2 = rhizomeParms[2], 
+                           
+                           kStem3 = optimizingParms[7], 
+                           kLeaf3 = optimizingParms[8], 
+                           kRoot3 = optimizingParms[9],
                            kRhizome3 = rhizomeParms[3], 
+                           
+                           kStem4 = optimizingParms[10], 
+                           kLeaf4 = optimizingParms[11],  
+                           kRoot4 = optimizingParms[12], 
                            kRhizome4 = rhizomeParms[4], 
-                           kRhizome5 = rhizomeParms[5], 
-                           kRhizome6 = rhizomeParms[6])
+                           
+                           
+                           kStem5 = optimizingParms[13], 
+                           kLeaf5 = optimizingParms[14], 
+                           kRoot5 = optimizingParms[15], 
+                           kRhizome5 = rhizomeParms[5],
+                           
+                           kStem6 = optimizingParms[16],
+                           kLeaf6 = optimizingParms[17],
+                           kRoot6 = optimizingParms[18], 
+                           kRhizome6 = rhizomeParms[6],
+                           kGrain6 = optimizingParms[19])
   
   t <- BioCro::BioGro(
     WetDat = opt_weather,
@@ -152,26 +136,31 @@ opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){
   #   select(Stem_norm, Leaf_norm, Root_norm, Rhizome, Grain) %>% 
   #   rename(Stem = Stem_norm, Leaf = Leaf_norm, Root = Root_norm)
   
-  return(sum(diff))
+  return(sum(diff^2))
 }
 
-# Check function itself by running with example parameter values
-optimizingParms_check <- rep(c(0.2, 0.3, 0.4, 0.1), 6)
+# Check function itself by running with starting parameter values from config file
+cnames <- names(config$pft$phenoParms)
+optimizingParms_check <- as.numeric(unlist(config$pft$phenoParms[c(grep("kStem", cnames),
+                                                                   grep("kLeaf", cnames),
+                                                                   grep("kRoot", cnames),
+                                                                   grep("kGrain", cnames))]))
+# c(rep(c(0.2, 0.3, 0.4), 6), 0)
 thermaltimeParms_check <- as.numeric(unlist(config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))]))
-rhizomeParms_check <- rep(0, 6)
+rhizomeParms_check <- rep(0.0001, 6)
 opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
 ```
 
-Run objective function through optimization with `DEoptim`, setting the upper and lower bounds for the varying parameters to 0 and 1 and providing values for the non-varying parameters thermal time and rhizome coefficients. Reducing itermax reduces time to run `DEoptim`, but the resulting best value doesn't change much. 
+Run objective function through optimization with `DEoptim`, setting the upper and lower bounds for the varying parameters to 0 and 1 and providing values for the non-varying parameters thermal time and rhizome coefficients. Reducing itermax reduces time to run `DEoptim`;the resulting best value reduces to aboutu 10% of original. 
 ```{r, results='hide', message=FALSE}
 library(DEoptim)
 
-thermaltimevals <- c(config$pft$phenoParms$tp1, config$pft$phenoParms$tp2, 
-                     config$pft$phenoParms$tp3, config$pft$phenoParms$tp4, 
-                     config$pft$phenoParms$tp5, config$pft$phenoParms$tp6)
-rhizomevals <- rep(0, 6)
+thermaltimevals <- as.numeric(unlist(config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))]))
+rhizomevals <- rep(0.0001, 6)
 
-opt_results <- DEoptim(fn = opfn, lower = c(rep(0, 2), rep(0.6, 4), 0.3, 0.1, rep(0, 11)), upper = c(rep(1, 8), rep(0.1, 4), rep(1, 7)), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 20))
+opt_results <- DEoptim(fn = opfn, lower = rep(0, 19), upper = rep(1, 19), thermaltimeParms = thermaltimevals, rhizomeParms = rhizomevals, control = DEoptim.control(itermax = 20))
+
+save(opt_results, file = "opt_results.Rdata")
 ```
 
 Test that the resulting parameter values produce the same biomass estimates. `parms_results` are the actual parameters that we would use because they've been adjusted for the sum to 1 constraint. 
@@ -179,44 +168,51 @@ Test that the resulting parameter values produce the same biomass estimates. `pa
 library(ggplot2)
 
 parms_results <- as.vector(opt_results$optim$bestmem)
-parms_results[1:3] <- parms_results[1:3]/sum(parms_results[1:3])
-parms_results[4:6] <- parms_results[4:6]/sum(parms_results[4:6])
-parms_results[7:9] <- parms_results[7:9]/sum(parms_results[7:9])
-parms_results[10:12] <- parms_results[10:12]/sum(parms_results[10:12])
-parms_results[13:15] <- parms_results[13:15]/sum(parms_results[13:15])
-parms_results[16:19] <- parms_results[16:19]/sum(parms_results[16:19])
+parms_results[1:3] <- parms_results[1:3]/sum(parms_results[1:3], rhizomevals[1])
+parms_results[4:6] <- parms_results[4:6]/sum(parms_results[4:6], rhizomevals[1])
+parms_results[7:9] <- parms_results[7:9]/sum(parms_results[7:9], rhizomevals[1])
+parms_results[10:12] <- parms_results[10:12]/sum(parms_results[10:12], rhizomevals[1])
+parms_results[13:15] <- parms_results[13:15]/sum(parms_results[13:15], rhizomevals[1])
+parms_results[16:19] <- parms_results[16:19]/sum(parms_results[16:19], rhizomevals[1])
 optimalParms <- phenoParms(tp1 = thermaltimevals[1], 
-                                 tp2 = thermaltimevals[2], 
-                                 tp3 = thermaltimevals[3], 
-                                 tp4 = thermaltimevals[4], 
-                                 tp5 = thermaltimevals[5], 
-                                 tp6 = thermaltimevals[6], 
-                                 kStem1 = parms_results[1], 
-                                 kStem2 = parms_results[4], 
-                                 kStem3 = parms_results[7], 
-                                 kStem4 = parms_results[10], 
-                                 kStem5 = parms_results[13], 
-                                 kStem6 = parms_results[16], 
-                                 kLeaf1 = parms_results[2], 
-                                 kLeaf2 = parms_results[5], 
-                                 kLeaf3 = parms_results[8], 
-                                 kLeaf4 = parms_results[11], 
-                                 kLeaf5 = parms_results[14], 
-                                 kLeaf6 = parms_results[17], 
-                                 kRoot1 = parms_results[3], 
-                                 kRoot2 = parms_results[6], 
-                                 kRoot3 = parms_results[9], 
-                                 kRoot4 = parms_results[12], 
-                                 kRoot5 = parms_results[15], 
-                                 kRoot6 = parms_results[18], 
-                                 kRhizome1 = rhizomevals[1], 
-                                 kRhizome2 = rhizomevals[2], 
-                                 kRhizome3 = rhizomevals[3], 
-                                 kRhizome4 = rhizomevals[4], 
-                                 kRhizome5 = rhizomevals[5], 
-                                 kRhizome6 = rhizomevals[6], 
-                                 kGrain6 = parms_results[19])
-
+                           tp2 = thermaltimevals[2], 
+                           tp3 = thermaltimevals[3], 
+                           tp4 = thermaltimevals[4], 
+                           tp5 = thermaltimevals[5], 
+                           tp6 = thermaltimevals[6], 
+                           
+                           kStem1 = parms_results[1], 
+                           kLeaf1 = parms_results[2], 
+                           kRoot1 = parms_results[3], 
+                           kRhizome1 = rhizomevals[1], 
+                           
+                           kStem2 = parms_results[4], 
+                           kLeaf2 = parms_results[5], 
+                           kRoot2 = parms_results[6], 
+                           kRhizome2 = rhizomevals[2], 
+                           
+                           kStem3 = parms_results[7], 
+                           kLeaf3 = parms_results[8], 
+                           kRoot3 = parms_results[9],
+                           kRhizome3 = rhizomevals[3], 
+                           
+                           kStem4 = parms_results[10], 
+                           kLeaf4 = parms_results[11],  
+                           kRoot4 = parms_results[12], 
+                           kRhizome4 = rhizomevals[4], 
+                           
+                           
+                           kStem5 = parms_results[13], 
+                           kLeaf5 = parms_results[14], 
+                           kRoot5 = parms_results[15], 
+                           kRhizome5 = rhizomevals[5],
+                           
+                           kStem6 = parms_results[16],
+                           kLeaf6 = parms_results[17],
+                           kRoot6 = parms_results[18], 
+                           kRhizome6 = rhizomevals[6],
+                           kGrain6 = parms_results[19])
+  
 results_test <- BioCro::BioGro(
     WetDat = opt_weather,
     day1 = day1,
@@ -239,7 +235,7 @@ results_test2 <- data.frame(ThermalT = results_test$ThermalT,
                  Grain = results_test$Grain)
 results_test3 <- results_test2 %>% 
   filter(round(results_test2$ThermalT) %in% round(opt_biomass$ThermalT))
-diff <- sum(abs(results_test3 - opt_biomass))
+diff <- sum(abs(results_test3 - opt_biomass)^2)
 
 biomass_meas_plot <- opt_biomass %>% 
   tidyr::pivot_longer(Stem:Grain) %>% 
@@ -250,9 +246,10 @@ biomass_ests_plot <- results_test2 %>%
 biomass_plot <- bind_rows(biomass_meas_plot, biomass_ests_plot)
 
 ggplot() +
+  geom_vline(xintercept = thermaltimevals, alpha = 0.5) +
   geom_point(filter(biomass_plot, data == "measurements"), mapping = aes(x = ThermalT, y = value, color = name)) +
   geom_line(filter(biomass_plot, data == "estimates"), mapping = aes(x = ThermalT, y = value, color = name)) +
-  xlim(c(0, 1800)) +
+  xlim(c(0, max(biomass_meas_plot$ThermalT))) +
   labs(x = "Thermal Time", y = "Biomass (Ma/ha)", color = "Plant Part") +
   theme_classic() +
   facet_wrap(~name)
