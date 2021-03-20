@@ -3,32 +3,13 @@
 # ----------------------------------------------------------------------
 # library(RCurl)
 
-#Manually load, until PR is merged
-# On patch branch
-# devtools::install("~/pecan/base/utils")
-# devtools::install("~/pecan/base/settings")
-# devtools::install("~/pecan/base/workflow")
-# devtools::install("~/pecan/modules/meta.analysis")
-devtools::install("~/pecan/base/db")
-
-# On patch-get-params branch
-devtools::install("~/pecan/modules/uncertainty")
-
-# Biocro increase-light-threshold branch
-devtools::install("~/biocro")
-
-# library(PEcAn.utils)
-# library(PEcAn.workflow)
-# library(PEcAn.settings)
-# library(PEcAn.MA)
-library(PEcAn.DB)
-library(PEcAn.uncertainty)
-library(PEcAn.all)
-library(BioCro)
-
-# devtools::load_all("~/pecan/base/all")
-# or load_all?
+devtools::load_all("~/pecan/base/db")
+devtools::load_all("~/pecan/modules/uncertainty")
+devtools::load_all("~/biocro")
+# library(PEcAn.DB)
+# library(PEcAn.uncertainty)
 # library(PEcAn.all)
+# library(BioCro)
 
 # Add function for setting MA treatments
 source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")
@@ -41,7 +22,8 @@ treatments <- c("rn", "hn")
 for(trt in treatments){
   
   # Open, read in, and modify settings file for PEcAn run
-  settings <- PEcAn.settings::read.settings(paste0("../inputs/pecan.", trt, ".xml")) 
+  settings_file <- normalizePath(paste0("../inputs/pecan.", trt, ".xml"))
+  settings <- PEcAn.settings::read.settings(settings_file) 
   settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
   PEcAn.settings::write.settings(settings, outputfile = paste0("pecan.CHECKED.", trt, ".xml"))
   settings <- PEcAn.workflow::do_conversions(settings)
