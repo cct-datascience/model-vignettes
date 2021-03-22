@@ -68,10 +68,10 @@ upload_parameters <- all_parameters %>%
                            trait == "g1BB" ~ "stomatal_slope.BB",
                            trait == "g0BB" ~ "cuticular_cond",
                            trait == "g1L" ~ "stomatal_slope",
-                           trait == "g0L" ~ ""),
-         mean = case_when(trait == "g0BB" ~ round(ud.convert(Value, "mol/m2/s", "umol/m2/s"), 0),
+                           trait == "g0L" ~ "cuticular_cond"),
+         mean = case_when(variable == "cuticular_cond" ~ round(ud.convert(Value, "mol/m2/s", "umol/m2/s"), 0),
                           TRUE ~ round(Value, 3)),
-         SE = case_when(trait == "g0BB" ~ round(ud.convert(SE, "mol/m2/s", "umol/m2/s"), 0),
+         SE = case_when(variable == "cuticular_cond" ~ round(ud.convert(SE, "mol/m2/s", "umol/m2/s"), 0),
                           TRUE ~ round(SE, 3))) %>% 
   select(-ID, -SD, -Date.run, -Genotype, -A_Ci, -A_Qin, -Rd, -Treatment, -Value, -trait) %>% 
   #spread(Trait, value) %>% 
@@ -87,7 +87,7 @@ upload_parameters <- all_parameters %>%
          ) %>%
   select(citation_author, citation_year, citation_title, 
          species, cultivar, site, treatment, local_datetime, Date, rep,
-         #Vcmax, leaf_respiration_rate_m2, quantum_efficiency, stomatal_slope.BB, cuticular_cond,
+         #Vcmax, leaf_respiration_rate_m2, quantum_efficiency, stomatal_slope.BB, cuticular_cond, stomatal_slope
          variable, mean, 
          leafT, n, SE, access_level) %>%
   replace(., is.na(.), "")
@@ -122,13 +122,13 @@ newdir <- paste0("upload/phys_params/", dname)
 prevDate <- max(pparams$local_datetime)
 
 #split dataframe for each parameter type and save each dataframe as a csv 
-params <- c("Vcmax", "leaf_respiration_rate_m2", "quantum_efficiency", "theta", "stomatal_slope.BB", "cuticular_cond")
+params <- c("Vcmax", "leaf_respiration_rate_m2", "quantum_efficiency", "theta", "stomatal_slope.BB", "cuticular_cond", "stomatal_slope")
 for(p in params){
   trait_df <- upload_parameters %>%
     filter(variable == p, local_datetime > prevDate) %>%
     spread(variable, mean)
   
-  # If cuticular_cond, convert units; if theta, remove leafT
+  # If cuticular_cond, round; if theta, remove leafT
   if (p == "cuticular_cond") {
       trait_df2 <- trait_df %>% mutate(cuticular_cond = round(cuticular_cond, 0))
     } else if (p == "theta") {
