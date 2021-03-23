@@ -62,3 +62,6 @@ figures/plots
 # Do include csv files in certain subdirectories
 !BioCro/DARPA/temp_comparison/inputs/*.csv
 !BioCro/DARPA/env_comparison/inputs/*.csv
+
+# Do include .Rdata files in certain subdirectories
+!BioCro/DARPA/biomass_opti/scripts/*.Rdata
