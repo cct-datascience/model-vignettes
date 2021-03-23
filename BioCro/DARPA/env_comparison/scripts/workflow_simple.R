@@ -3,61 +3,68 @@
 # ----------------------------------------------------------------------
 # library(RCurl)
 
-#Manually load, until PR is merged
-# On patch branch
-# devtools::install("~/pecan/base/utils")
-# devtools::install("~/pecan/base/settings")
-# devtools::install("~/pecan/base/workflow")
-# devtools::install("~/pecan/modules/meta.analysis")
-devtools::install("~/pecan/base/db")
-
-# On mstmip branch
-devtools::install("~/pecan/modules/uncertainty")
-
-# Biocro increase-light-threshold branch
-devtools::install("~/biocro")
-
-# library(PEcAn.utils)
-# library(PEcAn.workflow)
-# library(PEcAn.settings)
-# library(PEcAn.MA)
-library(PEcAn.DB)
-library(PEcAn.uncertainty)
-library(PEcAn.all)
+devtools::load_all('~/pecan/base/db/')
+devtools::load_all('~/pecan/modules/uncertainty/')
+devtools::load_all('~/pecan/base/all/')
+#library(PEcAn.DB)
+#library(PEcAn.uncertainty)
+#library(PEcAn.all)
 library(BioCro)
 
-# devtools::load_all("~/pecan/base/all")
-# or load_all?
-# library(PEcAn.all)
-
 # Add function for setting MA treatments
-source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")
+source("BioCro/DARPA/set_MA_trt.R")
 # Add function for plotting MA by treatment and trait
-source("~/model-vignettes/BioCro/DARPA/plot_MA.R")
+source("BioCro/DARPA/plot_MA.R")
 # ----------------------------------------------------------------------
 # PEcAn Workflow
 # ----------------------------------------------------------------------
 treatments <- c("ch", "gh", "out")
+
 for(trt in treatments){
   
+  #settings_template <- 'BioCro/DARPA/env_comparison/inputs/pecan.template.xml'
+  #settings_template <- PEcAn.settings::read.settings(settings_file)
+  # need to set run$site$id, metaanalysis$treatment
+
   # Open, read in, and modify settings file for PEcAn run
-  settings <- PEcAn.settings::read.settings(paste0("../inputs/pecan.", trt, ".xml")) 
-  settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
+  settings_file <- normalizePath(paste0("BioCro/DARPA/env_comparison/inputs/pecan.", trt, ".xml"))
+  settings <- PEcAn.settings::read.settings(settings_file)
+  settings$outdir <- file.path('/tmp', 'env_comp', trt)
+  settings$ensemble$size <- 10
+  settings$database$dbfiles <- file.path(settings$outdir, 'dbfiles')
+  settings$pfts$pft$outdir <- file.path(settings$outdir, 'pft', settings$pfts$pft$name)
+  settings$ensemble$samplingspace$parameters$method <- 'lhc'
+  # can met go in /data/dbfiles?
+  settings$run$inputs$met <- paste0(
+    normalizePath("~/model-vignettes/BioCro/DARPA/env_comparison/inputs/"),
+    "weather.", trt)
+
+  settings$pfts$pft$constants$file <- normalizePath(
+    "BioCro/DARPA/env_comparison/inputs/setaria.constants.xml"
+    )
+  
+  # TODO after moving to template: 
+  # PEcAn.settings::write.settings(settings_file)
+
+  dir.create(settings$pfts$pft$outdir, recursive = TRUE, showWarnings = FALSE)
+  dir.create(settings$database$dbfiles, recursive = TRUE, showWarnings = FALSE)
+
+  #settings <- PEcAn.settings::prepare.settings(settings, force = TRUE)
   PEcAn.settings::write.settings(settings, outputfile = paste0("pecan.CHECKED.", trt, ".xml"))
-  settings <- PEcAn.workflow::do_conversions(settings)
+  # settings <- PEcAn.workflow::do_conversions(settings)
   
   # Query the trait database for data and priors
-  settings <- PEcAn.workflow::runModule.get.trait.data(settings)
+  #settings <- PEcAn.workflow::runModule.get.trait.data(settings)
   
   # Run the PEcAn meta.analysis
-  PEcAn.MA::runModule.run.meta.analysis(settings)
+  #PEcAn.MA::runModule.run.meta.analysis(settings)
   
   # If treatment specific, set meta.analysis treatments and plot MA priors vs. posteriors
   set_MA_trt(settings)
   if (settings$meta.analysis$update == TRUE) {
     plot_MA(settings)
   }
-  
+  settings$pfts$pft$posteriorid <- NULL
   # Write model specific configs
   settings <- PEcAn.workflow::runModule.run.write.configs(settings)
   
@@ -68,6 +75,7 @@ for(trt in treatments){
   dur <- (en - st)/60/60
   print(paste0(settings$ensemble$size, " ensembles completed in ", round(dur[3], 4), " hours"))
   
+ 
   # Get sensitivity and ensemble output of model runs
   runModule.get.results(settings)
   
