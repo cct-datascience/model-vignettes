@@ -25,10 +25,10 @@ library(ggplot2)
 
 rundir <- getwd()
 
-opt_weather <- read.csv("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_weather.csv")
+opt_weather <- read.csv("../inputs/ch_weather.csv")
 colnames(opt_weather) <- c("year", "doy", "hour", "Solar", "Temp", "RH", "WS", "precip")
 
-config <- PEcAn.BIOCRO::read.biocro.config("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_config.xml")
+config <- PEcAn.BIOCRO::read.biocro.config("../inputs/ch_config.xml")
 
 lat <- as.numeric(config$location$latitude)
 lon <- as.numeric(config$location$longitude)
@@ -42,7 +42,7 @@ l2n <- function(x) lapply(x, as.numeric)
 day1 <- 1
 dayn <- 50
 
-opt_biomass <- read.csv("~/model-vignettes/BioCro/DARPA/biomass_opti/inputs/ch_biomass.csv")
+opt_biomass <- read.csv("../inputs/ch_biomass.csv")
 ```
 
 We want biomass estimates from `BioGro` (i.e., ttt) to be as close to the actual biomass values as possible (i.e., opt_biomass). Will be optimizing over the parameters, which are the biomass coefficients. 
