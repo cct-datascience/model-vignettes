@@ -1,6 +1,6 @@
 # Biomass optimization
 
-This folder contains code used to optimize the BioCro biomass allocation parameters for *Setaria* growth. Plants from the second chamber experiment (31/31/430) were harvested 6 times and stem, leaf, root, and panicle bioamss was recorded. 
+This folder contains code used to optimize the BioCro biomass allocation parameters for *Setaria* growth. Plants from the second chamber experiment (31/31/430) were harvested 6 times and stem, leaf, root, and panicle biomass was recorded. 
 
 ## Contents:
 

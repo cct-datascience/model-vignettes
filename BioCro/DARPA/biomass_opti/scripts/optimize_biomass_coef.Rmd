@@ -9,11 +9,11 @@ editor_options:
 
 ### Walkthrough for optimizing using `DEoptim`
 
-Optimizing biomass coefficients so that biomass estimates from BioCro as closely as possible match the measured biomass values. Parameters of interest are phenoParms, with thermal times and rhizome coefficients being fixed and leaf, stem, root, and grain coefficients being optimized across. This returns values of biomass for each stage and plant part, but the value being minimized is the difference between measured biomass and biomass estimated by BioCro. It seems like we can optimized across all stages at once within our objective function. 
+Optimizing biomass coefficients so that biomass estimates from BioCro as closely as possible match the measured biomass values. Parameters of interest are phenoParms, with thermal times and rhizome coefficients being fixed and leaf, stem, root, and grain coefficients being optimized across. This returns values of biomass for each stage and plant part, but the value being minimized is the sum of squared differences between measured biomass and biomass estimated by BioCro. We can optimize across all stages within our objective function. 
 
 First, read in necessary input data for the chamber experiment 2, 31_31_430 treatment that has biomass data from 6 time points: 
 
-* BioCro config file (copied from a PEcAn run by generate_weather_config.R and updated by collate_biomass.R)
+* BioCro [config](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/inputs/ch_config.xml) file (copied from a PEcAn run by [generate_weather_config.R](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/generate_weather_config.R) and updated by [collate_biomass.R](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/collate_biomass.R)
 * weather file (created by generate_weather_config.R)
 * biomass file (created by collate_biomass.R)
 
@@ -22,8 +22,6 @@ library(dplyr)
 library(BioCro)
 library(DEoptim)
 library(ggplot2)
-
-rundir <- getwd()
 
 opt_weather <- read.csv("../inputs/ch_weather.csv")
 colnames(opt_weather) <- c("year", "doy", "hour", "Solar", "Temp", "RH", "WS", "precip")
@@ -45,10 +43,10 @@ dayn <- 50
 opt_biomass <- read.csv("../inputs/ch_biomass.csv")
 ```
 
-We want biomass estimates from `BioGro` (i.e., ttt) to be as close to the actual biomass values as possible (i.e., opt_biomass). Will be optimizing over the parameters, which are the biomass coefficients. 
+We want biomass estimates from `BioGro` (i.e., ttt) to be as close to the actual biomass values as possible (i.e., opt_biomass). We will be optimizing over the allocation parameters, which are the biomass coefficients at six timesteps. 
 
 
-First create objective function `opfn`, and include parameter values to test if this function by itself works. The objective function to be minimized is the residual sum of squares. 
+First, create objective function `opfn`, and include parameter values to test if this function by itself works. The objective function to be minimized is the residual sum of squares. 
 ```{r, message=FALSE}
 opfn <- function(optimizingParms, thermaltimeParms, rhizomeParms){ 
   optimizingParms[1:3] <- optimizingParms[1:3]/sum(optimizingParms[1:3], rhizomeParms[1])
@@ -152,7 +150,7 @@ rhizomeParms_check <- rep(0.0001, 6)
 opfn(optimizingParms_check, thermaltimeParms_check, rhizomeParms_check)
 ```
 
-Run objective function through optimization with `DEoptim`, setting the upper and lower bounds for the varying parameters to 0 and 1 and providing values for the non-varying parameters thermal time and rhizome coefficients. Reducing itermax reduces time to run `DEoptim`;the resulting best value reduces to aboutu 10% of original. 
+Run objective function through optimization with `DEoptim`, setting the upper and lower bounds for the varying parameters to 0 and 1 and providing values for the non-varying parameters thermal time and rhizome coefficients. Reducing itermax reduces time to run `DEoptim`;the resulting best value reduces to about 10% of original. 
 ```{r, results='hide', message=FALSE}
 thermaltimevals <- as.numeric(unlist(config$pft$phenoParms[grep("tp", names(config$pft$phenoParms))]))
 rhizomevals <- rep(0.0001, 6)
@@ -252,3 +250,5 @@ ggplot() +
   theme_classic() +
   facet_wrap(~name)
 ```
+
+After running this script, see the [modify_constants_file.R](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/modify_constants_file.R), which uses the saved results to update the BioCro config files for the PEcAn experiments. 
