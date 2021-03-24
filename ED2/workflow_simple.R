@@ -38,7 +38,9 @@ settings <- PEcAn.workflow::runModule.run.write.configs(settings)
 #rsync '-a' '-q' '--delete' '/data/tests/ed2/run' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE'
 
 # Start ecosystem model runs
+ptm <- proc.time()
 PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
+proc.time() - ptm
 
 # Manual rsync of out folder back to Welsch, replacing DATE
 #rsync '-az' '-q' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE/out' '/data/tests/ed2'
