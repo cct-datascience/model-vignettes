@@ -49,6 +49,7 @@
   <sensitivity.analysis>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
+    <variable>AGB</variable>
   </sensitivity.analysis>
 
   <model>
