@@ -6,6 +6,8 @@
 devtools::load_all("~/pecan/base/db")
 devtools::load_all("~/pecan/modules/uncertainty")
 devtools::load_all("~/biocro")
+devtools::load_all("~/pecan/base/settings")
+devtools::load_all("~/pecan/models/biocro")
 # library(PEcAn.DB)
 # library(PEcAn.uncertainty)
 # library(PEcAn.all)
