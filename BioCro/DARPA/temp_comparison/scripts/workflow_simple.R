@@ -16,7 +16,6 @@ library(PEcAn.settings)
 library(PEcAn.BIOCRO)
 library(PEcAn.all)
 
-
 # Add function for setting MA treatments
 source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")
 # Add function for plotting MA by treatment and trait

@@ -45,8 +45,18 @@ for(trt in treatments){
     plot_MA(settings)
   }
   
-  # Write model specific configs
+  # Write model specific configs - if update is false, set posteriorid to NULL so that local version of 
+  # trait.mcmc.Rdata is used to create samples.Rdata, then restore posteriorid afterward
+  if(settings$meta.analysis$update == FALSE) {
+    pid <- settings$pfts$pft$posteriorid
+    settings$pfts$pft$posteriorid <- NULL
+  }
+  
   settings <- PEcAn.workflow::runModule.run.write.configs(settings)
+  
+  if(settings$meta.analysis$update == FALSE) {
+    settings$pfts$pft$posteriorid <- pid
+  }
   
   # Run ecosystem model (in folders 'run' and 'out')
   st <- proc.time()
