@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Parameters
 
-The first figure of paramters should be two columns of 6 figures, the left side contrasting high and low night temperatures and the right side contrasting chamber, greenhouse, and outdoor conditions.  
+The first figure of paramters should be two sets of 6 figures, the top showing contrasting high and low night temperatures and the bottom contrasting chamber, greenhouse, and outdoor conditions.  
 
 ```{r}
 library(dplyr)
