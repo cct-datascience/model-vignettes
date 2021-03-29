@@ -3,13 +3,18 @@
 # ----------------------------------------------------------------------
 # library(RCurl)
 
-devtools::load_all("~/pecan/base/db")
-devtools::load_all("~/pecan/modules/uncertainty")
-devtools::load_all("~/biocro")
-# library(PEcAn.DB)
-# library(PEcAn.uncertainty)
-# library(PEcAn.all)
-# library(BioCro)
+# Use install functions below the first time
+# devtools::install("~/pecan/base/db")
+# devtools::install("~/pecan/modules/uncertainty")
+# devtools::install("~/biocro")
+# devtools::install("~/pecan/base/settings")
+# devtools::install("~/pecan/models/biocro")
+library(PEcAn.DB)
+library(PEcAn.uncertainty)
+library(BioCro)
+library(PEcAn.settings)
+library(PEcAn.BIOCRO)
+library(PEcAn.all)
 
 # Add function for setting MA treatments
 source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")
@@ -40,8 +45,18 @@ for(trt in treatments){
     plot_MA(settings)
   }
   
-  # Write model specific configs
+  # Write model specific configs - if update is false, set posteriorid to NULL so that local version of 
+  # trait.mcmc.Rdata is used to create samples.Rdata, then restore posteriorid afterward
+  if(settings$meta.analysis$update == FALSE) {
+    pid <- settings$pfts$pft$posteriorid
+    settings$pfts$pft$posteriorid <- NULL
+  }
+  
   settings <- PEcAn.workflow::runModule.run.write.configs(settings)
+  
+  if(settings$meta.analysis$update == FALSE) {
+    settings$pfts$pft$posteriorid <- pid
+  }
   
   # Run ecosystem model (in folders 'run' and 'out')
   st <- proc.time()

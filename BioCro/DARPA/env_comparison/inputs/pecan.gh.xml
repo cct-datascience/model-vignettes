@@ -30,8 +30,14 @@
     <size>1000</size>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
+    <variable>AGB</variable>
+    <samplingspace>
+      <parameters>
+        <method>lhc</method>
+      </parameters>
+  </samplingspace>
   </ensemble>
-
+  
   <meta.analysis>
     <iter>30000</iter>
     <random.effects>TRUE</random.effects>
@@ -43,6 +49,7 @@
   <sensitivity.analysis>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
+    <variable>AGB</variable>
   </sensitivity.analysis>
 
   <model>

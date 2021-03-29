@@ -9,11 +9,11 @@ library(tidyr)
 # Summarize (mn, md, sd, CI_50, and CI_95) across ensembles for all 3 treatments and 2 variables
 
 treatments <- c("ch", "gh", "out")
-variables <- c("TotLivBiom", "TVeg")
+variables <- c("TotLivBiom", "TVeg", "AGB")
 
 # Functions for conversion of biomass and transpiration units
 convert_units <- function(x, variable) {
-  if (variable == "TotLivBiom") {
+  if (variable %in% c("TotLivBiom", "AGB")) {
     # undo  biomass to C conversion in PEcAn, already converted to kg/m2
     return(x / 0.4)
   } else if (variable == "TVeg") {
@@ -36,7 +36,7 @@ for(trt in treatments){
                 "/ensemble.ts.NOENSEMBLEID.", v, ".2020.2020.Rdata"))
     
     # Rearrange to long format and summarize across ensembles
-    if (v == "TotLivBiom") { # Take midday values only
+    if (v %in% c("TotLivBiom", "AGB")) { # Take midday values only
       daily <- data.frame(timescale, t(ensemble.ts[[v]])) %>% 
         pivot_longer(cols = starts_with("X"), names_to = "ensemble",
                      names_prefix = "X", values_to = "output") %>% 
@@ -89,7 +89,7 @@ for(v in variables){
   # Load all 3 treatments, summarize to daily depending on variable
   load(paste0("/data/output/pecan_runs/env_comp_results/ch/ensemble.ts.NOENSEMBLEID.", 
               v, ".2020.2020.Rdata"))
-  if (v == "TotLivBiom") {
+  if (v %in% c("TotLivBiom", "AGB")) {
     ch <- data.frame(timescale, t(ensemble.ts[[v]])) %>%
       pivot_longer(cols = starts_with("X"), names_to = "ensemble",
                    names_prefix = "X", values_to = "output") %>% 
@@ -111,7 +111,7 @@ for(v in variables){
   
   load(paste0("/data/output/pecan_runs/env_comp_results/gh/ensemble.ts.NOENSEMBLEID.", 
               v, ".2020.2020.Rdata"))
-  if (v == "TotLivBiom") {
+  if (v %in% c("TotLivBiom", "AGB")) {
     gh <- data.frame(timescale, t(ensemble.ts[[v]])) %>%
       pivot_longer(cols = starts_with("X"), names_to = "ensemble",
                    names_prefix = "X", values_to = "output") %>% 
@@ -132,7 +132,7 @@ for(v in variables){
   
   load(paste0("/data/output/pecan_runs/env_comp_results/out/ensemble.ts.NOENSEMBLEID.", 
               v, ".2020.2020.Rdata"))
-  if (v == "TotLivBiom") {
+  if (v %in% c("TotLivBiom", "AGB")) {
     out <- data.frame(timescale, t(ensemble.ts[[v]])) %>%
       pivot_longer(cols = starts_with("X"), names_to = "ensemble",
                    names_prefix = "X", values_to = "output") %>% 
