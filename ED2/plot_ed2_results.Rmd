@@ -71,8 +71,8 @@ for(ensemble in 1:100){
   } else {
     ens_num <- ensemble
   }
-  #ens_path <- paste0("/data/tests/ed2/out/ENS-00", ens_num, "-76")
-  ens_path <- paste0(results_path, "/ed2/out/ENS-00", ens_num, "-76")
+  ens_path <- paste0("/data/tests/ed2/out/ENS-00", ens_num, "-76")
+  #ens_path <- paste0(results_path, "/ed2/out/ENS-00", ens_num, "-76")
   print(ens_path)
   ens_e_files <- Sys.glob(file.path(ens_path, c("analysis-E-*", ".*h5")))
   ensemble_npp <- c()
@@ -85,7 +85,7 @@ for(ensemble in 1:100){
     ens_month_df <- data.frame(npp = ens_month_total_npp, pft = ens_month_pft) %>%
       group_by(pft) %>%
       summarize(npp = mean(npp)) %>%
-      mutate(date = substr(file, 93, 99),
+      mutate(date = substr(file, 45, 51),
              ensemble = ensemble)
     ensemble_npp <- bind_rows(ensemble_npp, ens_month_df)
     ncdf4::nc_close(ens_month_file)
@@ -98,7 +98,9 @@ write.csv(ensembles_npps, paste0(results_path, "/ensemble_values.csv"), row.name
 npp_summary <- ensembles_npps %>% 
   mutate(date = as.POSIXct(as.Date(paste0(date, "-01"))), 
          pft = case_when(pft == 1 ~ "Setaria (triggered)", 
-                         pft == 5 ~ "C3 grass"), 
+                         pft == 9 ~ "Early succession trees", 
+                         pft == 10 ~ "Mid succession trees", 
+                         pft == 11 ~ "Late succession trees"), 
          pft = as.factor(pft)) %>% 
   group_by(pft, date) %>% 
   summarize(mean = mean(npp, na.rm = TRUE),

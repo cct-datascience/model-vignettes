@@ -14,7 +14,7 @@
   </database>
   <pfts>
     <pft>
-      <name>SetariaWT_reduceStom</name>
+      <name>SetariaWT</name>
       <ed2_pft_number>1</ed2_pft_number>
     </pft>
     <pft>
@@ -39,7 +39,7 @@
   </meta.analysis>
 
   <ensemble>
-    <size>1</size>
+    <size>100</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
@@ -54,7 +54,7 @@
           <sigma>1</sigma>
       </quantiles>
     <variable>NPP</variable>
-  </sensitivity.analysis> -->
+  </sensitivity.analysis> --> 
 
   <model>
     <type>ED2</type>
@@ -80,7 +80,7 @@
     <site>
       <id>76</id>
       <met.start>2004-04-01 00:00:00</met.start>
-      <met.end>2009-04-01 23:59:59</met.end>
+      <met.end>2007-04-01 23:59:59</met.end>
     </site>
 
     <inputs>
@@ -95,14 +95,14 @@
     </inputs>
 
     <start.date>2004/04/01</start.date>
-    <end.date>2009/04/01</end.date>
+    <end.date>2007/04/01</end.date>
   </run>
   
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
-      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=1:mem=6gb -l walltime=05:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
+      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=4:ncpus=28:mem=168gb -l walltime=07:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
       <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
       <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi</job.sh>
