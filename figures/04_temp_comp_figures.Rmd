@@ -33,7 +33,7 @@ biomass_ts <- c()
 trans_ts <- c()
 for (trt in treatments) {
   data_in <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/", trt, 
-                        "/ensemble_ts_summary_TotLivBiom.csv")) %>%
+                        "/ensemble_ts_summary_AGB.csv")) %>%
     mutate(treatment = trt,
            trait = "biomass") %>%
     relocate(treatment)
@@ -112,9 +112,9 @@ Second, organize model output and plot differences between treatments.
 
 ```{r}
 # Organize 2 treatments into same figure
-biomass_df <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/comparison_diff_TotLivBiom.csv")) %>%
-  pivot_wider(names_from = percentile, values_from = c(rn_hn)) %>%
-  mutate(diff = "rn_hn",
+biomass_df <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/comparison_diff_AGB.csv")) %>%
+  pivot_wider(names_from = percentile, values_from = c(hn_rn)) %>%
+  mutate(diff = "hn_rn",
          trait = "biomass") %>%
   rename(p025 = "25",
          p05 = "50",
@@ -125,8 +125,8 @@ biomass_df <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/compari
          p975 = "975")
 
 trans_df <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/comparison_diff_TVeg.csv")) %>%
-  pivot_wider(names_from = percentile, values_from = c(rn_hn)) %>%
-  mutate(diff = "rn_hn",
+  pivot_wider(names_from = percentile, values_from = c(hn_rn)) %>%
+  mutate(diff = "hn_rn",
          trait = "transpiration") %>%
   rename(p025 = "25",
          p05 = "50",
@@ -147,7 +147,7 @@ trans_df$sig_025 <- ifelse(trans_df$p025 > 0, TRUE, FALSE)
 all_df <- rbind.data.frame(biomass_df, trans_df) %>%
   mutate(Trait = case_when(trait == "biomass" ~ "Delta~Biomass~(kg~m^-2)",
                            trait == "transpiration" ~ "Delta~Transpiration~(kg~m^-2~d^-1)"),
-         Diff = case_when(diff == "rn_hn" ~ "cn - hn"))
+         Diff = case_when(diff == "hn_rn" ~ "hn - cn"))
 
 # Plot biomass treatment differences through time
 col2 <- brewer.pal(3, name = "Dark2")
@@ -179,7 +179,7 @@ dev.off()
 
 Finally, organize and plot variance decomposition for biomass and transpiration. 
 ```{r}
-load("/data/output/pecan_runs/temp_comp_results/var_decomp_TotLivBiom.Rdata")
+load("/data/output/pecan_runs/temp_comp_results/var_decomp_AGB.Rdata")
 cols <- brewer.pal(7, name = "Set1")
 
 # Exclude Leaf Respiration Rate and Leaf C:N
