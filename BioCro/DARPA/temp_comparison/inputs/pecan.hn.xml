@@ -1,6 +1,6 @@
 <pecan>
 
-  <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1</outdir>
+  <outdir>/data/output/pecan_runs/temp_comp_results/hn</outdir>
 
   <database>
     <bety>
@@ -12,37 +12,44 @@
       <write>FALSE</write>
     </bety>
 
-    <dbfiles>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1/dbfiles</dbfiles>
+    <dbfiles>/data/output/pecan_runs/temp_comp_results/hn/dbfiles</dbfiles>
 
   </database>
 
   <pfts>
     <pft>
       <name>SetariaWT_ME034</name>
-      <outdir>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1/pft/SetariaWT_ME034</outdir>
+      <outdir>/data/output/pecan_runs/temp_comp_results/hn/pft/SetariaWT_ME034</outdir>
       <constants>
-        <file>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_inputs1/setaria.constants.xml</file>
+        <file>~/model-vignettes/BioCro/DARPA/temp_comparison/inputs/setaria.constants.xml</file>
       </constants>
     </pft>
   </pfts>
 
   <ensemble>
-    <size>100</size>
+    <size>1000</size>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
+    <variable>AGB</variable>
+    <samplingspace>
+      <parameters>
+        <method>lhc</method>
+      </parameters>
+  </samplingspace>
   </ensemble>
 
   <meta.analysis>
     <iter>30000</iter>
     <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
-    <update>TRUE</update>
-    <treatment>regular night temperature</treatment>
+    <update>FALSE</update>
+    <treatment>high night temperature</treatment>
   </meta.analysis>
 
   <sensitivity.analysis>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
+    <variable>AGB</variable>
   </sensitivity.analysis>
 
   <model>
@@ -58,11 +65,11 @@
     <inputs>
       <met>
         <output>BIOCRO</output>
-        <path>/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_inputs1/danforth-control-chamber</path>
+        <path>~/model-vignettes/BioCro/DARPA/temp_comparison/inputs/weather.hn</path>
       </met>
     </inputs>
       <start.date>2019/01/01</start.date>
-      <end.date>2019/12/30</end.date>
+      <end.date>2019/04/10</end.date>
     <host>
       <name>localhost</name>
     </host>
