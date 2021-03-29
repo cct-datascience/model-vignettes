@@ -34,7 +34,7 @@ output.list <- list()
 controls.list <- list()
 for(loc in 1:nrow(loc.coords)) {
   # Add met data
-  biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
+  biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew/stlew-",
                             loc.coords$lat[loc], "-", loc.coords$lon[loc], ".2010.csv")
   met <- read.csv(biocro_met_path) %>%
     filter(year == 2010 & doy >= 91)
@@ -382,12 +382,12 @@ plot_grid(fig_npp_ts, fig_wue_ts, fig_tet_ts, ncol = 1)
 ```
 
 
-GDD, or growing degree days, controls the timing of phenophase transition. Calculate and plot what it looks like starting onb June 1. 
+GDD, or growing degree days, controls the timing of phenophase transition. Calculate and plot what it looks like starting on June 1. 
 ```{r}
 gdd.list <- list()
 for(loc in 1:nrow(loc.coords)) {
   # Add met data
-  biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew-",
+  biocro_met_path <- paste0("/data/dbfiles/biocro_met/stlew/stlew-",
                             loc.coords$lat[loc], "-", loc.coords$lon[loc], ".2010.csv")
   gdd.list[[loc]] <- read.csv(biocro_met_path) %>%
     filter(year == 2010 & doy >= 91 & doy < 191) %>%
