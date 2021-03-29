@@ -17,7 +17,7 @@ biomass_ts <- c()
 trans_ts <- c()
 for (trt in treatments) {
   data_in <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/", trt, 
-                        "/ensemble_ts_summary_TotLivBiom.csv")) %>%
+                        "/ensemble_ts_summary_AGB.csv")) %>%
     mutate(treatment = trt) %>%
     relocate(treatment)
   biomass_ts <- rbind(biomass_ts, data_in)
@@ -70,18 +70,18 @@ biomass_valid_gh_out <- greenhouse_outdoor_biomass %>%
 # Combine
 biomass_valid <- rbind(biomass_valid_ch, biomass_valid_gh_out) %>%
   rename(treatment = location) %>%
-  mutate(total_biomass_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103,
+  mutate(agb_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103,
                                           "g/cm2", "kg/m2"),
          day = difftime(harvest_date, sowing_date, units = "days"))
 
 # Plot measured biomass against biomass estimates
 fig_biomass_ts <- ggplot() +
   geom_line(data = biomass_ts, aes(day, y = median, color = treatment)) +
-  geom_ribbon(data = biomass_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), 
+  geom_ribbon(data = biomass_ts, aes(day, ymin = lcl_50, ymax = ucl_50, fill = treatment), 
               alpha = 0.25) +
-  geom_point(data = biomass_valid, aes(day, y = total_biomass_kg_m2, color = treatment)) +
-  scale_x_continuous("Day of Experiment") + 
-  scale_y_continuous(expression(paste("Total Biomass (kg ",  m^-2, ")"))) +
+  geom_point(data = biomass_valid, aes(day, y = agb_kg_m2, color = treatment)) +
+  scale_x_continuous("Day of experiment") + 
+  scale_y_continuous(expression(paste("Aboveground biomass (kg ",  m^-2, ")"))) +
   theme_classic()
 
 jpeg(filename = "../plots/biomass_ts.jpg", height = 5, width = 7, units = "in", res = 600)
@@ -90,7 +90,7 @@ dev.off()
 
 fig_trans_ts <- ggplot() +
   geom_line(data = trans_ts, aes(day, y = median, color = treatment)) +
-  geom_ribbon(data = trans_ts, aes(day, ymin = lcl_95, ymax = ucl_95, fill = treatment), 
+  geom_ribbon(data = trans_ts, aes(day, ymin = lcl_50, ymax = ucl_50, fill = treatment), 
               alpha = 0.25) +
   scale_x_continuous("Day of Experiment") + 
   scale_y_continuous(expression(paste("Canopy Transpiration (kg ",  m^-2, " ", day^-1, ")"))) +

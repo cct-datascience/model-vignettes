@@ -3,13 +3,18 @@
 # ----------------------------------------------------------------------
 # library(RCurl)
 
-devtools::load_all("~/pecan/base/db")
-devtools::load_all("~/pecan/modules/uncertainty")
-devtools::load_all("~/biocro")
-# library(PEcAn.DB)
-# library(PEcAn.uncertainty)
-# library(PEcAn.all)
-# library(BioCro)
+# Use install functions below the first time
+# devtools::install("~/pecan/base/db")
+# devtools::install("~/pecan/modules/uncertainty")
+# devtools::install("~/biocro")
+# devtools::install("~/pecan/base/settings")
+# devtools::install("~/pecan/models/biocro")
+library(PEcAn.DB)
+library(PEcAn.uncertainty)
+library(BioCro)
+library(PEcAn.settings)
+library(PEcAn.BIOCRO)
+library(PEcAn.all)
 
 # Add function for setting MA treatments
 source("~/model-vignettes/BioCro/DARPA/set_MA_trt.R")

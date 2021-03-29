@@ -51,8 +51,7 @@ biomass_valid <- chamber_biomass %>%
   dplyr::select(location, plant_id, sowing_date, transplant_date, harvest_date,
                 stem_DW_g, leaf_DW_g, panicle_DW_g) %>%
   rename(treatment = location) %>%
-  mutate(agb_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103,
-                                "g/cm2", "kg/m2"),
+  mutate(agb_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103, "g/cm2", "kg/m2"),
          day = difftime(harvest_date, sowing_date, units = "days")) 
 
 # Plot measured biomass against biomass estimates
