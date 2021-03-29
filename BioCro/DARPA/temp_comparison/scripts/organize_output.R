@@ -135,14 +135,14 @@ for(v in variables){
     rename(rn = 3,
            hn = 4) %>%
     # One-sided t-tests predictions
-    mutate(rn_hn = rn - hn)
+    mutate(hn_rn = hn - rn)
   
   # Summarize whether across ensembles, the differences are significant each day
   diff_stat <- all %>%
     dplyr::select(-rn, -hn) %>%
     group_by(day) %>%
     # Reports the 2.5, 5, 50, 95, and 97.5th percentile of each set of differences
-    summarize(rn_hn = quantile(rn_hn, probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975))) %>%
+    summarize(hn_rn = quantile(hn_rn, probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975))) %>%
     mutate(percentile = c("025", "050", "250", "500", "750", "950", "975")) %>%
     relocate(day, percentile)
   
