@@ -148,7 +148,7 @@ d.ch.organ.prop <- ch.reassign[1:4,] %>%
   slice(rep(1, each = 4), rep(2:n(), each = 1))
 
 # Changing config.xml from biomass_opti/inputs folder
-# First, adjust time points based on Nielsen et al. 2016, Applied Engineering in Agriculture, Fig. 2b
+# First, adjust time points based on McMaster et al. 2013, Applied Engineering in Agriculture, Fig. 2b
 # Hay millet phenological stages (S. italica, the domesticated version of S. viridis)
 # 150 Leaf Growth initiation
 # 310 Tiller Bud Growth initiation
