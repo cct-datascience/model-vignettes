@@ -30,10 +30,9 @@
     <size>1000</size>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
-    <variable>AGB</variable>
     <samplingspace>
       <parameters>
-        <method>lhc</method>
+        <method>halton</method>
       </parameters>
   </samplingspace>
   </ensemble>
@@ -49,7 +48,6 @@
   <sensitivity.analysis>
     <variable>TotLivBiom</variable>
     <variable>TVeg</variable>
-    <variable>AGB</variable>
   </sensitivity.analysis>
 
   <model>
