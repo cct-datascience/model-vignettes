@@ -21,6 +21,7 @@ library(data.table)
 library(tidyr)
 library(gt)
 library(Hotelling)
+library(pwr)
 ```
 
 ## Summarize parameter data
@@ -192,9 +193,50 @@ gtsave(tab1, filename = "Table1.pdf", path = "/plots")
 
 ## Conduct Hotelling's multivariate t-test
 
-Using A.m and gsw.m from all_sum and gas exchange parameters from in_params (SLA will be included when available for regular night temperature), format response matrix for Hotelling's multivariate t-test. 
+Using the subset of five gas exchange parameters from in_params that are used in the PEcAn model run, format response matrix and conduct the Hotelling's multivariate t-test
 
 ```{r}
+params1<- in_params %>%
+  filter(Treatment %in% c("31_31_250", "31_22_250")) %>%
+  select(ID, rep, Treatment, trait, Value) %>%
+  pivot_wider(names_from = trait, values_from = Value) 
 
+params2 <- params1 %>%
+  select(-LCPT, -LSP, -Am, -g0M, -g1M, -theta_lc) %>%
+  mutate(trt = case_when(Treatment == "31_31_250" ~ 1,
+                         Treatment == "31_22_250" ~ 2)) %>%
+  select(-ID, -rep, -Treatment) %>%
+  relocate(trt)
+
+fit <- hotelling.test(.~trt, data = params2)
+fit
 ```
 
+There was not a significant difference between the two treatments. 
+
+Next, try conducting t-tests for each of 13 gas exchange parameters, ignoring for now the low sample size (6 per treatment) and requirements for homogeneity of variances and normality. 
+```{r}
+params3 <- left_join(params1, all_sum[,c("ID", "rep", "A.m", "gsw.m")]) %>%
+  mutate(trt = case_when(Treatment == "31_31_250" ~ 1,
+                         Treatment == "31_22_250" ~ 2)) %>%
+  select(-ID, -rep, -Treatment) %>%
+  relocate(trt)
+
+tt <- list()
+for(i in 1:13){
+  m <- t.test(unlist(c(params3[,(i+1)]))~params3$trt)
+  tt[[i]] <- m$p.value
+}
+```
+
+Only the Rd parameter was significantly different between the two treatments. Next, conduct a power analysis to determine the sample size needed to achieve a power (1 - type II error) of 0.5. 
+```{r}
+samplesize <- list()
+for(i in 1:13){
+  dat <- data.frame(params3[,c(1,(i+1))])
+  d <- abs((mean(dat[1:6,2]) - mean(dat[7:12,2])) / sd(dat[,2]))
+  m <- pwr.t.test(d = d, power = 0.5, type = "two.sample", sig.level = 0.05)
+  samplesize[[i]] <- m$n
+}
+```
+For most parameters, somewhere between 10 to 35 samples are needed to achieve a power of 0.5.
