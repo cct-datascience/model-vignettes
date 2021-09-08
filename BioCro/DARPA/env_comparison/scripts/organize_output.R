@@ -158,7 +158,7 @@ for(v in variables){
            gh = 4,
            out = 5) %>%
     # One-sided t-tests predictions
-    mutate(gh_ch = gh - ch,
+    mutate(ch_gh = ch - gh,
            out_ch = out - ch,
            out_gh = out - gh)
   
@@ -167,7 +167,7 @@ for(v in variables){
     dplyr::select(-gh, -ch, -out) %>%
     group_by(day) %>%
     # Reports the 2.5, 5, 50, 95, and 97.5th percentile of each set of differences
-    summarize(gh_ch = quantile(gh_ch, probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)),
+    summarize(ch_gh = quantile(ch_gh, probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)),
               out_ch = quantile(out_ch, probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)),
               out_gh = quantile(out_gh, probs = c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975))) %>%
     mutate(percentile = c("025", "050", "250", "500", "750", "950", "975")) %>%

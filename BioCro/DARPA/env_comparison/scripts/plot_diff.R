@@ -11,8 +11,8 @@ if(!dir.exists(paste0("../plots/"))){
 }
 
 # Organize 3 treatments into same figure
-biomass_diff <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TotLivBiom.csv")) %>%
-  pivot_wider(names_from = percentile, values_from = c(gh_ch, out_ch, out_gh)) %>%
+biomass_diff <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_AGB.csv")) %>%
+  pivot_wider(names_from = percentile, values_from = c(ch_gh, out_ch, out_gh)) %>%
   pivot_longer(!day, names_to = c("first", "second", "level"), names_pattern = "(.*)_(.*)_(.*)",
                values_to = "percentile") %>%
   mutate(diff = paste0(first, "_", second)) %>%
@@ -24,7 +24,7 @@ biomass_diff <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/compar
          p975 = "975")
 
 trans_diff <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TVeg.csv")) %>%
-  pivot_wider(names_from = percentile, values_from = c(gh_ch, out_ch, out_gh)) %>%
+  pivot_wider(names_from = percentile, values_from = c(ch_gh, out_ch, out_gh)) %>%
   pivot_longer(!day, names_to = c("first", "second", "level"), names_pattern = "(.*)_(.*)_(.*)",
                values_to = "percentile") %>%
   mutate(diff = paste0(first, "_", second)) %>%

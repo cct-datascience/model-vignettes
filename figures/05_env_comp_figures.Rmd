@@ -33,7 +33,7 @@ biomass_ts <- c()
 trans_ts <- c()
 for (trt in treatments) {
   data_in <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/", trt, 
-                        "/ensemble_ts_summary_TotLivBiom.csv")) %>%
+                        "/ensemble_ts_summary_AGB.csv")) %>%
     mutate(treatment = trt,
            trait = "biomass") %>%
     relocate(treatment)
@@ -58,8 +58,7 @@ biomass_valid_ch <- chamber_biomass %>%
            light == 430 &
            !is.na(stem_DW_mg) &
            !is.na(leaf_DW_mg) &
-           !is.na(panicle_DW_mg) &
-           !is.na(root_DW_mg)) %>%
+           !is.na(panicle_DW_mg)) %>%
   rename(plant_id = plantID) %>%
   mutate(location = "ch",
          stem_DW_g = ud.convert(stem_DW_mg, "mg", "g"),
@@ -75,14 +74,12 @@ biomass_valid_gh_out <- greenhouse_outdoor_biomass %>%
            !is.na(stem_DW_g) &
            !is.na(leaf_DW_g) &
            !is.na(panicle_DW_g) & 
-           !is.na(root_DW_g) & 
            exp_site == "GH" & exp_number == 1 |
            genotype == "ME034V-1" &
            treatment %in% c("pot", "jolly_pot") &
            !is.na(stem_DW_g) &
            !is.na(leaf_DW_g) &
            !is.na(panicle_DW_g) &
-           !is.na(root_DW_g) &
            exp_site == "Field" & exp_number == 2) %>%
   mutate(location = case_when(exp_site == "GH" ~ "gh",
                               exp_site == "Field" ~ "out")) %>%
@@ -117,7 +114,7 @@ fig_ts <- ggplot() +
   geom_line(data = all_ts, aes(day, y = median, color = Treatment)) +
   geom_ribbon(data = all_ts, aes(day, ymin = lcl_50, ymax = ucl_50, fill = Treatment), 
               alpha = 0.25) +
-  geom_point(data = biomass_valid, aes(x = day, y = total_biomass_kg_m2, color = Treatment)) +
+  # geom_point(data = biomass_valid, aes(x = day, y = total_biomass_kg_m2, color = Treatment)) +
   scale_x_continuous("Day of Experiment") + 
   facet_wrap(~Trait, ncol = 1, scales = "free_y", strip.position = "left", labeller = label_parsed) +
   theme_bw(base_size = 12) +
@@ -137,8 +134,8 @@ Second, organize model output and plot differences between treatments.
 
 ```{r}
 # Organize 3 treatments into same figure
-biomass_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TotLivBiom.csv")) %>%
-  pivot_wider(names_from = percentile, values_from = c(gh_ch, out_ch, out_gh)) %>%
+biomass_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_AGB.csv")) %>%
+  pivot_wider(names_from = percentile, values_from = c(ch_gh, out_ch, out_gh)) %>%
   pivot_longer(!day, names_to = c("first", "second", "level"), names_pattern = "(.*)_(.*)_(.*)",
                values_to = "percentile") %>%
   mutate(diff = paste0(first, "_", second),
@@ -153,7 +150,7 @@ biomass_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparis
          p975 = "975")
 
 trans_df <- read.csv(paste0("/data/output/pecan_runs/env_comp_results/comparison_diff_TVeg.csv")) %>%
-  pivot_wider(names_from = percentile, values_from = c(gh_ch, out_ch, out_gh)) %>%
+  pivot_wider(names_from = percentile, values_from = c(ch_gh, out_ch, out_gh)) %>%
   pivot_longer(!day, names_to = c("first", "second", "level"), names_pattern = "(.*)_(.*)_(.*)",
                values_to = "percentile") %>%
   mutate(diff = paste0(first, "_", second),
@@ -178,7 +175,7 @@ trans_df$sig_025 <- ifelse(trans_df$p025 > 0, TRUE, FALSE)
 all_df <- rbind.data.frame(biomass_df, trans_df) %>%
   mutate(Trait = case_when(trait == "biomass" ~ "Delta~Biomass~(kg~m^-2)",
                            trait == "transpiration" ~ "Delta~Transpiration~(kg~m^-2~d^-1)"),
-         Diff = case_when(diff == "gh_ch" ~ "gh - ch",
+         Diff = case_when(diff == "ch_gh" ~ "ch - gh",
                                diff == "out_ch" ~ "out - ch",
                                diff == "out_gh" ~ "out - gh"))
 
@@ -212,7 +209,7 @@ dev.off()
 
 Finally, organize and plot variance decomposition for biomass and transpiration. 
 ```{r}
-load("/data/output/pecan_runs/env_comp_results/var_decomp_TotLivBiom.Rdata")
+load("/data/output/pecan_runs/env_comp_results/var_decomp_AGB.Rdata")
 cols <- brewer.pal(7, name = "Set1")
 
 # Exclude Leaf Respiration Rate and Leaf C:N
@@ -263,7 +260,7 @@ vdecomp.b <- ggplot(data = vd1) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.title.y=element_blank(), 
         axis.text.y=element_blank(), 
-        legend.position = c(0.9, 0.45),
+        legend.position = c(0.9, 0.85),
         legend.title = element_blank(),
         legend.background = element_blank(),
         legend.key.size = unit(0.4, "cm")) +

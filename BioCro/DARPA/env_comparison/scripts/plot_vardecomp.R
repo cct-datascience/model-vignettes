@@ -8,7 +8,7 @@ if(!dir.exists(paste0("../plots/"))){
 }
 
 # Plot variance decomposition of biomass
-load("/data/output/pecan_runs/env_comp_results/var_decomp_TotLivBiom.Rdata")
+load("/data/output/pecan_runs/env_comp_results/var_decomp_AGB.Rdata")
 
 cv.b <- ggplot(data = vd) +
   geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars, 

@@ -15,3 +15,4 @@ This folder contains code used to optimize the BioCro biomass allocation paramet
   3. `optimize_biomass_coef.Rmd` main script to optimize k parameters
   4. `opt_results.Rdata*` output of optimization
   5. `modify_constants_file.R` update existing constants files in 'env_comparison' and 'temp_comparison'
+  6. `plot_opti.R` plot observed and modeled biomass of root, leaf, stem, and grain

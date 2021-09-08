@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Parameters
 
-The first figure of paramters should be two columns of 6 figures, the left side contrasting high and low night temperatures and the right side contrasting chamber, greenhouse, and outdoor conditions.  
+The first figure of paramters should be two sets of 6 figures, the top showing contrasting high and low night temperatures and the bottom contrasting chamber, greenhouse, and outdoor conditions.  
 
 ```{r}
 library(dplyr)
@@ -114,16 +114,20 @@ jag.temp$treatment <- factor(jag.temp$treatment, levels = c("prior",
                                                             "control night T", 
                                                             "high night T"))
 mcmc.temp <- rbind(mcmc.df, priors.df) %>%
-  filter(trt_name %in% c("prior", "regular night temperature", "high night temperature")) %>%
+  filter(trt_name %in% c("prior", "regular night temperature", "high night temperature") |
+         trt_name %in% c("global") & trait == "SLA") %>%
   mutate(treatment = case_when(trt_name == "prior" ~ "prior",
                                trt_name == "regular night temperature" ~ "control night T",
-                               trt_name == "high night temperature" ~ "high night T"),
+                               trt_name == "high night temperature" ~ "high night T",
+                               trt_name == "global" ~ "global"),
          value = ifelse(trait == "cuticular_cond", value * 1e-6, value)) %>%
   group_by(Trait, treatment) %>%
   filter(value < quantile(value, 0.95) & value > quantile(value, 0.05))
+
 mcmc.temp$treatment <- factor(mcmc.temp$treatment, levels = c("prior",
                                                               "control night T", 
-                                                              "high night T"))  
+                                                              "high night T", 
+                                                              "global"))  
 # Env
 jag.env <- jag.df %>%
   filter(trt_name %in% c("high light", "greenhouse", "outdoor JollyG soil"))%>%
@@ -150,7 +154,7 @@ mcmc.env$treatment <- factor(mcmc.env$treatment, levels = c("prior",
                                                             "greenhouse",
                                                             "outdoor")) 
 # Set colors
-cols <- brewer.pal(7, name = "Set1")
+cols <- brewer.pal(9, name = "Set1")
 
 fig_temp <- ggplot() +
   stat_density(data = mcmc.temp, aes(x = value, color = treatment), 
@@ -171,7 +175,7 @@ fig_temp <- ggplot() +
         legend.key.size = unit(0.3, "cm"),
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  scale_color_manual(name = NULL, values = cols[c(7,2,1)])
+  scale_color_manual(name = NULL, values = cols[c(7,2,1,9)])
 
 fig_env <- ggplot() +
   stat_density(data = mcmc.env, aes(x = value, color = treatment),

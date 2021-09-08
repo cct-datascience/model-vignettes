@@ -17,13 +17,13 @@ biomass_ts <- c()
 trans_ts <- c()
 for (trt in treatments) {
   data_in <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/", trt, 
-                        "/ensemble_ts_summary_AGB.csv")) %>%
+                             "/ensemble_ts_summary_AGB.csv")) %>%
     mutate(treatment = trt) %>%
     relocate(treatment)
   biomass_ts <- rbind(biomass_ts, data_in)
   
   data_in <- read.csv(paste0("/data/output/pecan_runs/temp_comp_results/", trt, 
-                         "/ensemble_ts_summary_TVeg.csv")) %>%
+                             "/ensemble_ts_summary_TVeg.csv")) %>%
     mutate(treatment = trt) %>%
     relocate(treatment)
   trans_ts <- rbind(trans_ts, data_in)
@@ -49,10 +49,9 @@ biomass_valid <- chamber_biomass %>%
   # select closest dates to validation data, which were sown 2019-01-03 in GCH158
   filter(sowing_date >= as.POSIXct("2018-11-01") & sowing_date <= as.POSIXct("2019-03-01")) %>%
   dplyr::select(location, plant_id, sowing_date, transplant_date, harvest_date,
-         stem_DW_g, leaf_DW_g, panicle_DW_g) %>%
+                stem_DW_g, leaf_DW_g, panicle_DW_g) %>%
   rename(treatment = location) %>%
-  mutate(agb_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103,
-                                          "g/cm2", "kg/m2"),
+  mutate(agb_kg_m2 = ud.convert((stem_DW_g + leaf_DW_g + panicle_DW_g)/103, "g/cm2", "kg/m2"),
          day = difftime(harvest_date, sowing_date, units = "days")) 
 
 # Plot measured biomass against biomass estimates
