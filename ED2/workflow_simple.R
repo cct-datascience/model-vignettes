@@ -14,7 +14,7 @@ library(RCurl)
 # PEcAn Workflow
 # ----------------------------------------------------------------------
 # Open, read in, and modify settings file for PEcAn run.
-settings <- PEcAn.settings::read.settings("ED2/pecan.docker.ed2.xml") 
+settings <- PEcAn.settings::read.settings("ED2/pecan.docker.ed2.simple.xml") 
 settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
 PEcAn.settings::write.settings(settings, outputfile = "pecan.CHECKED.xml")
 settings <- PEcAn.workflow::do_conversions(settings)
@@ -49,7 +49,6 @@ proc.time() - ptm
 for(folder in list.dirs("/data/tests/ed2/out", recursive = FALSE)){
   model2netcdf.ED2(folder, settings$run$site$lat, settings$run$site$lon, settings$run$start.date, 
                    settings$run$end.date, unlist(purrr::map(settings$pfts, 1)))
-  
 }
 
 # Get results of model runs

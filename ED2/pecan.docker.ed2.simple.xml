@@ -94,13 +94,13 @@
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
-      <qsub>qsub -N @NAME@ -W group_list=dlebauer -l select=1:ncpus=24:mem=144gb -l walltime=02:00:00 -o @STDOUT@ -e @STDERR@ -S /bin/bash</qsub>
-      <qsub.jobid>([0-9]+).head1.cm.cluster</qsub.jobid>
-      <qstat>'qstat -J @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
-      <job.sh>module load openmpi</job.sh>
+      <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=24 --nodes=1 --time=02:00:00 -o @STDOUT@ -e @STDERR@</qsub>
+      <qsub.jobid>([0-9]+)</qsub.jobid>
+      <qstat>'squeue --job @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
+      <job.sh>module load openmpi3</job.sh>
       <modellauncher>
         <binary>/groups/dlebauer/ed2_results/pecan/contrib/modellauncher/modellauncher</binary>
-        <qsub.extra>-q standard</qsub.extra>
+        <qsub.extra>--partition=standard</qsub.extra>
       </modellauncher>
   </host>
 
