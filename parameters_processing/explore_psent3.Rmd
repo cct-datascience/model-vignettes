@@ -19,26 +19,15 @@ library(udunits2)
 
 # psent3 lines
 
-Psent3 is engineered *Setaria* line that responds to mandi by closing stomata, such that leaf temperature increases. So far, only biomass and leaf area measurements have been made on untriggered psent3 lines. Below, we determine how many SLA values are available for psent3, and at what growth conditions. 
+Psent3 is engineered *Setaria* line that responds to mandi by closing stomata, such that leaf temperature increases. So far, only biomass and leaf area measurements have been made on untriggered psent3 lines. Below, we determine how many SLA values are available for psent3, and at what growth conditions. [Here](https://docs.google.com/spreadsheets/d/1MepJgwKb18eg0n50C76S5dhAuaM5cUwy/edit#gid=1245723037) is the summary sheet documenting the psent3 lines.
 
 ## Specific Leaf Area
 
 SLA values are calculated from leaf area and leaf dry biomass. Below, the data are read in, filtered, and combined to produce specific leaf area in units of m2/kg. 
 
-These are the final columns:
+First, load in data from the chamber experiments, an Excel sheet entitled "manual-measurements-Darpa_setaria_chambers_experiments.xlsx", which consists of multiple tabs. All leaf areas are available in tab 'total_leaf_area'; biomass for the psent3 lines are found in '8th_biomass_mandi'. 
 
-
-1. `citation_author`, `citation_year`, and `citation_title`: indicate the source of the data using author, year, and title from BETYdb
-2. `species`: Setaria viridis, `cultivar`: ME-034
-3. `site`: one of three sites at Donald Danforth Plant Science Center, either Growth Chamber, Greenhouse, or Outdoor, using BETYdb site names
-4. `treatment`: specifies record's treatment using BETYdb treatment names
-5. `local_datetime`: convert date into machine readable format
-6.  `SLA`: Specific Leaf Area calculated from single-sided fresh leaf area divided by leaf dry mass, m2/kg
-8. `n`: sample size, always set to 1
-9. `access_level`: 2, equivalent to Internal & Collaborators
-
-
-First, load in data from the chamber experiments, an Excel sheet entitled "manual-measurements-Darpa_setaria_chambers_experiments.xlsx", which consists of multiple tabs. All leaf areas are avaiable in tab 'total_leaf_area'; biomass for the high night temperature experiment are found in '3rd_Biomass_ME034_GA_Exp' and the biomass for the high light experiment are found in '5th_Biomass_A10&ME034_cycling_t'. Note that because physiological and biomass data were taken on different individual plants, unique filters are applied to each biomass data to obtain the same set of experimental conditions as the physiological data. 
+In addition, we can lump the pSENT3_3.1_3 and the pSENT3_3.8_3 genotypes, as they are both homozygous for the transgene. pSENT3_3.8_22 should be considered separately, as it is the wild type. 
 
 ```{r}
 # Data from chamber experiments
@@ -46,7 +35,7 @@ data_path <- "../../sentinel-detection/data/raw_data/biomass/manual-measurements
 sheets_names <- excel_sheets(data_path)
 
 # Biomass and leaf area for psent lines, 31_22_430
-psent <- read_excel(data_path, sheets_names[3]) %>% 
+psent <- read_excel(data_path, sheets_names[4]) %>% 
   filter(grepl("psent3", genotype),
          sample_for == "biomass") %>%
   mutate(tier = case_when(grepl("low", location) ~ "bottom",
@@ -55,21 +44,38 @@ psent <- read_excel(data_path, sheets_names[3]) %>%
                           grepl("top", location) ~ "top"),
          chamber = case_when(grepl("GCH157", location) ~ "GCH157",
                              grepl("GCH158", location) ~ "GCH158"),
+         type = case_when(grepl("3.8-22", genotype) ~ "wild-type",
+                          grepl("3.8-3", genotype) ~ "psent3",
+                          grepl("3.1-3", genotype) ~ "psent3"),
          age = as.numeric(difftime(harvest_time, `sowing date`, "days")),
-         ldmc = leaf_fw_g/leaf_dw_g)
+         ldmc = leaf_fw_g/leaf_dw_g) %>%
+  select(plantID, genotype, type, tier, chamber, age, ldmc, height_top_panicle_cm:stem_dw_g)
   
 psent %>%
-  select(plantID, genotype, tier, chamber, age, ldmc, panicle_dw_g:stem_dw_g) %>%
-  pivot_longer(ldmc:stem_dw_g, names_to = "trait", values_to = "value")
+  select(plantID, genotype, type, tier, chamber, age, ldmc, panicle_dw_g:stem_dw_g) %>%
+  pivot_longer(ldmc:stem_dw_g, names_to = "trait", values_to = "value") %>%
   filter(trait != "ldmc") %>%
-  ggplot(aes(x = trait, y = value, color = tier)) +
+  ggplot(aes(x = trait, y = value, color = type)) +
   geom_point() +
   facet_wrap(~chamber)
 
-m1 <- aov(value ~ tier, data = filter(psent, trait == "leaf_dw_g"))
+la <- read_excel(data_path, sheets_names[2]) %>% 
+  filter(grepl("psent3", genotype)) %>%
+  rename(leaf_area_cm2 = `total_leaf_area_cm2 (pixels area * factor= 0.000071)`)
+
+sla <- left_join(psent, la) %>%
+  mutate(leaf_dw_kg = ud.convert(leaf_dw_g, "g", "kg"), 
+         leaf_area_m2 = ud.convert(leaf_area_cm2, "cm2", "m2"),
+         sla = leaf_area_m2 / leaf_dw_kg)
+
+ggplot(sla, aes(x = tier, y = sla, col = type, shape = chamber)) +
+  geom_point()
+
+m1 <- aov(sla ~ tier, data = sla)
 summary(m1)
 
-la <- read_excel(data_path, sheets_names[2]) %>% 
-  filter(grepl("psent3", genotype))
-
+ggplot(filter(sla, chamber == "GCH158"), aes(x = tier, y = sla, col = type, shape = chamber)) +
+  geom_point()
 ```
+
+The SLA appears to differ strongly by tier, at least witin GCH 157. In GCH 158, both the wild type and the homozygous mutant were grown in the bottom tier, but it appears that variation within the mutants were much larger than variation within the wild-type. 
