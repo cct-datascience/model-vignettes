@@ -98,7 +98,7 @@ ggplot(cover, aes(x = YEAR,
   
 ```
 
-Pasture 8 has had consistently the highest grazign levels. 
+Pasture 8 has had consistently the highest grazing levels. 
 
 Next, create double-axis plots for each pasture and pft, showing cover and grazing intensity over time. 
 
@@ -164,6 +164,6 @@ cover %>%
   theme_bw()
 ```
 
-Looks like the total cover rarely exceeds 30%, and is consistenly below 30% for at least 2 pastures. For any statistical analysise, pasture must be accounted for as a random effect. 
+Looks like the total cover rarely exceeds 30%, and is consistently below 30% for at least 2 pastures. For any statistical analysis, pasture must be accounted for as a random effect. 
 
 For simulation experiments within ED2, we can initialize with PFTs representing the early 
