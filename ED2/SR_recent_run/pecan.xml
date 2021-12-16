@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <pecan>
-  <outdir>/data/tests/ed2_new_met</outdir>
+  <outdir>/data/tests/ed2_SR_recent_500ens_sa</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
@@ -26,8 +26,16 @@
     <update>TRUE</update>
   </meta.analysis>
 
+  <sensitivity.analysis>
+      <quantiles>
+          <sigma>-1</sigma>
+          <sigma>1</sigma>
+      </quantiles>
+    <variable>NPP</variable>
+  </sensitivity.analysis>
+
   <ensemble>
-    <size>10</size>
+    <size>500</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
@@ -59,26 +67,27 @@
   <run>
     <site>
       <id>1000000111</id>
-      <met.start>2019-04-01 00:00:00</met.start>
-      <met.end>2019-08-30 23:59:59</met.end>
+      <met.start>2020-03-01 00:00:00</met.start>
+      <met.end>2021-02-28 23:59:59</met.end>
     </site>
 
     <inputs>
-      <met>
-        <source>MERRA</source>
-        <output>ED2</output>
-      </met>
+      <met>/data/sites/MERRA_ED2_site_1-111/ED_MET_DRIVER_HEADER</met>
+      <veg>/data/oge2OLD/OGE2_</veg>
+      <soil>/data/faoOLD/FAO_</soil>
+      <lu>/data/ed_inputs/glu/</lu>
+      <thsum>/data/ed_inputs/</thsum>
     </inputs>
 
-    <start.date>2019/04/01</start.date>
-    <end.date>2019/08/30</end.date>
+    <start.date>2020/03/01</start.date>
+    <end.date>2021/02/28</end.date>
   </run>
   
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
-      <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=24 --nodes=1 --time=02:00:00 -o @STDOUT@ -e @STDERR@</qsub>
+      <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=3 --time=25:00:00 -o @STDOUT@ -e @STDERR@</qsub>
       <qsub.jobid>([0-9]+)</qsub.jobid>
       <qstat>'squeue --job @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi3</job.sh>

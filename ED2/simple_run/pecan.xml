@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <pecan>
-  <outdir>/data/tests/ed2</outdir>
+  <outdir>/data/tests/ed2_file_perms</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
@@ -10,7 +10,7 @@
       <dbname>bety</dbname>
       <write>FALSE</write>
     </bety>
-    <dbfiles>/data/tests/ed2/dbfiles</dbfiles>
+    <dbfiles>/data/tests/ed2_file_perms/dbfiles</dbfiles>
   </database>
   <pfts>
     <pft>

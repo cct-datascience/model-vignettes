@@ -14,7 +14,7 @@ library(RCurl)
 # PEcAn Workflow
 # ----------------------------------------------------------------------
 # Open, read in, and modify settings file for PEcAn run.
-settings <- PEcAn.settings::read.settings("ED2/pecan.docker.ed2.simple.xml") 
+settings <- PEcAn.settings::read.settings("ED2/simple_run/pecan.xml") 
 settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
 PEcAn.settings::write.settings(settings, outputfile = "pecan.CHECKED.xml")
 settings <- PEcAn.workflow::do_conversions(settings)
@@ -35,7 +35,7 @@ PEcAn.MA::runModule.run.meta.analysis(settings)
 settings <- PEcAn.workflow::runModule.run.write.configs(settings)
 
 # Manual rsync of run folder to HPC, replacing DATE
-#rsync '-a' '-q' '--delete' '/data/tests/ed2/run' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE'
+#rsync '-a' '-q' '--delete' '/data/tests/ed2_file_perms/run' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE'
 
 # Start ecosystem model runs
 ptm <- proc.time()
