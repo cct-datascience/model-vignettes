@@ -1,0 +1,169 @@
+---
+title: "Assessing PFTs at SRER"
+author: "Jessica Guo"
+date: "11/9/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(httr)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+```
+
+## Santa Rita Experimental Range (SRER)
+
+To run ED2 at SRER, we would like to know the starting plant community to prescribe before adding *Setaria* to the simulation. SRER provisions long-term plant cover [data](https://cals.arizona.edu/srer/data.html), which has been recently summarized by [Liang et al. 2020](https://doi.org/10.1111/1365-2664.13780). Plant cover along transect plots from 1953-2018 have been summarized across functional types and available on [Dryad](https://datadryad.org/stash/dataset/doi:10.5061/dryad.r4xgxd29r). 
+
+Here, we utilized the cleaned and published dataset to determine the relative abundance of different functional types over time. 
+
+```{r}
+# grazing intensity is a flat csv
+# convert from wide to long
+graz <- read_csv("https://datadryad.org/stash/downloads/file_stream/430432") %>%
+  select(-overall_mean, -overall_sd) %>%
+  tidyr::pivot_longer(-YEAR,
+                      names_to = "PASTURE", 
+                      values_to = "grazing_intensity")
+
+# cover is an xlsx with 9 sheets
+# to download, need to add the '.xlsx' extension
+url1 <- "https://datadryad.org/stash/downloads/file_stream/430434"
+GET(url1, write_disk(tf <- tempfile(fileext = ".xlsx")))
+coverlist <- list()
+for(i in 1:9){
+  coverlist[[i]] <- read_xlsx(tf, sheet = i, 
+                              na = "NA")
+}
+unlink(tf)
+
+# combine sheets and join with grazing intensity by year and pasture
+cover <- do.call(rbind.data.frame, coverlist) %>%
+  left_join(graz) %>%
+  mutate(pft = factor(pfg, levels = c("CHOLLA", "OTHCACTUS",
+                                     "IPG", "NPG",
+                                     "NON-LEGUME", "LEGUME")))
+
+cover %>%
+  group_by(synusia, pfg) %>%
+  count()
+```
+Liang et al. (2020) summarized the ~80 plant species into 3 synusiae, each with two plant functional groups based on management relevance: cacti (cholla and non-cholla), herbaceous (invasive and native), and woody (legume and non-leguminous). Dominant cholla species belonged to the genera *Cylindropuntia* and *Opuntia* (prickly pear); *Eragrostis lehmanniana* (Lehmann's lovegrass) was the primary invasive grass; *Prosopis velutina* (velvet mesquite) was the main woody legume; *Haplopappus tenuisectus* (burroweed) was the dominant non-leguminous shrub. 
+
+## Plots
+
+We are interested in patterns over time. First, examine the cover of each pfg over time, separating out the pastures by color. 
+
+```{r}
+cover %>%
+  ggplot(aes(x = YEAR, y= cover, color = PASTURE)) +
+  geom_pointrange(aes(ymin = cover - sd, ymax = cover + sd)) +
+  geom_line() +
+  facet_wrap(~pft, ncol = 2, scales = "free_y") +
+  scale_color_ordinal() +
+  theme_bw()
+```
+
+It looks like there are peak years for the different pfts, with some peaks associated with most of the pastures. 
+
+Next, let's plot the relationship between grazing intensity and plant cover. 
+
+```{r}
+cover %>%
+  ggplot(aes(x = grazing_intensity, y= cover, color = PASTURE)) +
+  geom_point(alpha = 0.5) +
+  # geom_pointrange(aes(ymin = cover - sd, ymax = cover + sd)) +
+  facet_wrap(~pft, ncol = 2, scales = "free_y") +
+  scale_color_ordinal() +
+  theme_bw()
+```
+
+There appear to be some intermediate disturbance hypothesis at play, including a strong trend for native grasses. 
+
+What do the grazing intensities look like over time?
+
+```{r}
+ggplot(cover, aes(x = YEAR, 
+                  y = grazing_intensity,
+                  color = PASTURE)) +
+  geom_point() +
+  geom_line() +
+  scale_color_ordinal() +
+  theme_bw()
+  
+```
+
+Pasture 8 has had consistently the highest grazing levels. 
+
+Next, create double-axis plots for each pasture and pft, showing cover and grazing intensity over time. 
+
+```{r}
+pf <- unique(cover$pft)
+for(p in pf) {
+  
+  # Filter by pft
+  temp <- cover %>%
+    filter(pft == p)
+  
+  # Calculate ratio
+  r <- max(temp$cover + temp$se,  na.rm = TRUE)/
+    max(temp$grazing_intensity, na.rm = TRUE)
+  
+  fig <- ggplot(temp, aes(x = YEAR)) +
+  geom_errorbar(aes(ymin = cover - se, ymax = cover + se,
+                color = "Cover"),
+                width = 0,
+                alpha = 0.5) +
+  geom_point(aes(y = cover, color = "Cover")) +
+  geom_point(aes(y = grazing_intensity*r, 
+                 color = "Grazing  intensity"),
+             alpha = 0.75) +
+  labs(y = paste(p, " cover (%)")) +
+  scale_y_continuous(sec.axis = sec_axis(~./r, name = "Grazing intensity (AUY/ha)")) +
+  facet_wrap(~PASTURE, ncol = 3) +
+  scale_color_manual(values = c("forestgreen", "darkmagenta")) +
+  theme_bw() +
+  theme(axis.title.y.left = element_text(color = "forestgreen"),
+        axis.title.y.right = element_text(color = "darkmagenta")) +
+  guides(color = "none")
+  
+  ggsave(filename = paste0("SRER_figs/", p, "_grazing.png"),
+         plot = fig,
+         height = 4,
+         width = 6,
+         units = "in")
+}
+```
+
+While some pft's cover appear to be correlated with grazing intensity at the pasture level, it is difficult to separate the longer cyclic trends in precipitation from the effects of grazing alone. 
+
+### Summarizing cover
+
+Stacked bar plots over time could show the shift in pfts in their respective pastures. 
+
+```{r}
+cover %>%
+  ggplot(aes(x = YEAR)) +
+  geom_point(aes(y = grazing_intensity*450), 
+             size = 0.5) +
+  geom_line(aes(y = grazing_intensity*450),
+            lwd = 0.25) +
+  geom_bar(aes(y = cover, fill = pft),
+           position = "stack", 
+           stat = "identity",
+           alpha = 0.75) +
+  labs(y = "Total cover (%)") +
+  scale_y_continuous(sec.axis = sec_axis(~./450, name = "Grazing intensity (AUY/ha)")) +
+  facet_wrap(~PASTURE, ncol = 3)+
+  scale_fill_ordinal() +
+  theme_bw()
+```
+
+Looks like the total cover rarely exceeds 30%, and is consistently below 30% for at least 2 pastures. For any statistical analysis, pasture must be accounted for as a random effect. 
+
+For simulation experiments within ED2, we can initialize with PFTs representing the early 
