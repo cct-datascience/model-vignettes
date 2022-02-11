@@ -10,7 +10,7 @@
       <dbname>bety</dbname>
       <write>TRUE</write>
     </bety>
-    <dbfiles>/data/dbfiles</dbfiles>
+    <dbfiles>/data/sites</dbfiles>
   </database>
   <pfts>
     <pft>
@@ -59,8 +59,8 @@
   <run>
     <site>
       <id>1000000111</id>
-      <met.start>2004-04-01 00:00:00</met.start>
-      <met.end>2005-04-03 23:59:59</met.end>
+      <met.start>2005-04-04 00:00:00</met.start>
+      <met.end>2021-09-30 23:59:59</met.end>
     </site>
 
     <inputs>
@@ -70,8 +70,8 @@
       </met>
     </inputs>
 
-    <start.date>2004/04/01</start.date>
-    <end.date>2005/04/03</end.date>
+    <start.date>2005/04/04</start.date>
+    <end.date>2021/09/30</end.date>
   </run>
   
   <host>
