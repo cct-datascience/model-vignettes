@@ -13,3 +13,4 @@ settings <- PEcAn.workflow::do_conversions(settings, overwrite.met = TRUE)
 
 # Manual rsync of weather data once only
 #rsync '-a' '-q' '--delete' '/data/dbfiles/MERRA_ED2_site_1-4897/' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/inputs/julianp/sites/MERRA_ED2_site_1-4897'
+#rsync '-a' '-q' '--delete' '/data/sites/MERRA_ED2_site_1-4897/' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/inputs/julianp/sites/MERRA_ED2_site_1-4897'
