@@ -2,174 +2,62 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-days <- c(1:365)
-timescale <- data.table::data.table(day = rep(days, each = 24), hour = 0:23)
+### Multiple PFTs
 
-# Read in and clean 100 ensembles data
-#TODO: Automate getting years and variable name in path
-load("/data/tests/ed2_SR_recent_100ens_sa/ensemble.ts.NOENSEMBLEID.NPP.2020.2021.Rdata")
-timescale_final <- timescale[1:ncol(ensemble.ts$NPP), ]
-
-daily_npp_100 <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
-  gather(ensemble, npp, X1:X100) %>% #todo: automate for final column
-  filter(hour == 23) %>%
-  mutate(date = as.Date("2020-02-29") + day) %>% #todo: automate date from pecan xml
-  group_by(date) %>%
-  summarise(mean = mean(npp, na.rm = TRUE),
-            median = median(npp, na.rm = TRUE),
-            sd = sd(npp, na.rm = TRUE),
-            lcl_50 = quantile(npp, probs = c(0.25), na.rm = TRUE),
-            ucl_50 = quantile(npp, probs = c(0.75), na.rm = TRUE),
-            lcl_95 = quantile(npp, probs = c(0.025), na.rm = TRUE),
-            ucl_95 = quantile(npp, probs = c(0.975), na.rm = TRUE)) %>% 
-  mutate(median = udunits2::ud.convert(median, "kg/m2/s", "kg/m2/yr"), 
-         lcl_50 = udunits2::ud.convert(lcl_50, "kg/m2/s", "kg/m2/yr"), 
-         ucl_50 = udunits2::ud.convert(ucl_50, "kg/m2/s", "kg/m2/yr"), 
-         lcl_95 = udunits2::ud.convert(lcl_95, "kg/m2/s", "kg/m2/yr"), 
-         ucl_95 = udunits2::ud.convert(ucl_95, "kg/m2/s", "kg/m2/yr"))
-
-ensembles_100 <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
-  gather(ensemble, npp, X1:X100) %>%
-  filter(hour == 23)
-
-# Read in and clean 500 ensembles data
-load("/data/tests/ed2_SR_recent_500ens_sa/ensemble.ts.NOENSEMBLEID.NPP.2020.2021.Rdata")
-
-daily_npp_500 <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
-  gather(ensemble, npp, X1:X500) %>% #todo: automate for final column
-  filter(hour == 23) %>%
-  mutate(date = as.Date("2020-02-29") + day) %>% #todo: automate date from pecan xml
-  group_by(date) %>%
-  summarise(mean = mean(npp, na.rm = TRUE),
-            median = median(npp, na.rm = TRUE),
-            sd = sd(npp, na.rm = TRUE),
-            lcl_50 = quantile(npp, probs = c(0.25), na.rm = TRUE),
-            ucl_50 = quantile(npp, probs = c(0.75), na.rm = TRUE),
-            lcl_95 = quantile(npp, probs = c(0.025), na.rm = TRUE),
-            ucl_95 = quantile(npp, probs = c(0.975), na.rm = TRUE)) %>% 
-  mutate(median = udunits2::ud.convert(median, "kg/m2/s", "kg/m2/yr"), 
-         lcl_50 = udunits2::ud.convert(lcl_50, "kg/m2/s", "kg/m2/yr"), 
-         ucl_50 = udunits2::ud.convert(ucl_50, "kg/m2/s", "kg/m2/yr"), 
-         lcl_95 = udunits2::ud.convert(lcl_95, "kg/m2/s", "kg/m2/yr"), 
-         ucl_95 = udunits2::ud.convert(ucl_95, "kg/m2/s", "kg/m2/yr"))
-
-ensembles_500 <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
-  gather(ensemble, npp, X1:X500) %>%
-  filter(hour == 23)
-
-# Plot 100 and 500 ensembles data
-npp_timeseries <- ggplot() +
-  geom_line(data = daily_npp_100, aes(date, y = median, color = "red")) +
-  geom_ribbon(data = daily_npp_100, aes(date, ymin = lcl_95, ymax = ucl_95, fill = "red"), alpha = 0.1) +
-  geom_ribbon(data = daily_npp_100, aes(date, ymin = lcl_50, ymax = ucl_50, fill = "red"), alpha = 0.1) +
-  geom_line(data = daily_npp_500, aes(date, y = median, color = "blue")) +
-  geom_ribbon(data = daily_npp_500, aes(date, ymin = lcl_95, ymax = ucl_95, fill = "blue"), alpha = 0.1) +
-  geom_ribbon(data = daily_npp_500, aes(date, ymin = lcl_50, ymax = ucl_50, fill = "blue"), alpha = 0.1) +
-  xlab("Day") +
-  ylab("NPP (kg/m2/yr)") +
-  labs(fill = "50% & 95% CIs", color = "Ensemble mean") +
-  scale_fill_discrete(labels = c("100 ensembles", "500 ensembles")) +
-  scale_color_discrete(labels = c("100 ensembles", "500 ensembles")) +
-  theme_classic() +
-  theme(legend.position = "right")
-
-npp_ensembles <- ggplot() +
-  geom_line(data = ensembles_500, aes(x = day, y = npp), alpha = 0.1, color = "red") +
-  geom_line(data = ensembles_100, aes(x = day, y = npp), alpha = 0.1) +
-  theme(legend.position = "none")
-
-# Plot SA results for 100 ensembles
-load("/data/tests/ed2_SR_recent_100ens_sa/sensitivity.results.NOENSEMBLEID.NPP.2020.2021.Rdata")
-for(pft in names(sensitivity.results)){
-  sa_df1_100 <- sensitivity.results[[pft]]$variance.decomposition.output
-  sa_df2_100 <- data.frame(trait = names(sa_df1_100$coef.vars), data.frame(sa_df1_100))
-  sa_df3_100 <- sa_df2_100 %>%
-    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
-           units = PEcAn.utils::trait.lookup(trait)$units,
-           coef.vars = coef.vars * 100,
-           sd = sqrt(variances)) %>% 
-    filter(trait != "water_conductance")
-  
-  fontsize = list(title = 18, axis = 14)
-  theme_set(theme_minimal() +
-              theme(axis.text.x = element_text(size = fontsize$axis,
-                                               vjust = -1),
-                    axis.text.y = element_blank(),
-                    axis.ticks = element_blank(),
-                    axis.line = element_blank(),
-                    axis.title.x = element_blank(),
-                    axis.title.y = element_blank(),
-                    panel.grid.minor = element_blank(),
-                    panel.border = element_blank()))
-  
-  cv_100 <- ggplot(data = sa_df3_100) +
-    geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
-    coord_flip() +
-    ggtitle("CV %") +
-    geom_hline(aes(yintercept = 0), size = 0.1) +
-    theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
-  
-  el_100 <- ggplot(data = sa_df3_100) +
-    geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
-    coord_flip() +
-    ggtitle("Elasticity") +
-    geom_hline(aes(yintercept = 0), size = 0.1) +
-    theme(plot.title = element_text(hjust = 0.5))
-  
-  vd_100 <- ggplot(data = sa_df3_100) +
-    geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
-    coord_flip() +
-    ggtitle("Variance Explained") +
-    geom_hline(aes(yintercept = 0), size = 0.1) +
-    scale_y_continuous(breaks = pretty(sa_df3_100$sd, n = 3))
-  
-  npp_savd_100 <- cowplot::plot_grid(cv_100, el_100, vd_100, nrow = 1, rel_widths = c(2, 1, 1))
+ensembles_npps <- c()
+for(ensemble in 1:10){ 
+  if(ensemble < 10){
+    ens_num <- paste0("00", ensemble)
+  } else if(ensemble >= 10 & ensemble < 100){
+    ens_num <- paste0("0", ensemble)
+  } else {
+    ens_num <- ensemble
+  }
+  ens_path <- paste0("/data/tests/ed2_SR_recent_patches/out/ENS-00", ens_num, "-1000000111")
+  ens_filepaths <- Sys.glob(file.path(ens_path, c("analysis-E-*", ".*h5")))
+  ensemble_npp <- c()
+  for(month_filepath in ens_filepaths){
+    month_file <- ncdf4::nc_open(month_filepath)
+    all_month_npps <- data.frame(pft = ncdf4::ncvar_get(month_file, "PFT"), 
+                           npp = ncdf4::ncvar_get(month_file, "MMEAN_NPP_CO"), 
+                           patch = c(rep(2, ncdf4::ncvar_get(month_file, "PACO_N")[1]), 
+                                     rep(1, ncdf4::ncvar_get(month_file, "PACO_N")[2])))
+    summed_month_npps <- all_month_npps %>% 
+      group_by(patch, pft) %>% 
+      summarise(pft_npp = sum(npp)) %>% 
+      mutate(date = substr(month_filepath, 71, 77), 
+             ensemble = ensemble)
+    ensemble_npp <- bind_rows(ensemble_npp, summed_month_npps)
+    ncdf4::nc_close(month_file)
+  }
+  ensembles_npps <- bind_rows(ensembles_npps, ensemble_npp)
 }
 
-# Plot SA results for 500 ensembles
-load("/data/tests/ed2_SR_recent_500ens_sa/sensitivity.results.NOENSEMBLEID.NPP.2020.2021.Rdata")
-for(pft in names(sensitivity.results)){
-  sa_df1_500 <- sensitivity.results[[pft]]$variance.decomposition.output
-  sa_df2_500 <- data.frame(trait = names(sa_df1_500$coef.vars), data.frame(sa_df1_500))
-  sa_df3_500 <- sa_df2_500 %>%
-    mutate(trait.labels = factor(as.character(PEcAn.utils::trait.lookup(trait)$figid)),
-           units = PEcAn.utils::trait.lookup(trait)$units,
-           coef.vars = coef.vars * 100,
-           sd = sqrt(variances)) %>% 
-    filter(trait != "water_conductance")
-  
-  fontsize = list(title = 18, axis = 14)
-  theme_set(theme_minimal() +
-              theme(axis.text.x = element_text(size = fontsize$axis,
-                                               vjust = -1),
-                    axis.text.y = element_blank(),
-                    axis.ticks = element_blank(),
-                    axis.line = element_blank(),
-                    axis.title.x = element_blank(),
-                    axis.title.y = element_blank(),
-                    panel.grid.minor = element_blank(),
-                    panel.border = element_blank()))
-  
-  cv_500 <- ggplot(data = sa_df3_500) +
-    geom_pointrange(aes(x = trait.labels, y = coef.vars, ymin = 0, ymax = coef.vars), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
-    coord_flip() +
-    ggtitle("CV %") +
-    geom_hline(aes(yintercept = 0), size = 0.1) +
-    theme(axis.text.y = element_text(color = 'black', hjust = 1, size = fontsize$axis))
-  
-  el_500 <- ggplot(data = sa_df3_500) +
-    geom_pointrange(aes(x = trait.labels, y = elasticities, ymin = 0, ymax = elasticities), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
-    coord_flip() +
-    ggtitle("Elasticity") +
-    geom_hline(aes(yintercept = 0), size = 0.1) +
-    theme(plot.title = element_text(hjust = 0.5))
-  
-  vd_500 <- ggplot(data = sa_df3_500) +
-    geom_pointrange(aes(x = trait.labels, y = sd, ymin = 0, ymax = sd), alpha = 0.5, size = 1.25, position = position_dodge(width = c(-0.4))) +
-    coord_flip() +
-    ggtitle("Variance Explained") +
-    geom_hline(aes(yintercept = 0), size = 0.1) +
-    scale_y_continuous(breaks = pretty(sa_df3_500$sd, n = 3))
-  
-  npp_savd_500 <- cowplot::plot_grid(cv_500, el_500, vd_500, nrow = 1, rel_widths = c(2, 1, 1))
-}
+npp_summary <- ensembles_npps %>% 
+  mutate(date = as.POSIXct(as.Date(paste0(date, "-01"))),
+         pft = case_when(pft == 1 ~ "Setaria",
+                         pft == 5 ~ "C3 grass",
+                         pft == 9 ~ "Hardwood trees"),
+         pft = as.factor(pft)) %>%
+  group_by(patch, pft, date) %>% 
+  summarize(mean = mean(pft_npp, na.rm = TRUE),
+            median = median(pft_npp, na.rm = TRUE),
+            sd = sd(pft_npp, na.rm = TRUE),
+            lcl_50 = quantile(pft_npp, probs = c(0.25), 
+                              na.rm = TRUE, names = FALSE),
+            ucl_50 = quantile(pft_npp, probs = c(0.75), 
+                              na.rm = TRUE, names = FALSE),
+            lcl_95 = quantile(pft_npp, probs = c(0.025), 
+                              na.rm = TRUE, names = FALSE),
+            ucl_95 = quantile(pft_npp, probs = c(0.975), 
+                              na.rm = TRUE, names = FALSE)) %>% 
+  rename(Species = pft)
+
+ggplot(data = npp_summary) +
+  geom_line(aes(x = date, y = median, color = Species)) +
+  geom_ribbon(aes(x = date, ymin = lcl_50, ymax = ucl_50, fill = Species), alpha = 0.4) +
+  facet_grid(rows = vars(patch)) +
+  scale_x_datetime(labels = scales::date_format("%b")) +
+  xlab("Month") +
+  ylab("NPP (kgC/m2/yr)") +
+  theme_classic()

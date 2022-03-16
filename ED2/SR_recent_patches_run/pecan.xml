@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <pecan>
-  <outdir>/data/tests/ed2_SR_recent_patches</outdir>
+  <outdir>/data/tests/ed2_SR_recent_2patches_100ens</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
@@ -17,6 +17,14 @@
       <name>SetariaWT</name>
       <ed2_pft_number>1</ed2_pft_number>
     </pft>
+    <pft>
+      <name>ebifarm.c3grass</name>
+      <ed2_pft_number>5</ed2_pft_number>
+    </pft>
+    <pft>
+      <name>temperate.Early_Hardwood</name>
+      <ed2_pft_number>9</ed2_pft_number>
+    </pft>
   </pfts>
 
   <meta.analysis>
@@ -27,7 +35,7 @@
   </meta.analysis>
 
   <ensemble>
-    <size>1</size>
+    <size>100</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
@@ -51,16 +59,16 @@
     </config.header>
     <phenol.scheme>0</phenol.scheme>
     <ed2in_tags>
-      <PFT_1ST_CHECK>2</PFT_1ST_CHECK>
-      <IED_INIT_MODE>3</IED_INIT_MODE>
+      <IED_INIT_MODE>6</IED_INIT_MODE>
+      <PFT_1ST_CHECK>0</PFT_1ST_CHECK>
     </ed2in_tags>
   </model>
 
   <run>
     <site>
       <id>1000000111</id>
-      <met.start>2020-04-01 00:00:00</met.start>
-      <met.end>2020-04-30 23:59:59</met.end>
+      <met.start>2020-03-01 00:00:00</met.start>
+      <met.end>2020-09-01 23:59:59</met.end>
     </site>
 
     <inputs>
@@ -69,20 +77,19 @@
       <soil>/data/faoOLD/FAO_</soil>
       <pss>/data/sites/MERRA_ED2_site_1-111/srer.lat31.8lon-110.8.pss</pss>
       <css>/data/sites/MERRA_ED2_site_1-111/srer.lat31.8lon-110.8.css</css>
-      <site>/data/sites/MERRA_ED2_site_1-111/srer.lat31.8lon-110.8.site</site>
       <lu>/data/ed_inputs/glu/</lu>
       <thsum>/data/ed_inputs/</thsum>
     </inputs>
 
-    <start.date>2020/04/01</start.date>
-    <end.date>2020/04/30</end.date>
+    <start.date>2020/03/01</start.date>
+    <end.date>2020/09/01</end.date>
   </run>
   
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
-      <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=3 --time=25:00:00 -o @STDOUT@ -e @STDERR@</qsub>
+      <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=1 --time=25:00:00 -o @STDOUT@ -e @STDERR@</qsub>
       <qsub.jobid>([0-9]+)</qsub.jobid>
       <qstat>'squeue --job @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi3</job.sh>

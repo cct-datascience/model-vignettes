@@ -38,7 +38,7 @@ PEcAn.MA::runModule.run.meta.analysis(settings)
 settings <- PEcAn.workflow::runModule.run.write.configs(settings)
 
 # Manual rsync of run folder to HPC, replacing DATE
-#rsync '-a' '-q' '--delete' '/data/tests/ed2_SR_recent_patches/run' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE'
+#rsync '-a' '-q' '--delete' '/data/tests/ed2_SR_recent_2patches_100ens/run' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE'
 
 # Start ecosystem model runs
 ptm <- proc.time()
@@ -46,10 +46,10 @@ PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
 proc.time() - ptm
 
 # Manual rsync of out folder back to Welsch, replacing DATE
-#rsync '-az' '-q' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE/out' '/data/tests/ed2_SR_recent_patches'
+#rsync '-az' '-q' 'kristinariemer@login.ocelote.hpc.arizona.edu:/groups/dlebauer/ed2_results/pecan_remote/DATE/out' '/data/tests/ed2_SR_recent_2patches_100ens'
 
 # Do results post-processing
-for(folder in list.dirs("/data/tests/ed2_SR_recent_patches/out", recursive = FALSE)){
+for(folder in list.dirs("/data/tests/ed2_SR_recent_2patches_100ens/out", recursive = FALSE)){
   print(folder)
   model2netcdf.ED2(folder, settings$run$site$lat, settings$run$site$lon, settings$run$start.date, 
                    settings$run$end.date, settings$pfts)
