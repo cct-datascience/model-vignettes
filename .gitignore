@@ -60,6 +60,7 @@ ecoregions*
 # Figures until publication ready
 figures/plots
 ED2/pfts/SRER_figs/
+dispersal_analysis/plots
 
 # Do include csv files in certain subdirectories
 !BioCro/DARPA/temp_comparison/inputs/*.csv
