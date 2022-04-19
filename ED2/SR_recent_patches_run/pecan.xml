@@ -67,29 +67,29 @@
   <run>
     <site>
       <id>1000000111</id>
-      <met.start>2020-03-01 00:00:00</met.start>
-      <met.end>2020-09-01 23:59:59</met.end>
+      <met.start>2016-03-01 00:00:00</met.start>
+      <met.end>2021-08-31 23:59:59</met.end>
     </site>
 
     <inputs>
       <met>/data/sites/MERRA_ED2_site_1-111/ED_MET_DRIVER_HEADER</met>
       <veg>/data/oge2OLD/OGE2_</veg>
       <soil>/data/faoOLD/FAO_</soil>
-      <pss>/data/sites/MERRA_ED2_site_1-111/srer.lat31.8lon-110.8.pss</pss>
-      <css>/data/sites/MERRA_ED2_site_1-111/srer.lat31.8lon-110.8.css</css>
+      <pss>/data/sites/MERRA_ED2_site_1-111/srer.lat31.5lon-110.5.pss</pss>
+      <css>/data/sites/MERRA_ED2_site_1-111/srer.lat31.5lon-110.5.css</css>
       <lu>/data/ed_inputs/glu/</lu>
       <thsum>/data/ed_inputs/</thsum>
     </inputs>
 
-    <start.date>2020/03/01</start.date>
-    <end.date>2020/09/01</end.date>
+    <start.date>2016/03/01</start.date>
+    <end.date>2021/08/31</end.date>
   </run>
   
   <host>
       <name>login.ocelote.hpc.arizona.edu</name>
       <user>kristinariemer</user>
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
-      <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=1 --time=25:00:00 -o @STDOUT@ -e @STDERR@</qsub>
+      <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=1 --time=48:00:00 -o @STDOUT@ -e @STDERR@</qsub>
       <qsub.jobid>([0-9]+)</qsub.jobid>
       <qstat>'squeue --job @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <job.sh>module load openmpi3</job.sh>
