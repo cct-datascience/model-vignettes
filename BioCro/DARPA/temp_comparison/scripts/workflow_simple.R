@@ -33,6 +33,9 @@ for(trt in treatments){
   PEcAn.settings::write.settings(settings, outputfile = paste0("pecan.CHECKED.", trt, ".xml"))
   settings <- PEcAn.workflow::do_conversions(settings)
   
+  # Outputs will be saved here:
+  settings$outdir
+  
   # Query the trait database for data and priors
   settings <- PEcAn.workflow::runModule.get.trait.data(settings)
   
