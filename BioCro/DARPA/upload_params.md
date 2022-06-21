@@ -42,7 +42,7 @@ library(udunits2)
 Physiological parameters Vmax, Rd, and stomatal slope
 -----------------------------------------------------
 
-Read in parameters data from [model-vignettes-data repository](https://github.com/az-digitalag/model-vignettes-data), which should be cloned into the same folder as model-vignettes repo.
+Read in parameters data from [model-vignettes-data repository](https://github.com/cct-datascience/model-vignettes-data), which should be cloned into the same folder as model-vignettes repo.
 
 ``` r
 all_parameters <- read.csv("../../../model-vignettes-data/parameters_data.csv")

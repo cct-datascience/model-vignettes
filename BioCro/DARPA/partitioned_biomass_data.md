@@ -52,7 +52,7 @@ ggplot(opt_weather_plot %>% filter(month(date) ==1 & day(date) < 3), aes(date, v
 
 ### Biomass data
 
-These data are in [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data). Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31\*C) and taking the median of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.
+These data are in [the project's private data repo](https://github.com/cct-datascience/model-vignettes-data). Plants all started to grow at same time (Jan 3, 2019). Plants harvested on six different dates, from Jan 15 - Feb 19. The plants were grown at three different temperatures, and there were three genotypes. Initially only using data for the middle temperature (31\*C) and taking the median of the three values. Biomass measurements are from destructively harvesting plants, so plants from different harvest dates are different plants.
 
 ``` r
 library(udunits2)

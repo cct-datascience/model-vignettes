@@ -10,7 +10,7 @@ urlcolor: blue
 
 ### Initial run of BioCro for biomass & transpiration estimates
 
-This is based off of the working run for the high night temperature low light treatment, which is run 3 in [temp_exps_biomass.Rmd](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/temp_exps_biomass.Rmd). 
+This is based off of the working run for the high night temperature low light treatment, which is run 3 in [temp_exps_biomass.Rmd](https://github.com/cct-datascience/model-vignettes/blob/master/BioCro/DARPA/temp_exps_biomass.Rmd). 
 
 The weather data are created below, currently for the high night temperature condition. 
 
@@ -253,7 +253,7 @@ The coefficients are the amount of carbon going to each plant part (root, stem, 
 
 #### Create chamber weather data frame
 
-This weather data file approximates the conditions in the chamber, which are recorded in the "Environmental_data_chambers_5th_Biomass" tab of [manual-measurements-Darpa_setaria_chambers_experiments.xlsx](https://github.com/az-digitalag/model-vignettes-data/blob/master/manual-measurements-Darpa_setaria_chambers_experiments.xlsx). 
+This weather data file approximates the conditions in the chamber, which are recorded in the "Environmental_data_chambers_5th_Biomass" tab of [manual-measurements-Darpa_setaria_chambers_experiments.xlsx](https://github.com/cct-datascience/model-vignettes-data/blob/master/manual-measurements-Darpa_setaria_chambers_experiments.xlsx). 
 ```{r, eval=FALSE}
 if (!file.exists("high_light_inputs/weather.csv")) {
   weather <- data.frame(year = rep(2019, 8760), 

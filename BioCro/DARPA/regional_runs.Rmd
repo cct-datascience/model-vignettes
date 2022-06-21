@@ -32,7 +32,7 @@ This set of runs uses the same parameters as above for the high light treatment,
 
 # Estimate biomass & transpiration
 
-The three genotypes are 1) high light chamber treatment, 2) decreased stomatal slope values, and 3) modified carbon allocation to represent the dwarf plants. The first genotype's config file here comes from [the high light treatment BioCro run](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. The second has the stomatal slope value changed from 4.86 to 3.36. The third has the values of all `kStem` halved, with the remaining half split evenly between the other plant parts by stage. 
+The three genotypes are 1) high light chamber treatment, 2) decreased stomatal slope values, and 3) modified carbon allocation to represent the dwarf plants. The first genotype's config file here comes from [the high light treatment BioCro run](https://github.com/cct-datascience/model-vignettes/blob/master/BioCro/DARPA/high_light.Rmd), specifically the config file in the SA-median run folder. The second has the stomatal slope value changed from 4.86 to 3.36. The third has the values of all `kStem` halved, with the remaining half split evenly between the other plant parts by stage. 
 
 We also read in a soil file, which is not necessary but is useful. These data are from [the harmonized world soil database](http://www.fao.org/soils-portal/soil-survey/soil-maps-and-databases/harmonized-world-soil-database-v12/en/). 
 
@@ -64,7 +64,7 @@ for(r in regions){
 
 The BioCro model is then run for each location of interest, using the config file, soil data, and weather data. The locations are determined and indexed from the weather data subset, which are then used to read in the relevant weather csv for the location of interest. 
 
- The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/az-digitalag/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_stlew.Rmd). This data is specifically for an extended longitudinal range across North America that includes the city of St. Louis.  
+ The weather data comes from [the CRUNCEP](https://rda.ucar.edu/datasets/ds314.3/) global gridded dataset provided by NCAR. The original NetCDF file has been subsetted according to [the weather subset vignette](https://github.com/cct-datascience/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/subset_weather.Rmd) and converted to the correct csv format required by BioCro according to [the convert weather vignette](https://github.com/cct-datascience/model-vignettes/blob/master/BioCro/DARPA/regional_runs_inputs/convert_weather_stlew.Rmd). This data is specifically for an extended longitudinal range across North America that includes the city of St. Louis.  
 
 The results from running BioCro for each location produces hourly, daily, and yearly estimates for biomass, transpiration, etc. for the time range we specified in the config file. We are using only the daily values, combining them for all locations. These are saved as csv files. 
 
