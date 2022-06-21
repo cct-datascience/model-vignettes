@@ -25,9 +25,9 @@ source("~/model-vignettes/BioCro/DARPA/plot_MA.R")
 # ----------------------------------------------------------------------
 treatments <- c("rn", "hn")
 for(trt in treatments){
-  
+
   # Open, read in, and modify settings file for PEcAn run
-  settings_file <- normalizePath(paste0("../inputs/pecan.", trt, ".xml"))
+  settings_file <- normalizePath(paste0("~/model-vignettes/BioCro/DARPA/temp_comparison/inputs/pecan.", trt, ".xml"))
   settings <- PEcAn.settings::read.settings(settings_file) 
   settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
   PEcAn.settings::write.settings(settings, outputfile = paste0("pecan.CHECKED.", trt, ".xml"))
