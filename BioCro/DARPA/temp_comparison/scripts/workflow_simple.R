@@ -63,7 +63,7 @@ for(trt in treatments){
   
   # Run ecosystem model (in folders 'run' and 'out')
   st <- proc.time()
-  PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
+  PEcAn.workflow::runModule_start_model_runs(settings, stop.on.error = FALSE)
   en <- proc.time()
   dur <- (en - st)/60/60
   print(paste0(settings$ensemble$size, " ensembles completed in ", round(dur[3], 4), " hours"))
