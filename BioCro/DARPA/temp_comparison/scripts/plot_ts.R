@@ -6,8 +6,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-if(!dir.exists(paste0("../plots/"))){
-  dir.create(paste0("../plots/"), recursive = T)
+if(!dir.exists(paste0("~/model-vignettes/BioCro/DARPA/temp_comparison/"))){
+  dir.create(paste0("~/model-vignettes/BioCro/DARPA/temp_comparison/"), recursive = T)
 }
 
 # Organize 3 treatments into same figure
