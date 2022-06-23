@@ -6,8 +6,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-if(!dir.exists(paste0("../plots/"))){
-  dir.create(paste0("../plots/"), recursive = T)
+if(!dir.exists(paste0("BioCro/DARPA/temp_comparison/plots/"))){
+    dir.create(paste0("BioCro/DARPA/temp_comparison/plots/"), recursive = T)
 }
 
 # Organize 3 treatments into same figure
@@ -47,9 +47,9 @@ fig_biomass_diff <- ggplot() +
   scale_y_continuous(expression(paste(Delta, " Aboveground biomass (kg ",  m^-2, ")"))) +
   theme_classic()
 
-jpeg(filename = "../plots/biomass_diff.jpg", height = 5, width = 7, units = "in", res = 600)
-print(fig_biomass_diff)
-dev.off()
+ggsave("BioCro/DARPA/temp_comparison/plots/biomass_diff.jpg", fig_biomass_diff, 
+       height = 5, width = 7, units = "in")
+fig_biomass_diff
 
 fig_trans_diff <- ggplot() +
   geom_hline(yintercept = 0) +
@@ -59,7 +59,6 @@ fig_trans_diff <- ggplot() +
   scale_x_continuous("Day of Experiment") + 
   scale_y_continuous(expression(paste(Delta, " Canopy transpiration (kg ",  m^-2, " ", day^-1, ")"))) +
   theme_classic()
-
-jpeg(filename = "../plots/trans_diff.jpg", height = 5, width = 7, units = "in", res = 600)
-print(fig_trans_diff)
-dev.off()
+ggsave("BioCro/DARPA/temp_comparison/plots/trans_diff.jpg", fig_trans_diff,
+       height = 5, width = 7, units = "in")
+fig_trans_diff
