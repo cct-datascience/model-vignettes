@@ -3,9 +3,7 @@
 library(ggplot2)
 library(cowplot)
 
-if(!dir.exists(paste0("../plots/"))){
-  dir.create(paste0("../plots/"), recursive = T)
-}
+plot_dir <- "BioCro/DARPA/temp_comparison/plots/"
 
 # Plot variance decomposition of biomass
 load("/data/output/pecan_runs/temp_comp_results/var_decomp_AGB.Rdata")
@@ -52,9 +50,11 @@ vdecomp.b <- ggplot(data = vd) +
         axis.text.y=element_blank(), 
         legend.position = c(0.8, 0.5))
 
-jpeg(filename = "../plots/biomass_vd.jpg", height = 5, width = 7, units = "in", res = 600)
-cowplot::plot_grid(cv.b, el.b, vdecomp.b, nrow = 1, rel_widths = c(1.5, 1, 1))
-dev.off()
+fig_biomass_vd <- cowplot::plot_grid(cv.b, el.b, vdecomp.b, nrow = 1, rel_widths = c(1.5, 1, 1))
+ggsave(paste0(plot_dir, "biomass_vd.jpg"), fig_biomass_vd, 
+       height = 5, width = 7, units = "in", dpi = 600)
+fig_biomass_vd
+
 
 # Plot variance decomposition of transpiration
 load("/data/output/pecan_runs/temp_comp_results/var_decomp_TVeg.Rdata")
@@ -101,6 +101,9 @@ vdecomp.t <- ggplot(data = vd) +
         axis.text.y=element_blank(), 
         legend.position = c(0.8, 0.5))
 
-jpeg(filename = "../plots/trans_vd.jpg", height = 5, width = 7, units = "in", res = 600)
-cowplot::plot_grid(cv.t, el.t, vdecomp.t, nrow = 1, rel_widths = c(1.5, 1, 1))
-dev.off()
+fig_trans_vd <- cowplot::plot_grid(cv.t, el.t, vdecomp.t, nrow = 1, rel_widths = c(1.5, 1, 1))
+
+ggsave(paste0(plot_dir, "trans_vd.jpg"),
+       fig_trans_vd,
+       height = 5, width = 7, units = "in", dpi = 600)
+fig_trans_vd

@@ -6,9 +6,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-if(!dir.exists(paste0("~/model-vignettes/BioCro/DARPA/temp_comparison/"))){
-  dir.create(paste0("~/model-vignettes/BioCro/DARPA/temp_comparison/"), recursive = T)
-}
+plot_dir <- "BioCro/DARPA/temp_comparison/plots/"
 
 # Organize 3 treatments into same figure
 treatments <- c("rn", "hn")
@@ -64,9 +62,9 @@ fig_biomass_ts <- ggplot() +
   scale_y_continuous(expression(paste("Abovground biomass (kg ",  m^-2, ")"))) +
   theme_classic()
 
-jpeg(filename = "../plots/biomass_ts.jpg", height = 5, width = 7, units = "in", res = 600)
-print(fig_biomass_ts)
-dev.off()
+ggsave(paste0(plotdir, "biomass_ts.jpg"), fig_biomass_ts,
+       height = 5, width = 7, units = "in", dpi = 600)
+fig_biomass_ts
 
 fig_trans_ts <- ggplot() +
   geom_line(data = trans_ts, aes(day, y = median, color = treatment)) +
@@ -76,6 +74,7 @@ fig_trans_ts <- ggplot() +
   scale_y_continuous(expression(paste("Canopy Transpiration (kg ",  m^-2, " ", day^-1, ")"))) +
   theme_classic()
 
-jpeg(filename = "../plots/trans_ts.jpg", height = 5, width = 7, units = "in", res = 600)
-print(fig_trans_ts)
-dev.off()
+ggsave(paste0(plotdir, "trans_ts.jpg"), fig_trans_ts,
+       height = 5, width = 7, units = "in", dpi = 600)
+fig_trans_ts
+
