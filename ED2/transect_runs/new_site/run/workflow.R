@@ -9,6 +9,7 @@ library(progressr)
 
 # Read in settings --------------------------------------------------------
 
+#edit this path
 inputfile <- "ED2/transect_runs/new_site/run/pecan.xml"
 
 #check that inputfile exists, because read.settings() doesn't do that!

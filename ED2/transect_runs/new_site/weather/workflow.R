@@ -2,6 +2,7 @@
 library(PEcAn.all)
 
 # Load settings --------------------------------------------------------
+#edit this path
 settings <- read.settings("ED2/transect_runs/new_site/weather/pecan.xml")
 
 # Do conversions ----------------------------------------------------------

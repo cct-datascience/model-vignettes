@@ -3,6 +3,7 @@ library(tidyr)
 library(ggplot2)
 library(stringr)
 
+#edit this path
 outdir_name <- "/data/tests/ed2_transect_LW/"
 
 ensembles_npps <- c()
