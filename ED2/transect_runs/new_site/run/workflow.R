@@ -9,6 +9,8 @@ library(progressr)
 
 # Read in settings --------------------------------------------------------
 
+inputfile <- "ED2/transect_runs/new_site/run/pecan.xml"
+
 #check that inputfile exists, because read.settings() doesn't do that!
 if (file.exists(inputfile)) {
   settings <- PEcAn.settings::read.settings(inputfile)
@@ -20,6 +22,7 @@ if (file.exists(inputfile)) {
 settings$outdir
 
 # Prepare settings --------------------------------------------------------
+#TODO: check that dates are sensible?
 settings <- prepare.settings(settings, force = FALSE) 
 write.settings(settings, outputfile = "pecan_checked.xml")
 settings <- do_conversions(settings)
