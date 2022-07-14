@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <pecan>
-  <outdir>/home/ericrscott/Eric-ED2/WL/weather</outdir>
+  <!-- edit this path by replacing "SN" with two-letter abbreviation for new site -->
+  <outdir>/data/sites/NS_weather_only</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
@@ -58,6 +59,7 @@
 
   <run>
     <site>
+      <!-- edit the site ID to correspond to new site on BETY -->
       <id>678</id>
       <met.start>2019-01-01 00:00:00</met.start>
       <met.end>2019-12-31 23:59:59</met.end>
