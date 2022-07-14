@@ -1,9 +1,11 @@
 <?xml version="1.0"?>
 <pecan>
   <info>
-    <notes>WLEF site</notes>
+    <!--Edit this-->
+    <notes>site name</notes>
   </info>
-  <outdir>/home/ericrscott/Eric-ED2/WL/run</outdir>
+  <!-- Edit the outdir name to replace SN with the two-letter abreviation for this site -->  
+  <outdir>/data/tests/ed2_transect_SN</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
@@ -20,6 +22,11 @@
       <name>SetariaWT</name>
       <ed2_pft_number>1</ed2_pft_number>
     </pft>
+    <!-- Add additional PFTs here -->
+    <pft>
+      <name>ebifarm.c3grass</name>
+      <ed2_pft_number>5</ed2_pft_number>
+    </pft>
   </pfts>
 
   <meta.analysis>
@@ -28,7 +35,7 @@
     <threshold>1.2</threshold>
     <update>TRUE</update>
   </meta.analysis>
-
+<!--
   <sensitivity.analysis>
       <quantiles>
           <sigma>-1</sigma>
@@ -38,9 +45,9 @@
     <start.year>2019</start.year>
     <end.year>2019</end.year>
   </sensitivity.analysis>
-
+-->
   <ensemble>
-    <size>5</size>
+    <size>50</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
@@ -64,8 +71,9 @@
     </config.header>
     <phenol.scheme>0</phenol.scheme>
     <ed2in_tags>
-      <PFT_1ST_CHECK>2</PFT_1ST_CHECK>
+      <PFT_1ST_CHECK>0</PFT_1ST_CHECK>
       <IED_INIT_MODE>0</IED_INIT_MODE>
+      <!-- turn off cohort and patch fusion. Not necessary for short runs -->
       <MAXCOHORT>0</MAXCOHORT>
       <MAXPATCH>0</MAXPATCH>
     </ed2in_tags>
@@ -73,12 +81,14 @@
 
   <run>
     <site>
+      <!-- edit the site ID to match the site on BETYdb -->
       <id>678</id>
       <met.start>2019-01-01 00:00:00</met.start>
       <met.end>2019-12-31 23:59:59</met.end>
     </site>
 
     <inputs>
+      <!-- edit the site ID in this path also -->
       <met>/data/sites/MERRA_ED2_site_0-678/ED_MET_DRIVER_HEADER</met>
       <veg>/data/oge2OLD/OGE2_</veg>
       <soil>/data/faoOLD/FAO_</soil>
@@ -91,11 +101,14 @@
   </run>
   
   <host>
+      <!-- edit to whatever is in your .ssh/config -->
       <name>puma</name>
-      <user>ericrscott</user>
+      <!-- edit to your username.  This will do, e.g. ssh username@puma. -->
+      <user>username</user>
+      <!-- don't edit the rest unless you know what you're doing -->
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
       <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=3 --time=25:00:00 -o @STDOUT@ -e @STDERR@</qsub>
-      <qsub.jobid>.* ([0-9]+)</qsub.jobid>
+      <qsub.jobid>\\D*([0-9]+)\\D*</qsub.jobid>
       <qstat>'squeue --job @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <prerun>module load openmpi3</prerun>
       <modellauncher>
