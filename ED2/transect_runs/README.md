@@ -1,0 +1,76 @@
+ED2 North America Transect Runs
+================
+
+### Overview
+
+This folder contains inputs and scripts to simulate Setaria growth using
+ED2 for various sites.
+
+Each subfolder in the `transect_runs` folder is for a single site. Each
+site and associated files/folders are identifiable by a unique
+two-letter acronym. PFTs, initial conditions, and time ranges can vary
+by site and are documented here.
+
+### Sites information
+
+1.  Santa Rita site in southern Arizona
+      - Acronym: SR
+      - PEcAn site ID: 1000000111
+      - Simulation PFTS: Setaria, C3 grass
+      - Simulation initial conditions: no patch or cohort
+      - Simulation time range: March - September 2019
+      - Number of ensembles: 50
+2.  Walker Branch site in eastern Tennessee
+      - Acronym: WB
+      - PEcAn site ID: 1000000075
+      - Simulation PFTS: Setaria, C3 grass
+      - Simulation initial conditions: no patch or cohort
+      - Simulation time range: March - September 2019
+      - Number of ensembles: 50
+3.  Little Washita Watershed site in Oklahoma
+      - Acronym: LW
+      - PEcAn site ID: 1000000042
+      - Simulation PFTS: Setaria, C3 grass
+      - Simulation initial conditions: no patch or cohort
+      - Simulation time range: March - September 2019
+      - Number of ensembles: 50
+
+### Setting up a new site
+
+  - Set up files and folders
+      - Copy the `new_site` folder and its contents and re-name it to a
+        two-letter acronym for the new site
+  - Get MERRA weather for site and dates
+      - Modify `weather/pecan.xml` as indicated in the comments
+          - Update `outdir` to form `/data/sites/xx_weather_only`
+          - `dbfiles` MUST be set to `/data/sites`
+          - Update site ID
+          - If needed, change run and met start and end dates; files
+            take a long time to download and have to be consecutive with
+            already downloaded files, so be mindful of the date ranges
+            chosen; might need to delete files on BetyDB if weather data
+            has already been downloaded for a site
+      - Modify `weather/workflow.R`
+          - This is a truncated workflow script that goes through
+            `do_conversions`
+              - Update path to read in corresponding `pecan.xml`
+      - Run `weather/workflow.R`
+  - Run ED2 Pecan workflow
+      - Modify `run/pecan.xml` as indicated in comments
+          - Set `outdir` path to form of `/data/tests/ed2_transect_XX`
+          - Update site ID
+          - If needed, change run and met start and end dates
+          - Set ED2 tag `IED_INIT_MODE` to 6 if patch/cohort, to 0 if no
+            patch/cohort
+      - Modify `run/workflow.R`
+          - Update path to read in corresponding `pecan.xml`
+      - Run `workflow.R` (this will take a while and you might want to
+        run in a background R session with “Source as local job…”)
+  - Plot results
+      - Update `outdir_name` in `plots.R`
+      - Run `plots.R`
+
+### TODO
+
+  - Once patch and cohort files are working, add new site instructions
+    here
