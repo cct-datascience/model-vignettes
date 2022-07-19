@@ -87,6 +87,7 @@ NOTE: only run one of the two Wisconsin sites.  Which one though?
     - Update site ID
     - If needed, change run and met start and end dates
     - Set ED2 tag `IED_INIT_MODE` to 6 if patch/cohort, to 0 if no patch/cohort
+- **Delete all comments (`<!-- -->`) in pecan.xml!!** Comments will break several PEcAn functions currently!
   - Modify `run/workflow.R`
     - Update path to read in corresponding `pecan.xml`
   - Run `workflow.R` (this will take a while and you might want to run in a background R session with "Source as local job...")
