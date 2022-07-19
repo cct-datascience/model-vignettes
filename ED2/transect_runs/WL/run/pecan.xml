@@ -11,7 +11,7 @@
       <password>bety</password>
       <host>postgres</host>
       <dbname>bety</dbname>
-      <write>false</write>
+      <write>true</write>
     </bety>
     <dbfiles>/data/dbfiles</dbfiles>
   </database>
@@ -39,21 +39,11 @@
   </pfts>
 
   <meta.analysis>
-    <iter>5</iter>
+    <iter>3000</iter>
     <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
     <update>TRUE</update>
   </meta.analysis>
-  
-  <sensitivity.analysis>
-      <quantiles>
-          <sigma>-1</sigma>
-          <sigma>1</sigma>
-      </quantiles>
-    <variable>NPP</variable>
-    <start.year>2019</start.year>
-    <end.year>2019</end.year>
-  </sensitivity.analysis>
   
   <ensemble>
     <size>50</size>
@@ -110,7 +100,7 @@
       <name>puma</name>
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
       <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=3 --time=25:00:00 -o @STDOUT@ -e @STDERR@</qsub>
-      <qsub.jobid>\\D*([0-9]+)\\D*</qsub.jobid>
+      <qsub.jobid>.* ([0-9]+)</qsub.jobid>
       <qstat>'squeue --job @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
       <prerun>module load openmpi3</prerun>
       <modellauncher>
