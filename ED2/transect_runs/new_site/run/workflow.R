@@ -25,7 +25,7 @@ settings$outdir
 # Prepare settings --------------------------------------------------------
 #TODO: check that dates are sensible?
 settings <- prepare.settings(settings, force = FALSE) 
-write.settings(settings, outputfile = "pecan_checked.xml")
+write.settings(settings, outputfile = paste0("pecan_checked_", Sys.Date(), ".xml"))
 settings <- do_conversions(settings)
 
 # Query trait database ----------------------------------------------------
