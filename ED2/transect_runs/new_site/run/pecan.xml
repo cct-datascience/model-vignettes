@@ -5,7 +5,7 @@
     <notes>site name</notes>
   </info>
   <!-- Edit the outdir name to replace SN with the two-letter abreviation for this site -->  
-  <outdir>/data/tests/ed2_transect_SN</outdir>
+  <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_SN</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
