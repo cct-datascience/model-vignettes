@@ -40,6 +40,9 @@ runModule.run.write.configs(settings)
 # Start model runs --------------------------------------------------------
 runModule_start_model_runs(settings, stop.on.error = FALSE)
 
+
+
+
 ## If for some reason the above function tries to copy files back from HPC before
 ## runs are finished, this code will manually copy it back.
 #  
@@ -55,6 +58,13 @@ runModule_start_model_runs(settings, stop.on.error = FALSE)
 # Results post-processing -------------------------------------------------
 
 ## Convert and consolidate ED2 .h5 files to .nc files
+## NOTE: this is supposed to get run by runModule_start_model_runs() but is
+## currently broken and needs to be run manually.  However, even running it
+## manually is broken because it only converts data for one pft currently. So...
+## that's why the plot.R script just ignores the .nc files and pulls data
+## directly from the .h5 files. Running model2netcdf.ED2 on R >= 4.2.0 is even
+## more broken because it errors with a condition length > 1 error that is just
+## a warning in earlier versions of R.
 
 ### use 2 cores to speed up
 plan(multisession, workers = 2)
@@ -91,3 +101,8 @@ get.results(settings)
 
 ## Run ensemble analysis on model output
 runModule.run.ensemble.analysis(settings)
+
+#The run.ensemble.analysis() step fails because whatever output the
+#ensemble.output...Rdata file didn't grab the ensemble ID correctly
+# run manually: 
+run.ensemble.analysis(settings, ensemble.id = "NOENSEMBLEID")
