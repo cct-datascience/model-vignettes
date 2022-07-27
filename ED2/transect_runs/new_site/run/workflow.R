@@ -35,13 +35,15 @@ settings <- runModule.get.trait.data(settings)
 runModule.run.meta.analysis(settings)
 
 # Write model run configs -----------------------------------------------------
+
+# This will write config files locally and attempt to copy them to your HPC.  In
+# my experience, this copying fails, but it doesn't matter because the next step
+# ALSO attempts to copy the config files to the HPC.
+
 runModule.run.write.configs(settings)
 
 # Start model runs --------------------------------------------------------
 runModule_start_model_runs(settings, stop.on.error = FALSE)
-
-
-
 
 ## If for some reason the above function tries to copy files back from HPC before
 ## runs are finished, this code will manually copy it back.
@@ -49,7 +51,7 @@ runModule_start_model_runs(settings, stop.on.error = FALSE)
 # cmd <- 
 #   paste0(
 #     "rsync -az -q ",
-#     "'", settings$host$user, "@", settings$host$name, ":", settings$host$outdir, "' ",
+#     "'", settings$host$name, ":", settings$host$outdir, "' ",
 #     "'", settings$outdir, "'"
 #   )
 # 
