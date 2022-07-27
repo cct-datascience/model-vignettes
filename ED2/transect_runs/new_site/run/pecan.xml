@@ -13,6 +13,7 @@
       <password>bety</password>
       <host>postgres</host>
       <dbname>bety</dbname>
+      <!-- integration with BETYdb is buggy for now so keep this FALSE -->
       <write>FALSE</write>
     </bety>
     <dbfiles>/data/dbfiles</dbfiles>
@@ -33,6 +34,9 @@
     <iter>3000</iter>
     <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
+    <!-- AUTO is another possible value for <update>,
+         but intgration with BETYdb is buggy for now,
+         so keep this to TRUE -->
     <update>TRUE</update>
   </meta.analysis>
 <!--
