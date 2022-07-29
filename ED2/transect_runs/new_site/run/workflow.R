@@ -61,21 +61,24 @@ runModule_start_model_runs(settings, stop.on.error = FALSE)
 
 ## Convert and consolidate ED2 .h5 files to .nc files
 ## NOTE: this is supposed to get run by runModule_start_model_runs() but is
-## currently broken and needs to be run manually.  However, even running it
-## manually is broken because it only converts data for one pft currently. So...
-## that's why the plot.R script just ignores the .nc files and pulls data
-## directly from the .h5 files. Running model2netcdf.ED2 on R >= 4.2.0 is even
-## more broken because it errors with a condition length > 1 error that is just
-## a warning in earlier versions of R.
+## currently broken and needs to be run manually. Might get fixed once PEcAn
+## container on HPC is updated so check for .nc files in outdir before running
+## this
 
-### use 2 cores to speed up
+# TODO: Check how many ensembles failed (and why?) by looking for empty dirs
+
+# This "works" but the .nc files produced are not useable, I think, because they
+# don't indicate which values come from which PFT.  There is a workaround in
+# plot.R
+
+## use 2 cores to speed up
 plan(multisession, workers = 2)
 
 dirs <- list.dirs(file.path(settings$outdir, "out"), recursive = FALSE)
 
 with_progress({
   p <- progressor(steps = length(dirs))
-  
+
   future_walk(dirs, ~{
     p() #progress bar
     model2netcdf.ED2(
@@ -89,12 +92,8 @@ with_progress({
   })
 })
 
-### Remove .h5 files
-# WAIT, this might be used in Kristina's plotting script
-#TODO: Figure out how to delete h5 files ONLY if model2netcdf.ED2 was successful
-# h5_rm <- list.files("outputs/out", pattern = "*.h5$", recursive = TRUE, full.names = TRUE)
-# file.remove(h5_rm)
-
+### DON'T remove .h5 files.  The .nc files are currently malformed and you need
+### the raw output for plotting.
 
 # Model analyses ----------------------------------------------------------
 
