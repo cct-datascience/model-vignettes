@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <pecan>
-  <!-- edit this path by replacing "SN" with two-letter abbreviation for new site -->
   <outdir>/data/sites/WL_weather_only</outdir>
   <database>
     <bety>
@@ -59,9 +58,8 @@
 
   <run>
     <site>
-      <!-- edit the site ID to correspond to new site on BETY -->
       <id>678</id>
-      <met.start>2019-01-01 00:00:00</met.start>
+      <met.start>2008-01-01 00:00:00</met.start>
       <met.end>2019-12-31 23:59:59</met.end>
     </site>
 
@@ -72,7 +70,7 @@
       </met>
     </inputs>
 
-    <start.date>2019-01-01</start.date>
+    <start.date>2008-01-01</start.date>
     <end.date>2019-12-31</end.date>
   </run>
   
