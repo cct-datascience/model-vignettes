@@ -27,6 +27,14 @@ ensembles <- list.dirs(file.path(outdir, "out"), recursive = FALSE)
 
 # Extract data ------------------------------------------------------------
 
+## Ideally this should be done with the .nc files output by the workflow.R
+## script.  However, these .nc files have most variables aggregated to combine
+## all PFTs making them not super useful for our case.  The .h5 files have
+## variables split up by PFT, but none of the weighting or conversions are done
+## (i.e. outputs may be in units **per plant**)
+
+## Workaround with .h5 files:
+
 with_progress({
   #sets up progress bar
   p <- progressor(steps = length(ensembles))
@@ -54,11 +62,16 @@ with_progress({
           str_replace("\\d$", "1") %>% 
           lubridate::ymd()
         
+        #TODO: NPP needs to be weighted by plant density.  ED2 outputs are per plant
+        # Relevant code at line 1023 of model2netcdf.ED2
         tibble(
           date = date,
-          pft = as.character(ncvar_get(x, "PFT")),
-          npp = ncvar_get(x, "MMEAN_NPP_CO") #I guess "cohort" (_CO) is the same as PFT??  I wouldn't think so.
-        )
+          pft = as.character(ncvar_get(x, "PFT")), #PFTs of each cohort
+          npp = ncvar_get(x, "MMEAN_NPP_CO") # monthly mean NPP by cohort
+        ) %>% 
+          #sum over cohorts
+          group_by(patch, pft) %>%
+          summarise(pft_npp = sum(npp), .group = "drop")
       }) %>% 
         mutate(ensemble = basename(.x))
     })
