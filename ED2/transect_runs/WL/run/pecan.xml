@@ -80,7 +80,7 @@
   <run>
     <site>
       <id>678</id>
-      <met.start>2019-01-01 00:00:00</met.start>
+      <met.start>2009-01-01 00:00:00</met.start>
       <met.end>2019-12-31 23:59:59</met.end>
     </site>
 
@@ -92,7 +92,7 @@
       <thsum>/data/ed_inputs/</thsum>
     </inputs>
 
-    <start.date>2019-01-01</start.date>
+    <start.date>2009-01-01</start.date>
     <end.date>2019-12-31</end.date>
   </run>
   
