@@ -20,35 +20,30 @@
    <name>SetariaWT</name>
    <ed2_pft_number>1</ed2_pft_number>
    <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_WL/pft/SetariaWT</outdir>
-   <posteriorid>9000001292</posteriorid>
   </pft>
   <pft>
    <name>temperate.Northern_Pine</name>
    <ed2_pft_number>6</ed2_pft_number>
    <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_WL/pft/temperate.Northern_Pine</outdir>
-   <posteriorid>9000001293</posteriorid>
   </pft>
   <pft>
    <name>temperate.Early_Hardwood</name>
    <ed2_pft_number>9</ed2_pft_number>
    <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_WL/pft/temperate.Early_Hardwood</outdir>
-   <posteriorid>9000001294</posteriorid>
   </pft>
   <pft>
    <name>temperate.North_Mid_Hardwood</name>
    <ed2_pft_number>10</ed2_pft_number>
    <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_WL/pft/temperate.North_Mid_Hardwood</outdir>
-   <posteriorid>9000001295</posteriorid>
   </pft>
   <pft>
    <name>temperate.Late_Hardwood</name>
    <ed2_pft_number>11</ed2_pft_number>
    <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_WL/pft/temperate.Late_Hardwood</outdir>
-   <posteriorid>9000001296</posteriorid>
   </pft>
  </pfts>
  <meta.analysis>
-  <iter>300</iter>
+  <iter>3000</iter>
   <random.effects>
    <on>TRUE</on>
    <use_ghs>TRUE</use_ghs>
@@ -64,7 +59,7 @@
     <method>lhc</method>
    </parameters>
   </samplingspace>
-  <start.year>2019</start.year>
+  <start.year>2009</start.year>
   <end.year>2019</end.year>
  </ensemble>
  <model>
@@ -93,7 +88,7 @@
  <run>
   <site>
    <id>678</id>
-   <met.start>2019-01-01 00:00:00</met.start>
+   <met.start>2009-01-01 00:00:00</met.start>
    <met.end>2019-12-31 23:59:59</met.end>
    <name>Park Falls WLEF (US-PFa)</name>
    <lat>45.9408</lat>
@@ -101,9 +96,7 @@
   </site>
   <inputs>
    <met>
-    <path>
-     <path1>/data/sites/MERRA_ED2_site_0-678/ED_MET_DRIVER_HEADER</path1>
-    </path>
+    <path>/data/sites/MERRA_ED2_site_0-678/ED_MET_DRIVER_HEADER</path>
    </met>
    <veg>
     <path>/data/oge2OLD/OGE2_</path>
@@ -118,7 +111,7 @@
     <path>/data/ed_inputs/</path>
    </thsum>
   </inputs>
-  <start.date>2019-01-01</start.date>
+  <start.date>2009-01-01</start.date>
   <end.date>2019-12-31</end.date>
  </run>
  <host>
@@ -133,8 +126,8 @@
    <qsub.extra>--partition=standard</qsub.extra>
    <mpirun>module load openmpi3; mpirun</mpirun>
   </modellauncher>
-  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-07-27-19-02-27/run</rundir>
-  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-07-27-19-02-27/out</outdir>
+  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-08-09-13-12-54/run</rundir>
+  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-08-09-13-12-54/out</outdir>
  </host>
  <settings.info>
   <deprecated.settings.fixed>TRUE</deprecated.settings.fixed>
@@ -142,7 +135,7 @@
   <checked>TRUE</checked>
  </settings.info>
  <workflow>
-  <id>2022-07-27-19-02-27</id>
+  <id>2022-08-09-13-12-54</id>
  </workflow>
  <rundir>/data/output/pecan_runs/transect_runs/ed2_transect_WL/run</rundir>
  <modeloutdir>/data/output/pecan_runs/transect_runs/ed2_transect_WL/out</modeloutdir>
