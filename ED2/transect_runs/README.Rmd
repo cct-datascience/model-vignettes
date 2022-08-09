@@ -39,16 +39,25 @@ Sites to run still:
     - Acronym: EB
     - PEcAn site ID: 76
     - Simulation PFTs: Setaria, forb, legume, C3 grass, C4 grass, Switchgrass, Miscanthus
+    - [x] Get weather data
+    - [ ] Set up PFTs (can't find legume PFT or ED2 numbers for forb, c4 grass, switchgrass)
+    - [ ] 10 yr run
     
 2. Park Falls WLEF, WI
     - Acronym: WL
     - PEcAn site ID: 678
     - Simulation PFTs: Setaria, early-, mid-, and late-successional hardwood and northern pine
+    - [x] Get weather data
+    - [x] Set up PFTs
+    - [ ] 10 yr run
     
 3. AspenFACE, Rhinelander, WI
    - Acronym: AF
    - PEcAn site ID: 852
    - Simulation PFTs: Setaria, poplar (`temperate.Early_Hardwood`?)
+   - [x] Get weather data
+   - [ ] Set up PFTs
+   - [ ] 10 yr run
 
 NOTE: only run one of the two Wisconsin sites.  Which one though?
 
@@ -56,16 +65,25 @@ NOTE: only run one of the two Wisconsin sites.  Which one though?
     - Acronym: NC
     - PEcAn site ID: 1000000009 (not the same as 9!)
     - Simulation PFTs: Southern pine (`temperate.Southern_Pine`)
+    - [x] Get weather data
+    - [ ] Set up PFTs
+    - [ ] 10 yr run
 
 5. BOREAS SSA Old Aspen (CA-Oas) (**NOTE**: there are many BOREAS sites in BETYdb)
     - Acronym: BO
     - PEcAn site ID: 740
     - Simulation PFTs: Setaria, spruce (`boreal.blackspruce` or `boreal.blackspruce2`?)
+    - [ ] Get weather data
+    - [ ] Set up PFTs
+    - [ ] 10 yr run
     
 6. Arctic LTER, Toolik Lake, AK (**NOTE**: there are many sites in Toolik Lake in BETYdb in different habitats.  I'm guessing we want the shrub site?)
     - Acronym: TO
     - PEcAn site ID: 496 
     - Simulation PFTs: Setaria, graminoid (`tundra.grass`?), evergreen shrub, deciduous shrub (PFTs for shrubs not in BETY?  Maybe heath and salix?)
+    - [ ] Get weather data
+    - [ ] Set up PFTs
+    - [ ] 10 yr run
 
 ### Setting up a new site
 
