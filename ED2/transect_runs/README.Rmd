@@ -66,7 +66,7 @@ NOTE: only run one of the two Wisconsin sites.  Which one though?
     - PEcAn site ID: 1000000009 (not the same as 9!)
     - Simulation PFTs: Southern pine (`temperate.Southern_Pine`)
     - [x] Get weather data
-    - [ ] Set up PFTs
+    - [x] Set up PFTs
     - [ ] 10 yr run
 
 5. BOREAS SSA Old Aspen (CA-Oas) (**NOTE**: there are many BOREAS sites in BETYdb)
