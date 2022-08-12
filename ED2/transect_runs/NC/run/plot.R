@@ -16,8 +16,8 @@ plan(multisession, workers = 2)
 # Get filepaths -----------------------------------------------------------
 
 #edit this path
-inputdir <- "ED2/transect_runs/new_site/run"
-inputfile <- file.path(inputdir, "pecan_checked.xml")
+inputdir <- "ED2/transect_runs/NC/run"
+inputfile <- file.path(inputdir, "pecan.xml")
 settings <- read.settings(inputfile)
 outdir <- settings$outdir
 
@@ -25,28 +25,42 @@ outdir <- settings$outdir
 ensembles <- list.dirs(file.path(outdir, "out"), recursive = FALSE)
 
 
+#TODO: maybe move extract and convert code to workflow.R since that's where it's
+#supposed to happen anyways
+
 # Extract data ------------------------------------------------------------
+
+## Ideally this should be done with the .nc files output by the workflow.R
+## script.  However, these .nc files have most variables aggregated to combine
+## all PFTs making them not super useful for our case.  The .h5 files have
+## variables split up by PFT, but none of the weighting or conversions are done
+## (i.e. outputs may be in units **per plant**)
+
+## Workaround with .h5 files:
+
+#TODO: not sure which level parallelization happens at when there are only two
+#cores. Might be better for the inner "loop" to be parallelized than the outer
+#one.
 
 with_progress({
   #sets up progress bar
   p <- progressor(steps = length(ensembles))
   all_npp <- 
     future_map_dfr(ensembles, ~{
-      p() #increment progress bar
-      
       #with a single ensemble, `.x`:
+      
+      p() #increment progress bar
       
       ens_filepaths <- Sys.glob(file.path(.x, c("analysis-E-*", ".*h5")))
       #this will automatically drop any ensembles with no output because
       #ens_filepaths will be length 0 and the next map_df doesn't get run
       
-      
       future_map_dfr(ens_filepaths, ~{
         #with a single .h5 file, `.x`:
         x <- nc_open(.x)
         withr::defer(nc_close(x))
-        #parse date from filename
         
+        #parse date from filename
         date <-
           basename(.x) %>%
           str_extract("\\d{4}-\\d{2}-\\d{2}") %>% 
@@ -54,16 +68,37 @@ with_progress({
           str_replace("\\d$", "1") %>% 
           lubridate::ymd()
         
+        #NPP may need to be weighted by plant density. Some ED2 outputs
+        #are per plant. Relevant code at line 1023 of model2netcdf.ED2
         tibble(
           date = date,
-          pft = as.character(ncvar_get(x, "PFT")),
-          npp = ncvar_get(x, "MMEAN_NPP_CO") #I guess "cohort" (_CO) is the same as PFT??  I wouldn't think so.
-        )
+          pft = as.character(ncvar_get(x, "PFT")), #PFTs of each cohort
+          plant_dens = ncvar_get(x, "NPLANT"), #plant density
+          patch_area = rep(ncvar_get(x, "AREA"), ncvar_get(x, "PACO_N")), #patch area, repped out to one entry per cohort
+          npp = ncvar_get(x, "MMEAN_NPP_CO"), # monthly mean NPP by cohort
+          nplant = plant_dens * patch_area
+        ) %>% 
+          group_by(date, pft) %>% 
+          #TODO: test this with output that has multiple cohorts per PFT
+          # sum over cohorts if there are multiple cohorts per PFT
+          summarise(
+            across(c(plant_dens, patch_area, npp, nplant), sum),
+            .groups = "drop"
+          ) %>%
+          #TODO: maybe this has to happen before summing cohorts?
+          # mean NPP weighted by nplant
+          mutate(
+            sum_nplant = sum(nplant),
+            npp_pft = npp * nplant / sum(nplant)
+          )
+        
       }) %>% 
         mutate(ensemble = basename(.x))
     })
 })
 
+# save converted data
+write_csv(all_npp, file.path(settings$outdir, "npp_out.csv"))
 
 
 # Tidy data ---------------------------------------------------------------
@@ -71,12 +106,12 @@ with_progress({
 #get pft names from settings
 pft_mappings <- 
   tibble(pft = map_chr(settings$pfts, "ed2_pft_number"),
-       pft_name = map_chr(settings$pfts,"name"))
+         pft_name = map_chr(settings$pfts,"name"))
 
 all_npp <- 
   all_npp %>% 
   #set units for output
-  mutate(npp = set_units(npp, "kg/m^2/yr")) %>% 
+  mutate(npp_pft = set_units(npp_pft, "kg/m^2/yr")) %>% 
   #TODO units are actually "kgC/pl/yr" in the .h5 file attributes.  I'm guessing
   #     that's kg carbon/ polygon/yr.  Not sure if a polygon is 1 m^2 always 
   #join to pft name
@@ -84,21 +119,51 @@ all_npp <-
 
 # Summarize data ----------------------------------------------------------
 
-npp_summary <- 
-  all_npp %>% 
-  group_by(date, pft_name) %>% 
-  summarize(npp_mean = mean(npp, na.rm = TRUE),
-            npp_sd = sd(npp, na.rm = TRUE),
-            lcl_95 = quantile(npp, 0.025, na.rm = TRUE),
-            ucl_95 = quantile(npp, 0.975, na.rm = TRUE))
+#What fraction of ensembles ran?
+length(unique(all_npp$ensemble)) /
+  as.numeric(settings$ensemble$size)
 
+#Of those that ran, when did they end?
+ens_summary <- 
+  all_npp %>%
+  group_by(ensemble) %>% 
+  summarize(end = max(date)) 
+
+#for now, remove ensembles that errored and ended early.  Not a great idea
+#because they probably don't error at random. But the plots look silly.
+
+failed_ens <- ens_summary %>% 
+  filter(end < max(end)) %>% pull(ensemble)
+
+npp_good <- all_npp %>% filter(!ensemble %in% failed_ens)
+
+npp_summary <- 
+  npp_good %>% 
+  group_by(date, pft_name) %>% 
+  summarize(npp_mean = mean(npp_pft, na.rm = TRUE),
+            npp_sd = sd(npp_pft, na.rm = TRUE),
+            lcl_95 = quantile(npp_pft, 0.025, na.rm = TRUE),
+            ucl_95 = quantile(npp_pft, 0.975, na.rm = TRUE))
 
 # Plot data ---------------------------------------------------------------
 
-ggplot(npp_summary, aes(x = date, y = npp_mean)) +
-  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3) +
+ens_summary %>% 
+  ggplot(aes(end)) + geom_histogram()
+ggsave(file.path(outdir, "ensemble_end_date_hist.png"))
+
+# Ensembles.
+# You can see really well where some ensembles error and just end here
+ggplot(npp_good, aes(x = date, y = npp_pft, group = ensemble)) +
+  geom_line(alpha = 0.4) +
+  facet_wrap(~pft_name)
+ggsave(file.path(outdir, "npp_ensembles.png"))
+
+# Multi-ensemble mean ± CI
+p <- 
+  ggplot(npp_summary, aes(x = date, y = npp_mean)) +
   geom_line(aes(color = pft_name)) +
-  scale_x_date(date_labels = "%Y-%m") +
+  scale_x_date(date_breaks = "year", date_labels = "%Y") +
+  scale_fill_viridis_d(option = "D", end = 0.8, aesthetics = c("color", "fill")) +
   labs(
     title = settings$info$notes,
     x = "Date",
@@ -106,7 +171,26 @@ ggplot(npp_summary, aes(x = date, y = npp_mean)) +
     fill = "PFT",
     color = "PFT",
     caption = "multi-ensemble means ± 95% CI"
-  )
+  ) + 
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave(file.path(outdir, "npp.png"))
-  
+ggsave(file.path(outdir, "npp_mean.png"), p)
+
+p_conf <- p +
+  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3)
+
+ggsave(file.path(outdir, "npp_mean_ci.png"), p_conf)
+
+p_fac <- p +
+  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3) +
+  facet_wrap("pft_name", ncol = 1)
+
+ggsave(file.path(outdir, "npp_mean_facet.png"), p_fac)
+
+p_fac_free <- p +
+  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3) +
+  facet_wrap("pft_name", scales = "free_y", ncol = 1)
+
+ggsave(file.path(outdir, "npp_mean_facet_freey.png"), p_fac_free)
+

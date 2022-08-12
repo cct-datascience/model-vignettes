@@ -17,7 +17,7 @@ plan(multisession, workers = 2)
 
 #edit this path
 inputdir <- "ED2/transect_runs/WL/run"
-inputfile <- file.path(inputdir, "pecan_checked.xml")
+inputfile <- file.path(inputdir, "pecan.xml")
 settings <- read.settings(inputfile)
 outdir <- settings$outdir
 
@@ -91,7 +91,7 @@ with_progress({
             sum_nplant = sum(nplant),
             npp_pft = npp * nplant / sum(nplant)
           )
-          
+        
       }) %>% 
         mutate(ensemble = basename(.x))
     })
@@ -99,8 +99,9 @@ with_progress({
 
 # save converted data
 write_csv(all_npp, file.path(settings$outdir, "npp_out.csv"))
-
-
+all_npp <- read_csv(file.path(settings$outdir, "npp_out.csv")) %>% 
+  mutate(pft = as.character(pft))
+all_npp
 # Tidy data ---------------------------------------------------------------
 
 #get pft names from settings
@@ -119,16 +120,26 @@ all_npp <-
 
 # Summarize data ----------------------------------------------------------
 
-#How many ensembles made it all the way?
+#What fraction of ensembles ran?
+length(unique(all_npp$ensemble)) /
+  as.numeric(settings$ensemble$size)
 
-all_npp %>%
-  group_by(ensemble, pft_name) %>% 
-  summarize(end = max(date)) %>% 
-  ggplot(aes(end)) + geom_histogram() + facet_wrap(~pft_name)
-ggsave(file.path(outdir, "end_date_hist.png"))
+#Of those that ran, when did they end?
+ens_summary <- 
+  all_npp %>%
+  group_by(ensemble) %>% 
+  summarize(end = max(date)) 
+
+#for now, remove ensembles that errored and ended early.  Not a great idea
+#because they probably don't error at random. But the plots look silly.
+
+failed_ens <- ens_summary %>% 
+  filter(end < max(end)) %>% pull(ensemble)
+
+npp_good <- all_npp %>% filter(!ensemble %in% failed_ens)
 
 npp_summary <- 
-  all_npp %>% 
+  npp_good %>% 
   group_by(date, pft_name) %>% 
   summarize(npp_mean = mean(npp_pft, na.rm = TRUE),
             npp_sd = sd(npp_pft, na.rm = TRUE),
@@ -137,16 +148,20 @@ npp_summary <-
 
 # Plot data ---------------------------------------------------------------
 
+ens_summary %>% 
+  ggplot(aes(end)) + geom_histogram()
+ggsave(file.path(outdir, "ensemble_end_date_hist.png"))
+
 # Ensembles.
 # You can see really well where some ensembles error and just end here
-ggplot(all_npp, aes(x = date, y = npp_pft, group = ensemble)) +
+ggplot(npp_good, aes(x = date, y = npp_pft, group = ensemble)) +
   geom_line(alpha = 0.4) +
   facet_wrap(~pft_name)
 ggsave(file.path(outdir, "npp_ensembles.png"))
 
 # Multi-ensemble mean ± CI
-ggplot(npp_summary, aes(x = date, y = npp_mean)) +
-  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3) +
+p <- 
+  ggplot(npp_summary, aes(x = date, y = npp_mean)) +
   geom_line(aes(color = pft_name)) +
   scale_x_date(date_breaks = "year", date_labels = "%Y") +
   scale_fill_viridis_d(option = "D", end = 0.8, aesthetics = c("color", "fill")) +
@@ -158,7 +173,25 @@ ggplot(npp_summary, aes(x = date, y = npp_mean)) +
     color = "PFT",
     caption = "multi-ensemble means ± 95% CI"
   ) + 
-  theme_classic() +
+  theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave(file.path(outdir, "npp_mean.png"))
+ggsave(file.path(outdir, "npp_mean.png"), p)
+
+p_conf <- p +
+  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3)
+
+ggsave(file.path(outdir, "npp_mean_ci.png"), p_conf)
+
+p_fac <- p +
+  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3) +
+  facet_wrap("pft_name", ncol = 1)
+
+ggsave(file.path(outdir, "npp_mean_facet.png"), p_fac)
+
+p_fac_free <- p +
+  geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3) +
+  facet_wrap("pft_name", scales = "free_y", ncol = 1)
+
+ggsave(file.path(outdir, "npp_mean_facet_freey.png"), p_fac_free)
+
