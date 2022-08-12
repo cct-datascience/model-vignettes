@@ -119,6 +119,14 @@ all_npp <-
 
 # Summarize data ----------------------------------------------------------
 
+#How many ensembles made it all the way?
+
+all_npp %>%
+  group_by(ensemble, pft_name) %>% 
+  summarize(end = max(date)) %>% 
+  ggplot(aes(end)) + geom_histogram() + facet_wrap(~pft_name)
+ggsave(file.path(outdir, "end_date_hist.png"))
+
 npp_summary <- 
   all_npp %>% 
   group_by(date, pft_name) %>% 
