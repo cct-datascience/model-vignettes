@@ -3,12 +3,12 @@ library(PEcAn.all)
 
 # Load settings --------------------------------------------------------
 #edit this path
-settings <- read.settings("ED2/transect_runs/new_site/weather/pecan.xml")
+settings <- read.settings("ED2/transect_runs/EB/weather/pecan.xml")
 
 # Do conversions ----------------------------------------------------------
 settings <- prepare.settings(settings, force = FALSE)
 write.settings(settings, outputfile = "pecan_weather_checked.xml")
-settings <- do_conversions(settings, overwrite.met = TRUE)
+settings <- do_conversions(settings, overwrite.met = FALSE)
 
 
 # Copy weather data to HPC ------------------------------------------------

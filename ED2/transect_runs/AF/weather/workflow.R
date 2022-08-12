@@ -2,8 +2,7 @@
 library(PEcAn.all)
 
 # Load settings --------------------------------------------------------
-#edit this path
-settings <- read.settings("ED2/transect_runs/new_site/weather/pecan.xml")
+settings <- read.settings("ED2/transect_runs/AF/weather/pecan.xml")
 
 # Do conversions ----------------------------------------------------------
 settings <- prepare.settings(settings, force = FALSE)
@@ -16,10 +15,7 @@ settings <- do_conversions(settings, overwrite.met = TRUE)
 driver_path_local <- paste0(dirname(settings[["run"]][["inputs"]][["met"]][["path"]][["path1"]]), "/")
 driver_path_local
 
-# Edit `host` to be whatever is in your .ssh/config
-host <- "login.ocelote.hpc.arizona.edu"
-# "puma" is now registered in BETY if you want to use it
-# host <- "puma"
+host <- "puma"
 
 driver_path_hpc <- file.path(paste0(host, ":"), "groups/dlebauer/ed2_results/inputs/julianp/sites", basename(driver_path_local))
 driver_path_hpc
