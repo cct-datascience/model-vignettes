@@ -67,7 +67,7 @@ NOTE: only run one of the two Wisconsin sites.  Which one though?
     - Simulation PFTs: Southern pine (`temperate.Southern_Pine`)
     - [x] Get weather data
     - [x] Set up PFTs
-    - [ ] 10 yr run
+    - [x] ~~10 yr~~ 6 yr run
 
 5. BOREAS SSA Old Aspen (CA-Oas) (**NOTE**: there are many BOREAS sites in BETYdb)
     - Acronym: BO
