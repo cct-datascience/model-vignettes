@@ -17,7 +17,7 @@ plan(multisession, workers = 2)
 
 #edit this path
 inputdir <- "ED2/transect_runs/new_site/run"
-inputfile <- file.path(inputdir, "pecan_checked.xml")
+inputfile <- file.path(inputdir, "pecan.xml")
 settings <- read.settings(inputfile)
 outdir <- settings$outdir
 
