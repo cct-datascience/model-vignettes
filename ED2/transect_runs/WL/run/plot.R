@@ -25,6 +25,9 @@ outdir <- settings$outdir
 ensembles <- list.dirs(file.path(outdir, "out"), recursive = FALSE)
 
 
+#TODO: maybe move extract and convert code to workflow.R since that's where it's
+#supposed to happen anyways
+
 # Extract data ------------------------------------------------------------
 
 ## Ideally this should be done with the .nc files output by the workflow.R
@@ -35,26 +38,29 @@ ensembles <- list.dirs(file.path(outdir, "out"), recursive = FALSE)
 
 ## Workaround with .h5 files:
 
+#TODO: not sure which level parallelization happens at when there are only two
+#cores. Might be better for the inner "loop" to be parallelized than the outer
+#one.
+
 with_progress({
   #sets up progress bar
   p <- progressor(steps = length(ensembles))
   all_npp <- 
     future_map_dfr(ensembles, ~{
-      p() #increment progress bar
-      
       #with a single ensemble, `.x`:
+      
+      p() #increment progress bar
       
       ens_filepaths <- Sys.glob(file.path(.x, c("analysis-E-*", ".*h5")))
       #this will automatically drop any ensembles with no output because
       #ens_filepaths will be length 0 and the next map_df doesn't get run
       
-      
       future_map_dfr(ens_filepaths, ~{
         #with a single .h5 file, `.x`:
         x <- nc_open(.x)
         withr::defer(nc_close(x))
-        #parse date from filename
         
+        #parse date from filename
         date <-
           basename(.x) %>%
           str_extract("\\d{4}-\\d{2}-\\d{2}") %>% 
@@ -62,21 +68,37 @@ with_progress({
           str_replace("\\d$", "1") %>% 
           lubridate::ymd()
         
-        #TODO: NPP needs to be weighted by plant density.  ED2 outputs are per plant
-        # Relevant code at line 1023 of model2netcdf.ED2
+        #NPP may need to be weighted by plant density. Some ED2 outputs
+        #are per plant. Relevant code at line 1023 of model2netcdf.ED2
         tibble(
           date = date,
           pft = as.character(ncvar_get(x, "PFT")), #PFTs of each cohort
-          npp = ncvar_get(x, "MMEAN_NPP_CO") # monthly mean NPP by cohort
+          plant_dens = ncvar_get(x, "NPLANT"), #plant density
+          patch_area = rep(ncvar_get(x, "AREA"), ncvar_get(x, "PACO_N")), #patch area, repped out to one entry per cohort
+          npp = ncvar_get(x, "MMEAN_NPP_CO"), # monthly mean NPP by cohort
+          nplant = plant_dens * patch_area
         ) %>% 
-          #sum over cohorts
-          group_by(patch, pft) %>%
-          summarise(pft_npp = sum(npp), .group = "drop")
+          group_by(date, pft) %>% 
+          #TODO: test this with output that has multiple cohorts per PFT
+          # sum over cohorts if there are multiple cohorts per PFT
+          summarise(
+            across(c(plant_dens, patch_area, npp, nplant), sum),
+            .groups = "drop"
+          ) %>%
+          #TODO: maybe this has to happen before summing cohorts?
+          # mean NPP weighted by nplant
+          mutate(
+            sum_nplant = sum(nplant),
+            npp_pft = npp * nplant / sum(nplant)
+          )
+          
       }) %>% 
         mutate(ensemble = basename(.x))
     })
 })
 
+# save converted data
+write_csv(all_npp, file.path(settings$outdir, "npp_out.csv"))
 
 
 # Tidy data ---------------------------------------------------------------
@@ -89,7 +111,7 @@ pft_mappings <-
 all_npp <- 
   all_npp %>% 
   #set units for output
-  mutate(npp = set_units(npp, "kg/m^2/yr")) %>% 
+  mutate(npp_pft = set_units(npp_pft, "kg/m^2/yr")) %>% 
   #TODO units are actually "kgC/pl/yr" in the .h5 file attributes.  I'm guessing
   #     that's kg carbon/ polygon/yr.  Not sure if a polygon is 1 m^2 always 
   #join to pft name
@@ -100,18 +122,26 @@ all_npp <-
 npp_summary <- 
   all_npp %>% 
   group_by(date, pft_name) %>% 
-  summarize(npp_mean = mean(npp, na.rm = TRUE),
-            npp_sd = sd(npp, na.rm = TRUE),
-            lcl_95 = quantile(npp, 0.025, na.rm = TRUE),
-            ucl_95 = quantile(npp, 0.975, na.rm = TRUE))
-
+  summarize(npp_mean = mean(npp_pft, na.rm = TRUE),
+            npp_sd = sd(npp_pft, na.rm = TRUE),
+            lcl_95 = quantile(npp_pft, 0.025, na.rm = TRUE),
+            ucl_95 = quantile(npp_pft, 0.975, na.rm = TRUE))
 
 # Plot data ---------------------------------------------------------------
 
+# Ensembles.
+# You can see really well where some ensembles error and just end here
+ggplot(all_npp, aes(x = date, y = npp_pft, group = ensemble)) +
+  geom_line(alpha = 0.4) +
+  facet_wrap(~pft_name)
+ggsave(file.path(outdir, "npp_ensembles.png"))
+
+# Multi-ensemble mean ± CI
 ggplot(npp_summary, aes(x = date, y = npp_mean)) +
   geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = pft_name), alpha = 0.3) +
   geom_line(aes(color = pft_name)) +
-  scale_x_date(date_labels = "%Y-%m") +
+  scale_x_date(date_breaks = "year", date_labels = "%Y") +
+  scale_fill_viridis_d(option = "D", end = 0.8, aesthetics = c("color", "fill")) +
   labs(
     title = settings$info$notes,
     x = "Date",
@@ -119,6 +149,8 @@ ggplot(npp_summary, aes(x = date, y = npp_mean)) +
     fill = "PFT",
     color = "PFT",
     caption = "multi-ensemble means ± 95% CI"
-  )
+  ) + 
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave(file.path(outdir, "npp.png"))
+ggsave(file.path(outdir, "npp_mean.png"))
