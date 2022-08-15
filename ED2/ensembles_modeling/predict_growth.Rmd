@@ -1,0 +1,48 @@
+---
+title: "Predicting Setaria growth by modeling ensemble results"
+author: Kristina Riemer
+output: github_document
+---
+
+## Purpose
+
+Predict is to predict Setaria growth for modified plant (e.g., anthocyanin) at new
+sites and times. Inputs that can be changed are parameter values and site-level
+environmental variables. 
+
+Steps: 
+
+1. Get cumulative monthly NPP by ensemble and site (from ensemble.ts results file, which has hourly values by ensemble)
+2. Get monthly environmental values for each site and year (lookup from MERRA or another gridded resource)
+
+
+## Data
+
+Combine ED2 output variables from ensemble runs with parameter values and environmental
+data by month for all sites with ED2 results. 
+
+Code from [`plot.R`](https://github.com/cct-datascience/model-vignettes/blob/6a77020a1218334cc8243f3f4b038fb99c947006/ED2/SR_recent_mult_set_run/plot.R)
+```{r}
+days <- c(1:365)
+timescale <- data.table::data.table(day = rep(days, each = 24), hour = 0:23)
+
+# Read in and clean 100 ensembles data
+#TODO: Automate getting years and variable name in path
+path <- "/data/tests/ed2_transect_LW/ensemble.ts.NOENSEMBLEID.NPP.2019.2019.Rdata"
+load(path)
+
+#load("/data/tests/ed2_SR_recent_100ens_sa/ensemble.ts.NOENSEMBLEID.NPP.2020.2021.Rdata")
+timescale_final <- timescale[1:ncol(ensemble.ts$NPP), ]
+
+daily_npp_100 <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
+  gather(ensemble, npp, X1:X50) #todo: automate for final column
+#need date column, start with setting start date from pecan checked
+#sum npp by month
+
+```
+
+
+
+## Model
+
+Machine learning model for prediction? 
