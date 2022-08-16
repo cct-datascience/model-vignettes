@@ -1,6 +1,6 @@
 library(raster)
 library(sp)
-setwd("bioclim")
+
 r <- getData("worldclim", var = "bio", res = 10) 
 # 10 min of a degree
 #    ~=11 mi lat; ~=10 mi lon at equator
