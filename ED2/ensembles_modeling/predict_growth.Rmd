@@ -39,61 +39,51 @@ for(site in sites_kr){
   pecan_xml <- read.settings(pecan_xml_path)
   site <- data.frame(name = pecan_xml$run$site$name, id = pecan_xml$run$site$id,
                      lat = pecan_xml$run$site$lat, lon = pecan_xml$run$site$lon, 
-                     start = pecan_xml$run$start.date, end = pecan_xml$run$end.date)
+                     start = pecan_xml$run$start.date, end = pecan_xml$run$end.date, 
+                     site = site)
   sites <- bind_rows(sites, site)
 }
 
 pecan_xml_NC <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_NC/pecan_checked_2022-08-12.xml")
 site_NC <- data.frame(name = pecan_xml_NC$run$site$name, id = pecan_xml_NC$run$site$id,
                      lat = pecan_xml_NC$run$site$lat, lon = pecan_xml_NC$run$site$lon, 
-                     start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date)
+                     start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date, 
+                     site = "NC")
 sites <- bind_rows(sites, site_NC)
 
 pecan_xml_WL <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_WL/pecan_checked.xml")
 site_WL <- data.frame(name = pecan_xml_WL$run$site$name, id = pecan_xml_WL$run$site$id,
                      lat = pecan_xml_WL$run$site$lat, lon = pecan_xml_WL$run$site$lon, 
-                     start = pecan_xml_WL$run$start.date, end = pecan_xml_WL$run$end.date)
+                     start = pecan_xml_WL$run$start.date, end = pecan_xml_WL$run$end.date, 
+                     site = "WL")
 sites <- bind_rows(sites, site_WL)
 ```
-
-
 
 ### Step 1: ensemble results data
 
 Code from [`plot.R`](https://github.com/cct-datascience/model-vignettes/blob/6a77020a1218334cc8243f3f4b038fb99c947006/ED2/SR_recent_mult_set_run/plot.R)
 
 Get this by PFT, for Setaria
-To limit to just Setaria PFT, need to pull directly from ED2 h5 files
+To limit to just Setaria PFT, need to pull directly from ED2 h5 files, use npp_out csv file
+TODO: generate npp_out for three previous sites
+Just August of first year, to start
+This comes monthly? 
 
 ```{r}
-sites <- c("LW", "SR", "WB")
+site_list <- c("NC", "WL")
 ens_results <- c()
-for(site in sites){
-  ens_path <- paste0("/data/tests/ed2_transect_", site, "/ensemble.ts.NOENSEMBLEID.NPP.2019.2019.Rdata")
-  load(ens_path)
-  
-  days <- c(1:365)
-  timescale <- data.table::data.table(day = rep(days, each = 24), hour = 0:23)
-  timescale_final <- timescale[1:ncol(ensemble.ts$NPP), ]
-  
-  pecan_xml_path <- paste0("/data/tests/ed2_transect_", site, "/pecan.CHECKED.xml")
-  pecan_xml <- read.settings(pecan_xml_path)
-  
-  single_site_ens_results <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
-    gather(ensemble, npp, X1:X50) %>% 
-    mutate(date = as.Date(pecan_xml$run$start.date) - 1 + day) %>% 
-    mutate(year_month = format(date, "%Y-%m")) %>% 
-    group_by(ensemble, year_month) %>% 
-    summarize(count = n(), 
-              cum_npp = sum(npp)) %>% 
-    filter(count > 700) %>% 
-    mutate(site = pecan_xml$run$site$name) %>% 
-    select(-count)
+for(site in site_list){
+  ens_path <- paste0("/data/output/pecan_runs/transect_runs/ed2_transect_", site, "/npp_out.csv")
+  single_site_ens_results <- read.csv(ens_path) %>% 
+    filter(pft == 1, 
+           date == "2009-08-01") %>% 
+    select(ensemble, npp) %>% 
+    mutate(ensemble = stringr::str_remove(substr(ensemble, 8, 9), "^0+"), 
+           site = site)
   ens_results <- bind_rows(single_site_ens_results, ens_results)
-  
-  rm(ensemble.ts)
 }
 ```
+
 ### Step 2: parameter values
 
 For only Setaria PFT? 
@@ -101,23 +91,21 @@ Assuming order of ensembles is the same in this file as in the ensembles result
 
 ```{r}
 params <- c()
-for(site in sites){
-  param_path <- paste0("/data/tests/ed2_transect_", site, "/ensemble.samples.NOENSEMBLEID.Rdata")
+for(site in site_list){
+  param_path <- paste0("/data/output/pecan_runs/transect_runs/ed2_transect_", site, "/ensemble.samples.NOENSEMBLEID.Rdata")
   load(param_path)
-  
-  pecan_xml_path <- paste0("/data/tests/ed2_transect_", site, "/pecan.CHECKED.xml")
-  pecan_xml <- read.settings(pecan_xml_path)
-  
+
   single_site_params <- ens.samples$SetariaWT %>% 
     tibble::rownames_to_column() %>% 
-    mutate(ensemble = paste0("X", rowname)) %>% 
+    mutate(ensemble = rowname) %>% 
     select(-rowname) %>% 
-    mutate(site = pecan_xml$run$site$name)
+    mutate(site = site)
   params <- bind_rows(single_site_params, params)
   
   rm(ens.samples)
 }
 ```
+
 Combine parameters with ensemble results by site and ensemble. 
 
 ```{r}
@@ -126,14 +114,41 @@ ens_params <- left_join(ens_results, params, by = c("ensemble", "site"))
 
 ### Step 3: environmental data
 
-(get from already downloaded merra data?)
-
-- MERRA_ED2_* folders have ED2-formatted MERRA data by month
-- MERRA_* folders have raw MERRA data
+Using environmental variable data from BioClim. Code from [this script](https://github.com/cct-datascience/model-vignettes/blob/9250417d96c6c15e35779c8044a94a2a47a856f9/bioclim/bioclim.R). 
 
 ```{r}
-library(rhdf5)
-h5ls("/data/sites/MERRA_ED2_site_1-42/2019JAN.h5")
+bioclim_data <- raster::getData("worldclim", var = "bio", res = 10) 
+coords <- data.frame(x = as.numeric(sites$lon), y = as.numeric(sites$lat))
+points <- sp::SpatialPoints(coords, proj4string = bioclim_data@crs)
+values <- raster::extract(bioclim_data, points)
+
+bioclim_names <-
+  c(
+    "mean_annual_temp", 
+    "mean_diurnal_range", 
+    "isothermality",
+    "temp_seasonality", 
+    "max_temp_warmest month", "min_temp_coldest_month",
+    "temp_annual_range", 
+    "mean_temp_wettest_quarter", "mean_temp_driest_quarter",
+    "mean_temp_warmest_quarter", "mean_temp_coldest_quarter", 
+    "mean_annual_precip",
+    "precip_wettest_month", 
+    "precip_driest_month", 
+    "precip_seasonality",
+    "precip_wettest_quarter", "precip_driest_quarter", 
+    "precip_warmest_quarter",
+    "precip_coldest_quarter"
+  )
+colnames(values) <- bioclim_names
+env <- cbind(sites, values) %>% 
+  select(-c(name, id, lat, lon, start, end))
+```
+
+Add environmental variables to ensemble results and parameters.
+
+```{r}
+ens_params_env <- left_join(ens_params, env, by = "site")
 ```
 
 
