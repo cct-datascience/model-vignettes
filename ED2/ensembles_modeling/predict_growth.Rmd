@@ -10,10 +10,12 @@ Predict is to predict Setaria growth for modified plant (e.g., anthocyanin) at n
 sites and times. Inputs that can be changed are parameter values and site-level
 environmental variables. 
 
-Steps: 
-
-1. Get cumulative monthly NPP by ensemble and site (from ensemble.ts results file, which has hourly values by ensemble)
-2. Get monthly environmental values for each site and year (lookup from MERRA or another gridded resource)
+Necessary packages: 
+```{r}
+library(PEcAn.settings)
+library(dplyr)
+library(tidyr)
+```
 
 
 ## Data
@@ -21,28 +23,122 @@ Steps:
 Combine ED2 output variables from ensemble runs with parameter values and environmental
 data by month for all sites with ED2 results. 
 
-Code from [`plot.R`](https://github.com/cct-datascience/model-vignettes/blob/6a77020a1218334cc8243f3f4b038fb99c947006/ED2/SR_recent_mult_set_run/plot.R)
+Steps: 
+
+1. Get cumulative monthly NPP by ensemble and site (from ensemble.ts .Rdata file, which has hourly values by ensemble)
+2. Get parameter values for each ensemble run (from ensemble.samples .Rdata file; same across years)
+3. Get monthly environmental values for each site and year (lookup from MERRA or another gridded resource)
+
+Five sites: 
+
 ```{r}
-days <- c(1:365)
-timescale <- data.table::data.table(day = rep(days, each = 24), hour = 0:23)
+sites <- c()
+sites_kr <- c("LW", "SR", "WB")
+for(site in sites_kr){
+  pecan_xml_path <- paste0("/data/tests/ed2_transect_", site, "/pecan.CHECKED.xml")
+  pecan_xml <- read.settings(pecan_xml_path)
+  site <- data.frame(name = pecan_xml$run$site$name, id = pecan_xml$run$site$id,
+                     lat = pecan_xml$run$site$lat, lon = pecan_xml$run$site$lon, 
+                     start = pecan_xml$run$start.date, end = pecan_xml$run$end.date)
+  sites <- bind_rows(sites, site)
+}
 
-# Read in and clean 100 ensembles data
-#TODO: Automate getting years and variable name in path
-path <- "/data/tests/ed2_transect_LW/ensemble.ts.NOENSEMBLEID.NPP.2019.2019.Rdata"
-load(path)
+pecan_xml_NC <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_NC/pecan_checked_2022-08-12.xml")
+site_NC <- data.frame(name = pecan_xml_NC$run$site$name, id = pecan_xml_NC$run$site$id,
+                     lat = pecan_xml_NC$run$site$lat, lon = pecan_xml_NC$run$site$lon, 
+                     start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date)
+sites <- bind_rows(sites, site_NC)
 
-#load("/data/tests/ed2_SR_recent_100ens_sa/ensemble.ts.NOENSEMBLEID.NPP.2020.2021.Rdata")
-timescale_final <- timescale[1:ncol(ensemble.ts$NPP), ]
-
-daily_npp_100 <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
-  gather(ensemble, npp, X1:X50) #todo: automate for final column
-#need date column, start with setting start date from pecan checked
-#sum npp by month
-
+pecan_xml_WL <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_WL/pecan_checked.xml")
+site_WL <- data.frame(name = pecan_xml_WL$run$site$name, id = pecan_xml_WL$run$site$id,
+                     lat = pecan_xml_WL$run$site$lat, lon = pecan_xml_WL$run$site$lon, 
+                     start = pecan_xml_WL$run$start.date, end = pecan_xml_WL$run$end.date)
+sites <- bind_rows(sites, site_WL)
 ```
 
+
+
+### Step 1: ensemble results data
+
+Code from [`plot.R`](https://github.com/cct-datascience/model-vignettes/blob/6a77020a1218334cc8243f3f4b038fb99c947006/ED2/SR_recent_mult_set_run/plot.R)
+
+Get this by PFT, for Setaria
+To limit to just Setaria PFT, need to pull directly from ED2 h5 files
+
+```{r}
+sites <- c("LW", "SR", "WB")
+ens_results <- c()
+for(site in sites){
+  ens_path <- paste0("/data/tests/ed2_transect_", site, "/ensemble.ts.NOENSEMBLEID.NPP.2019.2019.Rdata")
+  load(ens_path)
+  
+  days <- c(1:365)
+  timescale <- data.table::data.table(day = rep(days, each = 24), hour = 0:23)
+  timescale_final <- timescale[1:ncol(ensemble.ts$NPP), ]
+  
+  pecan_xml_path <- paste0("/data/tests/ed2_transect_", site, "/pecan.CHECKED.xml")
+  pecan_xml <- read.settings(pecan_xml_path)
+  
+  single_site_ens_results <- data.frame(timescale_final, t(ensemble.ts[["NPP"]])) %>%
+    gather(ensemble, npp, X1:X50) %>% 
+    mutate(date = as.Date(pecan_xml$run$start.date) - 1 + day) %>% 
+    mutate(year_month = format(date, "%Y-%m")) %>% 
+    group_by(ensemble, year_month) %>% 
+    summarize(count = n(), 
+              cum_npp = sum(npp)) %>% 
+    filter(count > 700) %>% 
+    mutate(site = pecan_xml$run$site$name) %>% 
+    select(-count)
+  ens_results <- bind_rows(single_site_ens_results, ens_results)
+  
+  rm(ensemble.ts)
+}
+```
+### Step 2: parameter values
+
+For only Setaria PFT? 
+Assuming order of ensembles is the same in this file as in the ensembles result
+
+```{r}
+params <- c()
+for(site in sites){
+  param_path <- paste0("/data/tests/ed2_transect_", site, "/ensemble.samples.NOENSEMBLEID.Rdata")
+  load(param_path)
+  
+  pecan_xml_path <- paste0("/data/tests/ed2_transect_", site, "/pecan.CHECKED.xml")
+  pecan_xml <- read.settings(pecan_xml_path)
+  
+  single_site_params <- ens.samples$SetariaWT %>% 
+    tibble::rownames_to_column() %>% 
+    mutate(ensemble = paste0("X", rowname)) %>% 
+    select(-rowname) %>% 
+    mutate(site = pecan_xml$run$site$name)
+  params <- bind_rows(single_site_params, params)
+  
+  rm(ens.samples)
+}
+```
+Combine parameters with ensemble results by site and ensemble. 
+
+```{r}
+ens_params <- left_join(ens_results, params, by = c("ensemble", "site"))
+```
+
+### Step 3: environmental data
+
+(get from already downloaded merra data?)
+
+- MERRA_ED2_* folders have ED2-formatted MERRA data by month
+- MERRA_* folders have raw MERRA data
+
+```{r}
+library(rhdf5)
+h5ls("/data/sites/MERRA_ED2_site_1-42/2019JAN.h5")
+```
 
 
 ## Model
 
 Machine learning model for prediction? 
+
+Need to get new environmental data given a site and time
