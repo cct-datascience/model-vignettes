@@ -56,6 +56,9 @@ docs/
 *.gif
 ecoregions*
 
+# worldclim layers
+*wc10
+
 # Figures until publication ready
 figures/plots
 ED2/pfts/SRER_figs/
@@ -64,6 +67,7 @@ ED2/pfts/SRER_figs/
 !BioCro/DARPA/temp_comparison/inputs/*.csv
 !BioCro/DARPA/env_comparison/inputs/*.csv
 !BioCro/DARPA/biomass_opti/inputs/*.csv
+!bioclim/*.csv
 
 # Do include .Rdata files in certain subdirectories
 !BioCro/DARPA/biomass_opti/scripts/*.Rdata
