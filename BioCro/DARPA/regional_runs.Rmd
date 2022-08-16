@@ -19,11 +19,16 @@ library(purrr)
 library(udunits2)
 library(ggplot2)
 library(gganimate)
+library(ncdf4)
 ```
 Here we combine Setaria WildType (ME034) with plants that have modified traits. One is with decreased stomatal conductance represented by a reduced slope in the slope parameter for the Ball Berry model of stomatal conductance. The second is for a dwarf plant.
 
 **Decreased Stomatal Slope Regional Runs**
 
+```{r}
+config <- PEcAn.BIOCRO::read.biocro.config('regional_runs_inputs/config_wt.xml')
+config_ss <- PEcAn.BIOCRO::read.biocro.config('regional_runs_inputs/config_ss.xml')
+```
 This set of runs uses the same parameters as above for the high light treatment, except in `config.xml` the stomatal slope input value is changed from `r config$pft$photoParms$b1` to `r config_ss$pft$photoParms$b1`. 
 
 **Changed Carbon Allocation Regional Runs**
@@ -38,7 +43,7 @@ We also read in a soil file, which is not necessary but is useful. These data ar
 
 ```{r}
 # genotypes <- c("wt", "ss", "ca")
-genotypes <- c("wt", "ss")
+genotypes <- c("wt", "ss", "ca")
 
 regions <- c("stlew", "chiruss")
 

@@ -48,7 +48,7 @@ for (trt in treatments) {
 }
 
 # Bring in validation biomass
-load("~/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
+load("/home/jessicaguo/sentinel-detection/data/cleaned_data/biomass/chamber_biomass.Rdata")
 
 biomass_valid <- chamber_biomass %>%
   filter(genotype == "ME034V-1" &
