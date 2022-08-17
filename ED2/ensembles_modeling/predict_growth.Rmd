@@ -33,8 +33,8 @@ Five sites:
 
 ```{r}
 sites <- c()
-sites_kr <- c("LW", "SR", "WB")
-for(site in sites_kr){
+site_list_kr <- c("LW", "SR", "WB")
+for(site in site_list_kr){
   pecan_xml_path <- paste0("/data/tests/ed2_transect_", site, "/pecan.CHECKED.xml")
   pecan_xml <- read.settings(pecan_xml_path)
   site <- data.frame(name = pecan_xml$run$site$name, id = pecan_xml$run$site$id,
@@ -70,13 +70,24 @@ Just August of first year, to start
 This comes monthly? 
 
 ```{r}
-site_list <- c("NC", "WL")
+site_list_ec <- c("NC", "WL")
 ens_results <- c()
-for(site in site_list){
+for(site in site_list_ec){
   ens_path <- paste0("/data/output/pecan_runs/transect_runs/ed2_transect_", site, "/npp_out.csv")
   single_site_ens_results <- read.csv(ens_path) %>% 
     filter(pft == 1, 
            date == "2009-08-01") %>% 
+    select(ensemble, npp) %>% 
+    mutate(ensemble = stringr::str_remove(substr(ensemble, 8, 9), "^0+"), 
+           site = site)
+  ens_results <- bind_rows(single_site_ens_results, ens_results)
+}
+
+for(site in site_list_kr){
+  ens_path <- paste0("/data/tests/ed2_transect_", site, "/npp_out.csv")
+  single_site_ens_results <- read.csv(ens_path) %>% 
+    filter(pft == 1, 
+           date == "2019-08-01") %>% 
     select(ensemble, npp) %>% 
     mutate(ensemble = stringr::str_remove(substr(ensemble, 8, 9), "^0+"), 
            site = site)
@@ -91,7 +102,7 @@ Assuming order of ensembles is the same in this file as in the ensembles result
 
 ```{r}
 params <- c()
-for(site in site_list){
+for(site in site_list_ec){
   param_path <- paste0("/data/output/pecan_runs/transect_runs/ed2_transect_", site, "/ensemble.samples.NOENSEMBLEID.Rdata")
   load(param_path)
 
@@ -104,6 +115,21 @@ for(site in site_list){
   
   rm(ens.samples)
 }
+
+for(site in site_list_kr){
+    param_path <- paste0("/data/tests/ed2_transect_", site, "/ensemble.samples.NOENSEMBLEID.Rdata")
+  load(param_path)
+
+  single_site_params <- ens.samples$SetariaWT %>% 
+    tibble::rownames_to_column() %>% 
+    mutate(ensemble = rowname) %>% 
+    select(-rowname) %>% 
+    mutate(site = site)
+  params <- bind_rows(single_site_params, params)
+  
+  rm(ens.samples)
+}
+
 ```
 
 Combine parameters with ensemble results by site and ensemble. 
