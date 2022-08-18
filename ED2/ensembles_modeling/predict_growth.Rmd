@@ -1,0 +1,319 @@
+---
+title: "Predicting Setaria growth by modeling ensemble results"
+author: Kristina Riemer
+output: github_document
+---
+
+## Purpose
+
+Predict is to predict Setaria growth for modified plant (e.g., anthocyanin) at new
+sites and times. Inputs that can be changed are parameter values and site-level
+environmental variables. 
+
+Necessary packages: 
+```{r}
+library(PEcAn.settings)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(daymetr)
+library(ggplot2)
+library(tidymodels)
+```
+
+
+## Data
+
+Combine ED2 output variables from ensemble runs with parameter values and environmental
+data by month for all sites with ED2 results. 
+
+Steps: 
+
+1. Get cumulative monthly NPP by ensemble and site (from ensemble.ts .Rdata file, which has hourly values by ensemble)
+2. Get parameter values for each ensemble run (from ensemble.samples .Rdata file; same across years)
+3. Get monthly environmental values for each site and year (lookup from MERRA or another gridded resource)
+
+Five sites: 
+
+```{r}
+sites <- c()
+site_list_kr <- c("LW", "SR", "WB")
+for(site in site_list_kr){
+  pecan_xml_path <- paste0("/data/tests/ed2_transect_", site, "/pecan.CHECKED.xml")
+  pecan_xml <- read.settings(pecan_xml_path)
+  site <- data.frame(name = pecan_xml$run$site$name, id = pecan_xml$run$site$id,
+                     lat = pecan_xml$run$site$lat, lon = pecan_xml$run$site$lon, 
+                     start = pecan_xml$run$start.date, end = pecan_xml$run$end.date, 
+                     site = site)
+  sites <- bind_rows(sites, site)
+}
+
+pecan_xml_NC <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_NC/pecan_checked_2022-08-12.xml")
+site_NC <- data.frame(name = "North Carolina Loblolly Pine (US-NC2)", id = pecan_xml_NC$run$site$id,
+                     lat = pecan_xml_NC$run$site$lat, lon = pecan_xml_NC$run$site$lon, 
+                     start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date, 
+                     site = "NC")
+sites <- bind_rows(sites, site_NC)
+
+pecan_xml_WL <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_WL/pecan_checked.xml")
+site_WL <- data.frame(name = pecan_xml_WL$run$site$name, id = pecan_xml_WL$run$site$id,
+                     lat = pecan_xml_WL$run$site$lat, lon = pecan_xml_WL$run$site$lon, 
+                     start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date, 
+                     site = "WL")
+sites <- bind_rows(sites, site_WL) %>% 
+  mutate(lat = as.numeric(lat), 
+         lon = as.numeric(lon))
+```
+
+### Step 1: ensemble results data
+
+Code from [`plot.R`](https://github.com/cct-datascience/model-vignettes/blob/6a77020a1218334cc8243f3f4b038fb99c947006/ED2/SR_recent_mult_set_run/plot.R)
+
+Get this by PFT, for Setaria
+To limit to just Setaria PFT, need to pull directly from ED2 h5 files, use npp_out csv file
+TODO: generate npp_out for three previous sites
+Just August of first year, to start
+This comes monthly? 
+
+```{r}
+site_list_ec <- c("NC", "WL")
+ens_results <- c()
+for(site in site_list_ec){
+  ens_path <- paste0("/data/output/pecan_runs/transect_runs/ed2_transect_", site, "/npp_out.csv")
+  single_site_ens_results <- read.csv(ens_path) %>% 
+    filter(pft == 1, 
+           date == "2009-08-01") %>% 
+    select(ensemble, npp) %>% 
+    mutate(ensemble = stringr::str_remove(substr(ensemble, 8, 9), "^0+"), 
+           site = site)
+  ens_results <- bind_rows(single_site_ens_results, ens_results)
+}
+
+for(site in site_list_kr){
+  ens_path <- paste0("/data/tests/ed2_transect_", site, "/npp_out.csv")
+  single_site_ens_results <- read.csv(ens_path) %>% 
+    filter(pft == 1, 
+           date == "2019-08-01") %>% 
+    select(ensemble, npp) %>% 
+    mutate(ensemble = stringr::str_remove(substr(ensemble, 8, 9), "^0+"), 
+           site = site)
+  ens_results <- bind_rows(single_site_ens_results, ens_results)
+}
+```
+
+### Step 2: parameter values
+
+For only Setaria PFT? 
+Assuming order of ensembles is the same in this file as in the ensembles result
+
+```{r}
+params <- c()
+for(site in site_list_ec){
+  param_path <- paste0("/data/output/pecan_runs/transect_runs/ed2_transect_", site, "/ensemble.samples.NOENSEMBLEID.Rdata")
+  load(param_path)
+
+  single_site_params <- ens.samples$SetariaWT %>% 
+    tibble::rownames_to_column() %>% 
+    mutate(ensemble = rowname) %>% 
+    select(-rowname) %>% 
+    mutate(site = site)
+  params <- bind_rows(single_site_params, params)
+  
+  rm(ens.samples)
+}
+
+for(site in site_list_kr){
+    param_path <- paste0("/data/tests/ed2_transect_", site, "/ensemble.samples.NOENSEMBLEID.Rdata")
+  load(param_path)
+
+  single_site_params <- ens.samples$SetariaWT %>% 
+    tibble::rownames_to_column() %>% 
+    mutate(ensemble = rowname) %>% 
+    select(-rowname) %>% 
+    mutate(site = site)
+  params <- bind_rows(single_site_params, params)
+  
+  rm(ens.samples)
+}
+
+```
+
+Combine parameters with ensemble results by site and ensemble. 
+
+```{r}
+ens_params <- left_join(ens_results, params, by = c("ensemble", "site"))
+```
+
+### Step 3: environmental data
+
+
+```{r}
+mets <- list()
+for(i in 1:nrow(sites)){
+    site <- sites[i,]
+    tmp <- 
+        download_daymet(
+                    site = site$site,
+                    lat = site$lat, 
+                    lon = site$lon, 
+                    start = year(ymd(site$start)),
+                    end = year(ymd(site$end))
+                    )
+    mets[[site$name]] <- cbind(site = tmp$site,
+                               lat = tmp$lat,
+                               lon = tmp$longitude,
+                               alt = tmp$altitude,
+                               tmp$data)
+}
+
+mets_all <- dplyr::bind_rows(mets)
+
+mymean <- function(x) {
+    a <- mean(x, na.rm = TRUE)
+    b <- signif(a, 4)
+    return(b)
+}
+
+mets_mean_summer <- mets_all  %>% 
+  group_by(site) %>% 
+  filter(year == min(year)) %>% 
+  mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
+         month = month(ymd(date))) %>% 
+  filter(month %in% c(7, 8)) %>% 
+  group_by(site) %>% 
+  summarise(
+    mean_temp = mymean((tmax..deg.c. + tmin..deg.c.)/2),
+    mean_vpd = mymean(vp..Pa.),
+    mean_precip = mymean(prcp..mm.day.),
+    mean_srad = mymean(srad..W.m.2.),
+    mean_swe = mymean(swe..kg.m.2.),
+    mean_dayl = mymean(dayl..s.)/86400)
+```
+
+```{r}
+ens_params_env <- left_join(ens_params, mets_mean_summer, by = "site") %>% 
+  janitor::clean_names()
+```
+
+
+## Model
+
+Machine learning model for prediction? 
+
+Need to get new environmental data given a site and time
+
+Goal: predict NPP given parameter and environmental input, so for modified Setaria at new site
+
+supervised learning, regression
+features (=variables, or columns in data) should be independent and informative (remove some params and env? are measured params more informative?)
+linear relationships? 
+which of these are photosynthetic params? 
+```{r}
+ggplot(ens_params_env, aes(x = quantum_efficiency, y = npp)) +
+  geom_point() + 
+  facet_grid(vars(site))
+
+ggplot(ens_params_env, aes(x = mean_temp, y = npp)) +
+  geom_point() + 
+  facet_grid(vars(site))
+ggplot(ens_params_env, aes(x = mean_precip, y = npp)) +
+  geom_point() + 
+  facet_grid(vars(site))
+```
+
+naive bayes? -nope, for classification
+decision tree or random forest? (latter is more accurate than interpretable)
+accuracy vs interpretability? former
+
+for predicting, give it the same input data but change the quantum efficiency parameter? 
+
+
+### Random forest
+
+split dataset
+```{r}
+set.seed(1234)
+data_split <- initial_split(ens_params_env)
+data_train <- training(data_split)
+#data_test <- testing(data_split)
+```
+
+preprocess training data
+```{r}
+data_recipe <- recipe(npp ~ ., data = data_train) %>% 
+  step_rm(c(ensemble, site)) 
+  # update_role(ensemble, new_role = "ID") %>% 
+  # update_role(site, new_role = "ID")
+#step_rm to remove predictors
+```
+
+specify model
+```{r}
+rf_model <- rand_forest() %>% 
+  set_mode("regression") %>% 
+  set_engine("ranger")
+```
+
+do workflow
+```{r}
+data_wf <- workflow() %>% 
+  add_recipe(data_recipe) %>% 
+  add_model(rf_model)
+```
+
+fit model
+```{r}
+model_fit <- data_wf %>% 
+  fit(data = data_train)
+```
+
+cross-validate data and evaluate
+```{r}
+folds <- vfold_cv(data_train)
+resamp_wf <- workflow() %>% 
+  add_recipe(data_recipe) %>% 
+  add_model(rf_model)
+resamp_fit <- fit_resamples(resamp_wf, folds, 
+                            #metrics = metric_set(accuracy, sens, spec),
+                            control = control_resamples(save_pred = TRUE))
+resamp_metrics <- collect_metrics(resamp_fit)
+```
+
+rmse: average deviation between predicted npp and measured npp; 0 means perfect fit, closer to zero is better
+rsq; how much variation in npp explained by predictor variables; from 0 to 1, closer to 1 is better
+
+```{r}
+2.21/mean(data_train$npp) #this is high, want it below 10%? 
+```
+
+
+options to improve model: 
+
+- reduce features?
+- hypertune parameters
+
+### Predicting from model
+
+use model predictions to get wild type npp using current (mean across ensemble?) params
+
+get data
+```{r}
+example_wt_data <- ens_params_env %>% 
+  select(-npp) %>%
+  group_by(site) %>% 
+  summarise_all(mean) %>% 
+  mutate(ensemble = "mean of 50")
+```
+
+run model
+```{r}
+example_wt_data$npp_pred <- predict(model_fit, example_wt_data, type = "numeric")
+```
+
+set up grid by adding environmental data for new sites, and keeping same param values
+
+change by 10% or +/- 1 SD
+fineroot2leaf, would be higher with shorter plant
+quantum_efficiency, would be lower with antho plant
+stomatal_slope, would be higher with cooler leaf
+

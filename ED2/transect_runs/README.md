@@ -35,6 +35,44 @@ by site and are documented here.
       - Simulation time range: March - September 2019
       - Number of ensembles: 50
 
+Sites to run still:
+
+1.  EBI Energy Farm, Urbana, IL
+      - Acronym: EB
+      - PEcAn site ID: 76
+      - Simulation PFTs: Setaria, forb, legume, C3 grass, C4 grass,
+        Switchgrass, Miscanthus
+2.  Park Falls WLEF, WI
+      - Acronym: WL
+      - PEcAn site ID: 678
+      - Simulation PFTs: Setaria, early-, mid-, and late-successional
+        hardwood and northern pine
+3.  AspenFACE, Rhinelander, WI
+      - Acronym: AF
+      - PEcAn site ID: 852
+      - Simulation PFTs: Setaria, poplar (`temperate.Early_Hardwood`?)
+
+NOTE: only run one of the two Wisconsin sites. Which one though?
+
+4.  North Carolina Loblolly Pine / US-NC2
+      - Acronym: NC
+      - PEcAn site ID: 1000000009 (not the same as 9\!)
+      - Simulation PFTs: Southern pine (`temperate.Southern_Pine`)
+5.  BOREAS SSA Old Aspen (CA-Oas) (**NOTE**: there are many BOREAS sites
+    in BETYdb)
+      - Acronym: BO
+      - PEcAn site ID: 740
+      - Simulation PFTs: Setaria, spruce (`boreal.blackspruce` or
+        `boreal.blackspruce2`?)
+6.  Arctic LTER, Toolik Lake, AK (**NOTE**: there are many sites in
+    Toolik Lake in BETYdb in different habitats. I’m guessing we want
+    the shrub site?)
+      - Acronym: TO
+      - PEcAn site ID: 496
+      - Simulation PFTs: Setaria, graminoid (`tundra.grass`?), evergreen
+        shrub, deciduous shrub (PFTs for shrubs not in BETY? Maybe heath
+        and salix?)
+
 ### Setting up a new site
 
   - Set up files and folders
@@ -62,6 +100,8 @@ by site and are documented here.
           - If needed, change run and met start and end dates
           - Set ED2 tag `IED_INIT_MODE` to 6 if patch/cohort, to 0 if no
             patch/cohort
+  - **Delete all comments (`<!-- -->`) in pecan.xml\!\!** Comments will
+    break several PEcAn functions currently\!
       - Modify `run/workflow.R`
           - Update path to read in corresponding `pecan.xml`
       - Run `workflow.R` (this will take a while and you might want to

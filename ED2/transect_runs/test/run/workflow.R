@@ -4,13 +4,14 @@
 
 # Load packages -----------------------------------------------------------
 library(PEcAn.all)
+library(PEcAn.ED2) #installed from PR 2985 for now
 library(furrr)
 library(progressr)
 
 # Read in settings --------------------------------------------------------
-
+#TODO: check if pecan_checked.xml exists and skip this stuff if it does
 #edit this path
-inputfile <- "ED2/transect_runs/new_site/run/pecan.xml"
+inputfile <- "ED2/transect_runs/test/run/pecan.xml"
 
 #check that inputfile exists, because read.settings() doesn't do that!
 if (file.exists(inputfile)) {
@@ -25,8 +26,10 @@ settings$outdir
 # Prepare settings --------------------------------------------------------
 #TODO: check that dates are sensible?
 settings <- prepare.settings(settings, force = FALSE) 
-write.settings(settings, outputfile = paste0("pecan_checked_", Sys.Date(), ".xml"))
+write.settings(settings,outputdir = "ED2/transect_runs/test", outputfile = paste0("pecan_checked.xml"))
 settings <- do_conversions(settings)
+
+settings <- read.settings("ED2/transect_runs/test/pecan_checked.xml")
 
 # Query trait database ----------------------------------------------------
 settings <- runModule.get.trait.data(settings)
@@ -35,50 +38,36 @@ settings <- runModule.get.trait.data(settings)
 runModule.run.meta.analysis(settings)
 
 # Write model run configs -----------------------------------------------------
-
-# This will write config files locally and attempt to copy them to your HPC.  In
-# my experience, this copying fails, but it doesn't matter because the next step
-# ALSO attempts to copy the config files to the HPC.
-
 runModule.run.write.configs(settings)
 
 # Start model runs --------------------------------------------------------
 runModule_start_model_runs(settings, stop.on.error = FALSE)
 
+
 ## If for some reason the above function tries to copy files back from HPC before
 ## runs are finished, this code will manually copy it back.
 #  
-# cmd <- 
-#   paste0(
-#     "rsync -az -q ",
-#     "'", settings$host$name, ":", settings$host$outdir, "' ",
-#     "'", settings$outdir, "'"
-#   )
-# 
-# system(cmd)
+cmd <-
+  paste0(
+    "rsync -az -q ",
+    "'", settings$host$name, ":", settings$host$outdir, "' ",
+    "'", settings$outdir, "'"
+  )
+
+system(cmd)
 
 # Results post-processing -------------------------------------------------
 
 ## Convert and consolidate ED2 .h5 files to .nc files
-## NOTE: this is supposed to get run by runModule_start_model_runs() but is
-## currently broken and needs to be run manually. Might get fixed once PEcAn
-## container on HPC is updated so check for .nc files in outdir before running
-## this
 
-# TODO: Check how many ensembles failed (and why?) by looking for empty dirs
-
-# This "works" but the .nc files produced are not useable, I think, because they
-# don't indicate which values come from which PFT.  There is a workaround in
-# plot.R
-
-## use 2 cores to speed up
+### use 2 cores to speed up
 plan(multisession, workers = 2)
 
 dirs <- list.dirs(file.path(settings$outdir, "out"), recursive = FALSE)
 
 with_progress({
   p <- progressor(steps = length(dirs))
-
+  
   future_walk(dirs, ~{
     p() #progress bar
     model2netcdf.ED2(
@@ -92,8 +81,13 @@ with_progress({
   })
 })
 
-### DON'T remove .h5 files.  The .nc files are currently malformed and you need
-### the raw output for plotting.
+
+### Remove .h5 files
+# WAIT, this might be used in Kristina's plotting script
+#TODO: Figure out how to delete h5 files ONLY if model2netcdf.ED2 was successful
+# h5_rm <- list.files("outputs/out", pattern = "*.h5$", recursive = TRUE, full.names = TRUE)
+# file.remove(h5_rm)
+
 
 # Model analyses ----------------------------------------------------------
 

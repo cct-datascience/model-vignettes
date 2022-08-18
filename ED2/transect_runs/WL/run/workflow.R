@@ -9,8 +9,9 @@ library(progressr)
 
 # Read in settings --------------------------------------------------------
 
-#edit this path
-inputfile <- "ED2/transect_runs/new_site/run/pecan.xml"
+#this is the directory that has pecan.xml in it
+inputdir <- "ED2/transect_runs/WL/run"
+inputfile <- file.path(inputdir, "pecan.xml")
 
 #check that inputfile exists, because read.settings() doesn't do that!
 if (file.exists(inputfile)) {
@@ -25,7 +26,9 @@ settings$outdir
 # Prepare settings --------------------------------------------------------
 #TODO: check that dates are sensible?
 settings <- prepare.settings(settings, force = FALSE) 
-write.settings(settings, outputfile = paste0("pecan_checked_", Sys.Date(), ".xml"))
+
+#write the parsed pecan.xml out
+write.settings(settings, outputfile = "pecan_checked.xml", outputdir = inputdir)
 settings <- do_conversions(settings)
 
 # Query trait database ----------------------------------------------------
@@ -58,27 +61,19 @@ runModule_start_model_runs(settings, stop.on.error = FALSE)
 # system(cmd)
 
 # Results post-processing -------------------------------------------------
+#TODO: check if .nc files already exist.  model2netcdf.ED2 is supposed to be run
+#on the HPC.  Probably won't happen until PEcAn container on HPC gets updated though.
 
 ## Convert and consolidate ED2 .h5 files to .nc files
-## NOTE: this is supposed to get run by runModule_start_model_runs() but is
-## currently broken and needs to be run manually. Might get fixed once PEcAn
-## container on HPC is updated so check for .nc files in outdir before running
-## this
 
-# TODO: Check how many ensembles failed (and why?) by looking for empty dirs
-
-# This "works" but the .nc files produced are not useable, I think, because they
-# don't indicate which values come from which PFT.  There is a workaround in
-# plot.R
-
-## use 2 cores to speed up
+### use 2 cores to speed up
 plan(multisession, workers = 2)
 
 dirs <- list.dirs(file.path(settings$outdir, "out"), recursive = FALSE)
 
 with_progress({
   p <- progressor(steps = length(dirs))
-
+  
   future_walk(dirs, ~{
     p() #progress bar
     model2netcdf.ED2(
@@ -87,13 +82,21 @@ with_progress({
       settings$run$site$lon,
       settings$run$start.date,
       settings$run$end.date,
-      settings$pfts
+      settings$pfts 
+      # TODO: looks like possibly not all PFTs make it into the .nc file??  In
+      # line 954 of model2netcdf.ED2.R it looks like it only takes the first PFT
+      # instead of pulling all the PFTs.  Should be something like `pft_names <-
+      # pfts %>% map(~.x[["name"]])` instead
     )
   })
 })
 
-### DON'T remove .h5 files.  The .nc files are currently malformed and you need
-### the raw output for plotting.
+### Remove .h5 files
+
+#TODO: Figure out how to delete h5 files ONLY if model2netcdf.ED2 was successful
+# h5_rm <- list.files("outputs/out", pattern = "*.h5$", recursive = TRUE, full.names = TRUE)
+# file.remove(h5_rm)
+
 
 # Model analyses ----------------------------------------------------------
 
@@ -102,8 +105,3 @@ get.results(settings)
 
 ## Run ensemble analysis on model output
 runModule.run.ensemble.analysis(settings)
-
-#The run.ensemble.analysis() step fails because whatever output the
-#ensemble.output...Rdata file didn't grab the ensemble ID correctly
-# run manually: 
-run.ensemble.analysis(settings, ensemble.id = "NOENSEMBLEID")
