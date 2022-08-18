@@ -1,11 +1,11 @@
 # based on https://tensorflow.rstudio.com/tutorials/keras/regression
 
-## install tensorflow & keras
-  # https://tensorflow.rstudio.com/install/
- reticulate::virtualenv_create("r-reticulate")
-# tensorflow::install_tensorflow(envname = "r-reticulate")
-keras::install_keras(envname = "r-reticulate")
-### 
+# ## install tensorflow & keras
+#   # https://tensorflow.rstudio.com/install/
+#  reticulate::virtualenv_create("r-reticulate")
+# # tensorflow::install_tensorflow(envname = "r-reticulate")
+# keras::install_keras(envname = "r-reticulate")
+# ### 
 
 library(tensorflow)
 library(keras)
@@ -20,11 +20,6 @@ split <- initial_split(data, 0.8)
 train_dataset <- training(split)
 test_dataset <- testing(split)
 
-## check it out
-#train_dataset %>% 
-#  GGally::ggpairs()
-
-skimr::skim(train_dataset)
 
 ## split features from labels
 
@@ -67,7 +62,11 @@ sla_model %>%
   )
 
 history <- sla_model  %>% 
-fit(as.matrix(train_features), as.matrix(train_labels), epochs = 100, verbose = 0, validation_split = 0.2)
+  fit(as.matrix(train_features)[,1:3], 
+      as.matrix(train_labels), 
+      epochs = 100, 
+      verbose = 0, 
+      validation_split = 0.2)
 
 plot(history)
 
