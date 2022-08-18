@@ -15,6 +15,8 @@ Necessary packages:
 library(PEcAn.settings)
 library(dplyr)
 library(tidyr)
+library(lubridate)
+library(daymetr)
 library(ggplot2)
 library(tidymodels)
 ```
@@ -47,7 +49,7 @@ for(site in site_list_kr){
 }
 
 pecan_xml_NC <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_NC/pecan_checked_2022-08-12.xml")
-site_NC <- data.frame(name = pecan_xml_NC$run$site$name, id = pecan_xml_NC$run$site$id,
+site_NC <- data.frame(name = "North Carolina Loblolly Pine (US-NC2)", id = pecan_xml_NC$run$site$id,
                      lat = pecan_xml_NC$run$site$lat, lon = pecan_xml_NC$run$site$lon, 
                      start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date, 
                      site = "NC")
@@ -56,9 +58,11 @@ sites <- bind_rows(sites, site_NC)
 pecan_xml_WL <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_WL/pecan_checked.xml")
 site_WL <- data.frame(name = pecan_xml_WL$run$site$name, id = pecan_xml_WL$run$site$id,
                      lat = pecan_xml_WL$run$site$lat, lon = pecan_xml_WL$run$site$lon, 
-                     start = pecan_xml_WL$run$start.date, end = pecan_xml_WL$run$end.date, 
+                     start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date, 
                      site = "WL")
-sites <- bind_rows(sites, site_WL)
+sites <- bind_rows(sites, site_WL) %>% 
+  mutate(lat = as.numeric(lat), 
+         lon = as.numeric(lon))
 ```
 
 ### Step 1: ensemble results data
@@ -142,41 +146,52 @@ ens_params <- left_join(ens_results, params, by = c("ensemble", "site"))
 
 ### Step 3: environmental data
 
-Using environmental variable data from BioClim. Code from [this script](https://github.com/cct-datascience/model-vignettes/blob/9250417d96c6c15e35779c8044a94a2a47a856f9/bioclim/bioclim.R). 
 
 ```{r}
-bioclim_data <- raster::getData("worldclim", var = "bio", res = 10) 
-coords <- data.frame(x = as.numeric(sites$lon), y = as.numeric(sites$lat))
-points <- sp::SpatialPoints(coords, proj4string = bioclim_data@crs)
-values <- raster::extract(bioclim_data, points)
+mets <- list()
+for(i in 1:nrow(sites)){
+    site <- sites[i,]
+    tmp <- 
+        download_daymet(
+                    site = site$site,
+                    lat = site$lat, 
+                    lon = site$lon, 
+                    start = year(ymd(site$start)),
+                    end = year(ymd(site$end))
+                    )
+    mets[[site$name]] <- cbind(site = tmp$site,
+                               lat = tmp$lat,
+                               lon = tmp$longitude,
+                               alt = tmp$altitude,
+                               tmp$data)
+}
 
-bioclim_names <-
-  c(
-    "mean_annual_temp", 
-    "mean_diurnal_range", 
-    "isothermality",
-    "temp_seasonality", 
-    "max_temp_warmest_month", "min_temp_coldest_month",
-    "temp_annual_range", 
-    "mean_temp_wettest_quarter", "mean_temp_driest_quarter",
-    "mean_temp_warmest_quarter", "mean_temp_coldest_quarter", 
-    "mean_annual_precip",
-    "precip_wettest_month", 
-    "precip_driest_month", 
-    "precip_seasonality",
-    "precip_wettest_quarter", "precip_driest_quarter", 
-    "precip_warmest_quarter",
-    "precip_coldest_quarter"
-  )
-colnames(values) <- bioclim_names
-env <- cbind(sites, values) %>% 
-  select(-c(name, id, lat, lon, start, end))
+mets_all <- dplyr::bind_rows(mets)
+
+mymean <- function(x) {
+    a <- mean(x, na.rm = TRUE)
+    b <- signif(a, 4)
+    return(b)
+}
+
+mets_mean_summer <- mets_all  %>% 
+  group_by(site) %>% 
+  filter(year == min(year)) %>% 
+  mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
+         month = month(ymd(date))) %>% 
+  filter(month %in% c(7, 8)) %>% 
+  group_by(site) %>% 
+  summarise(
+    mean_temp = mymean((tmax..deg.c. + tmin..deg.c.)/2),
+    mean_vpd = mymean(vp..Pa.),
+    mean_precip = mymean(prcp..mm.day.),
+    mean_srad = mymean(srad..W.m.2.),
+    mean_swe = mymean(swe..kg.m.2.),
+    mean_dayl = mymean(dayl..s.)/86400)
 ```
 
-Add environmental variables to ensemble results and parameters.
-
 ```{r}
-ens_params_env <- left_join(ens_params, env, by = "site") %>% 
+ens_params_env <- left_join(ens_params, mets_mean_summer, by = "site") %>% 
   janitor::clean_names()
 ```
 
@@ -198,10 +213,10 @@ ggplot(ens_params_env, aes(x = quantum_efficiency, y = npp)) +
   geom_point() + 
   facet_grid(vars(site))
 
-ggplot(ens_params_env, aes(x = mean_annual_temp, y = npp)) +
+ggplot(ens_params_env, aes(x = mean_temp, y = npp)) +
   geom_point() + 
   facet_grid(vars(site))
-ggplot(ens_params_env, aes(x = mean_annual_precip, y = npp)) +
+ggplot(ens_params_env, aes(x = mean_precip, y = npp)) +
   geom_point() + 
   facet_grid(vars(site))
 ```
@@ -222,13 +237,6 @@ data_split <- initial_split(ens_params_env)
 data_train <- training(data_split)
 #data_test <- testing(data_split)
 ```
-
-simplest approach
-```{r}
-#rf_fit <- fit_xy(rf_model, x = data_train %>% select(-c(ensemble, npp, site)), y = data_train$npp)
-#have to use test data to get metrics
-```
-
 
 preprocess training data
 ```{r}
@@ -276,3 +284,18 @@ rsq; how much variation in npp explained by predictor variables; from 0 to 1, cl
 ```{r}
 2.21/mean(data_train$npp) #this is high, want it below 10%? 
 ```
+
+
+
+options to improve model: 
+
+- reduce features?
+- hypertune parameters
+
+
+### Predicting from model
+
+change by 10% or +/- 1 SD
+fineroot2leaf, would be higher with shorter plant
+quantum_efficiency, would be lower with antho plant
+stomatal_slope, would be higher with cooler leaf
