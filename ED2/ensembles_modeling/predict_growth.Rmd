@@ -241,8 +241,9 @@ data_train <- training(data_split)
 preprocess training data
 ```{r}
 data_recipe <- recipe(npp ~ ., data = data_train) %>% 
-  update_role(ensemble, new_role = "ID") %>% 
-  update_role(site, new_role = "ID")
+  step_rm(c(ensemble, site)) 
+  # update_role(ensemble, new_role = "ID") %>% 
+  # update_role(site, new_role = "ID")
 #step_rm to remove predictors
 ```
 
@@ -286,16 +287,33 @@ rsq; how much variation in npp explained by predictor variables; from 0 to 1, cl
 ```
 
 
-
 options to improve model: 
 
 - reduce features?
 - hypertune parameters
 
-
 ### Predicting from model
+
+use model predictions to get wild type npp using current (mean across ensemble?) params
+
+get data
+```{r}
+example_wt_data <- ens_params_env %>% 
+  select(-npp) %>%
+  group_by(site) %>% 
+  summarise_all(mean) %>% 
+  mutate(ensemble = "mean of 50")
+```
+
+run model
+```{r}
+example_wt_data$npp_pred <- predict(model_fit, example_wt_data, type = "numeric")
+```
+
+set up grid by adding environmental data for new sites, and keeping same param values
 
 change by 10% or +/- 1 SD
 fineroot2leaf, would be higher with shorter plant
 quantum_efficiency, would be lower with antho plant
 stomatal_slope, would be higher with cooler leaf
+
