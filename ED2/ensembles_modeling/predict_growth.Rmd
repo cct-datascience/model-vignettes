@@ -15,6 +15,8 @@ Necessary packages:
 library(PEcAn.settings)
 library(dplyr)
 library(tidyr)
+library(ggplot2)
+library(tidymodels)
 ```
 
 
@@ -154,7 +156,7 @@ bioclim_names <-
     "mean_diurnal_range", 
     "isothermality",
     "temp_seasonality", 
-    "max_temp_warmest month", "min_temp_coldest_month",
+    "max_temp_warmest_month", "min_temp_coldest_month",
     "temp_annual_range", 
     "mean_temp_wettest_quarter", "mean_temp_driest_quarter",
     "mean_temp_warmest_quarter", "mean_temp_coldest_quarter", 
@@ -174,7 +176,8 @@ env <- cbind(sites, values) %>%
 Add environmental variables to ensemble results and parameters.
 
 ```{r}
-ens_params_env <- left_join(ens_params, env, by = "site")
+ens_params_env <- left_join(ens_params, env, by = "site") %>% 
+  janitor::clean_names()
 ```
 
 
@@ -183,3 +186,93 @@ ens_params_env <- left_join(ens_params, env, by = "site")
 Machine learning model for prediction? 
 
 Need to get new environmental data given a site and time
+
+Goal: predict NPP given parameter and environmental input, so for modified Setaria at new site
+
+supervised learning, regression
+features (=variables, or columns in data) should be independent and informative (remove some params and env? are measured params more informative?)
+linear relationships? 
+which of these are photosynthetic params? 
+```{r}
+ggplot(ens_params_env, aes(x = quantum_efficiency, y = npp)) +
+  geom_point() + 
+  facet_grid(vars(site))
+
+ggplot(ens_params_env, aes(x = mean_annual_temp, y = npp)) +
+  geom_point() + 
+  facet_grid(vars(site))
+ggplot(ens_params_env, aes(x = mean_annual_precip, y = npp)) +
+  geom_point() + 
+  facet_grid(vars(site))
+```
+
+naive bayes? -nope, for classification
+decision tree or random forest? (latter is more accurate than interpretable)
+accuracy vs interpretability? former
+
+for predicting, give it the same input data but change the quantum efficiency parameter? 
+
+
+### Random forest
+
+split dataset
+```{r}
+set.seed(1234)
+data_split <- initial_split(ens_params_env)
+data_train <- training(data_split)
+#data_test <- testing(data_split)
+```
+
+simplest approach
+```{r}
+#rf_fit <- fit_xy(rf_model, x = data_train %>% select(-c(ensemble, npp, site)), y = data_train$npp)
+#have to use test data to get metrics
+```
+
+
+preprocess training data
+```{r}
+data_recipe <- recipe(npp ~ ., data = data_train) %>% 
+  update_role(ensemble, new_role = "ID") %>% 
+  update_role(site, new_role = "ID")
+#step_rm to remove predictors
+```
+
+specify model
+```{r}
+rf_model <- rand_forest() %>% 
+  set_mode("regression") %>% 
+  set_engine("ranger")
+```
+
+do workflow
+```{r}
+data_wf <- workflow() %>% 
+  add_recipe(data_recipe) %>% 
+  add_model(rf_model)
+```
+
+fit model
+```{r}
+model_fit <- data_wf %>% 
+  fit(data = data_train)
+```
+
+cross-validate data and evaluate
+```{r}
+folds <- vfold_cv(data_train)
+resamp_wf <- workflow() %>% 
+  add_recipe(data_recipe) %>% 
+  add_model(rf_model)
+resamp_fit <- fit_resamples(resamp_wf, folds, 
+                            #metrics = metric_set(accuracy, sens, spec),
+                            control = control_resamples(save_pred = TRUE))
+resamp_metrics <- collect_metrics(resamp_fit)
+```
+
+rmse: average deviation between predicted npp and measured npp; 0 means perfect fit, closer to zero is better
+rsq; how much variation in npp explained by predictor variables; from 0 to 1, closer to 1 is better
+
+```{r}
+2.21/mean(data_train$npp) #this is high, want it below 10%? 
+```
