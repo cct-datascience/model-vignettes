@@ -174,6 +174,7 @@ for(i in 1:nrow(sites)){
 }
 
 mets_all <- dplyr::bind_rows(mets)
+readr::write_csv(mets_all, 'mets_all.csv')
 
 mymean <- function(x) {
     a <- mean(x, na.rm = TRUE)
@@ -235,10 +236,16 @@ aov(npp ~ ., data = ens_params_env) %>%
   broom::tidy() %>% 
   mutate_if(is.numeric, signif, 3)
 
-aov(npp ~ ., data = ens_params_env) %>% 
+z <- aov(npp ~ ., data = ens_params_env %>% select(-ensemble, -site, -year, -mean_dayl)) 
+zz <- z %>% 
   broom::tidy() %>% 
   mutate_if(is.numeric, signif, 3)
 
+zz %>% # print out names of variables to keep
+  filter(p.value < 0.1) %>% 
+  select(term) %>% 
+  gsub('\"', '', .) %>% 
+  paste0(collapse = ', ')
 options(scipen=2)
 lm(npp ~ ., data = ens_params_env) %>% 
   broom::tidy() %>% 
@@ -263,21 +270,62 @@ for predicting, give it the same input data but change the quantum efficiency pa
 split dataset
 ```{r}
 set.seed(1234)
+ens_params_env %>% group_by(site, year) %>% summarise(n = n())
+
+t <- ens_params_env %>% 
+  filter(site == "WL" & year > 2012) %>% 
+  select(-site, -year, -ensemble, # these are accounted for by other variables
+         -mean_srad, -mean_swe, -mean_dayl) # these aren't of primary interest
 data_split <- initial_split(ens_params_env)
-data_train <- training(data_split)
+data_train <- t #%>% #training(data_split) 
+                #train on entire thing. can always generate new test data 
+  # select(-ensemble, -site, -year)
+  #select(npp, mort2, growth_resp_factor, leaf_turnover_rate, leaf_width, fineroot2leaf, seedling_mortality, mean_vpd, mean_precip, mean_srad)
+  # select what is significant from aov above
+  # 
+
 #data_test <- testing(data_split)
+
 ```
 
 preprocess training data
 ```{r}
-data_recipe <- recipe(npp ~ ., data = data_train) %>% 
+data_recipe <- recipe(npp ~ ., data = data_train) #%>% 
   #step_naomit()
-  step_rm(c(ensemble, site, year)) 
+  # step_rm(c(ensemble, site, year)) 
   # update_role(ensemble, new_role = "ID") %>% 
   # update_role(site, new_role = "ID")
 #step_rm to remove predictors
 ```
 
+
+### Linear Regression
+
+```{r}
+lm_model <- 
+  linear_reg() %>% 
+  set_engine("lm")
+
+lm_wf <- workflow() %>% 
+  add_recipe(data_recipe) %>% 
+  add_model(lm_model)
+
+model_fit <- lm_wf %>% 
+  fit(data = data_train)
+
+folds <- vfold_cv(data_train)
+resamp_wf <- workflow() %>% 
+  add_recipe(data_recipe) %>% 
+  add_model(lm_model)
+resamp_fit <- fit_resamples(resamp_wf, folds, 
+                            #metrics = metric_set(accuracy, sens, spec),
+                            control = control_resamples(save_pred = TRUE))
+resamp_metrics <- collect_metrics(resamp_fit)
+
+resamp_metrics
+```
+
+### Random Forest
 specify model
 ```{r}
 rf_model <- rand_forest() %>% 
@@ -314,7 +362,8 @@ rmse: average deviation between predicted npp and measured npp; 0 means perfect 
 rsq; how much variation in npp explained by predictor variables; from 0 to 1, closer to 1 is better
 
 ```{r}
-2.21/mean(data_train$npp) #this is high, want it below 10%? 
+rmse <- resamp_metrics %>% filter(.metric == 'rmse') %>% select(mean) 
+rmse/mean(data_train$npp) #this is high, want it below 10%? 
 ```
 
 
@@ -325,21 +374,24 @@ options to improve model:
 
 ### Predicting from model
 
-use model predictions to get wild type npp using current (mean across ensemble?) params
+Use model predictions to get wild type npp using median values from sensitivity analysis
 
-get data
 ```{r}
-example_wt_data <- ens_params_env %>% 
-  filter(year == 2019)
-  select(-npp) %>%
-  group_by(site) %>% 
-  summarise_all(mean) %>% 
-  mutate(ensemble = "mean of 50")
+
+load('/data/tests/ed2_SR_recent_sa/sensitivity.samples.NOENSEMBLEID.Rdata')
+example_wt_data <- as.data.frame(sa.samples$SetariaWT['50',]) %>%
+  janitor::clean_names()
+
 ```
 
 run model
 ```{r}
-example_wt_data$npp_pred <- predict(model_fit, example_wt_data, type = "numeric")
+newx <- cbind(example_wt_data, 
+              mean_temp = 18.26, 
+              mean_vpd = 1140, 
+              mean_precip = 3.4)
+
+example_wt_data$npp_pred <- predict(model_fit, newx, type = "numeric")
 ```
 
 set up grid by adding environmental data for new sites, and keeping same param values
@@ -349,3 +401,55 @@ fineroot2leaf, would be higher with shorter plant
 quantum_efficiency, would be lower with antho plant
 stomatal_slope, would be higher with cooler leaf
 
+### Save environment
+
+```{r}
+save.image('~/model-vignettes/ED2/ensembles_modeling/predict_growth.Rdata')
+```
+
+## Predictions
+
+```{r}
+mets <- list()
+for(i in 1:nrow(sites)){
+    site <- sites[i,]
+    tmp <- 
+        download_daymet(
+                    site = site$site,
+                    lat = site$lat, 
+                    lon = site$lon, 
+                    start = year(ymd(site$start)),
+                    end = 2019 #year(ymd(site$end))
+                                #    for some reason site WL only says it goes to 2015 
+                    )
+    mets[[site$name]] <- cbind(site = tmp$site,
+                               lat = tmp$lat,
+                               lon = tmp$longitude,
+                               alt = tmp$altitude,
+                               tmp$data)
+}
+
+mets_all <- dplyr::bind_rows(mets)
+readr::write_csv(mets_all, 'mets_all.csv')
+
+mymean <- function(x) {
+    a <- mean(x, na.rm = TRUE)
+    b <- signif(a, 4)
+    return(b)
+}
+
+mets_mean_summer <- mets_all  %>% 
+#  group_by(site) %>% 
+#  filter(year == min(year)) %>% 
+  mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
+         month = month(ymd(date))) %>% 
+  filter(month %in% c(7, 8)) %>% 
+  group_by(site, year) %>% 
+  summarise(
+    mean_temp = mymean((tmax..deg.c. + tmin..deg.c.)/2),
+    mean_vpd = mymean(vp..Pa.),
+    mean_precip = mymean(prcp..mm.day.),
+    mean_srad = mymean(srad..W.m.2.),
+    mean_swe = mymean(swe..kg.m.2.),
+    mean_dayl = mymean(dayl..s.)/86400)
+```
