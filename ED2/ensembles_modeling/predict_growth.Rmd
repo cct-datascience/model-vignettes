@@ -59,10 +59,11 @@ pecan_xml_WL <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transec
 site_WL <- data.frame(name = pecan_xml_WL$run$site$name, id = pecan_xml_WL$run$site$id,
                      lat = pecan_xml_WL$run$site$lat, lon = pecan_xml_WL$run$site$lon, 
                      start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date, 
-                     site = "WL")
+                     site = "WL") 
 sites <- bind_rows(sites, site_WL) %>% 
   mutate(lat = as.numeric(lat), 
          lon = as.numeric(lon))
+
 ```
 
 ### Step 1: ensemble results data
@@ -82,8 +83,8 @@ for(site in site_list_ec){
   ens_path <- paste0("/data/output/pecan_runs/transect_runs/ed2_transect_", site, "/npp_out.csv")
   single_site_ens_results <- read.csv(ens_path) %>% 
     filter(pft == 1, 
-           date == "2009-08-01") %>% 
-    select(ensemble, npp) %>% 
+           grepl("-08-", date)) %>% 
+    select(ensemble, npp, date) %>% 
     mutate(ensemble = stringr::str_remove(substr(ensemble, 8, 9), "^0+"), 
            site = site)
   ens_results <- bind_rows(single_site_ens_results, ens_results)
@@ -93,12 +94,17 @@ for(site in site_list_kr){
   ens_path <- paste0("/data/tests/ed2_transect_", site, "/npp_out.csv")
   single_site_ens_results <- read.csv(ens_path) %>% 
     filter(pft == 1, 
-           date == "2019-08-01") %>% 
-    select(ensemble, npp) %>% 
+           grepl("-08-", date)) %>% 
+    select(ensemble, npp, date) %>% 
     mutate(ensemble = stringr::str_remove(substr(ensemble, 8, 9), "^0+"), 
            site = site)
   ens_results <- bind_rows(single_site_ens_results, ens_results)
 }
+
+ens_results <- ens_results%>% 
+  mutate(year = year(ymd(date))) %>% 
+  select(-date)
+
 ```
 
 ### Step 2: parameter values
@@ -147,7 +153,7 @@ ens_params <- left_join(ens_results, params, by = c("ensemble", "site"))
 ### Step 3: environmental data
 
 
-```{r}
+```{r cache=TRUE}
 mets <- list()
 for(i in 1:nrow(sites)){
     site <- sites[i,]
@@ -157,7 +163,8 @@ for(i in 1:nrow(sites)){
                     lat = site$lat, 
                     lon = site$lon, 
                     start = year(ymd(site$start)),
-                    end = year(ymd(site$end))
+                    end = 2019 #year(ymd(site$end))
+                                #    for some reason site WL only says it goes to 2015 
                     )
     mets[[site$name]] <- cbind(site = tmp$site,
                                lat = tmp$lat,
@@ -175,12 +182,12 @@ mymean <- function(x) {
 }
 
 mets_mean_summer <- mets_all  %>% 
-  group_by(site) %>% 
-  filter(year == min(year)) %>% 
+#  group_by(site) %>% 
+#  filter(year == min(year)) %>% 
   mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
          month = month(ymd(date))) %>% 
   filter(month %in% c(7, 8)) %>% 
-  group_by(site) %>% 
+  group_by(site, year) %>% 
   summarise(
     mean_temp = mymean((tmax..deg.c. + tmin..deg.c.)/2),
     mean_vpd = mymean(vp..Pa.),
@@ -191,7 +198,7 @@ mets_mean_summer <- mets_all  %>%
 ```
 
 ```{r}
-ens_params_env <- left_join(ens_params, mets_mean_summer, by = "site") %>% 
+ens_params_env <- left_join(ens_params, mets_mean_summer, by = c("site", "year")) %>%
   janitor::clean_names()
 ```
 
@@ -221,6 +228,29 @@ ggplot(ens_params_env, aes(x = mean_precip, y = npp)) +
   facet_grid(vars(site))
 ```
 
+### Simple models
+
+```{r}
+aov(npp ~ ., data = ens_params_env) %>% 
+  broom::tidy() %>% 
+  mutate_if(is.numeric, signif, 3)
+
+aov(npp ~ ., data = ens_params_env) %>% 
+  broom::tidy() %>% 
+  mutate_if(is.numeric, signif, 3)
+
+options(scipen=2)
+lm(npp ~ ., data = ens_params_env) %>% 
+  broom::tidy() %>% 
+  mutate_if(is.numeric, signif, 3)
+
+```
+
+only sensible if we remove year, ensemble, site
+
+### Advanced models
+
+
 naive bayes? -nope, for classification
 decision tree or random forest? (latter is more accurate than interpretable)
 accuracy vs interpretability? former
@@ -241,7 +271,8 @@ data_train <- training(data_split)
 preprocess training data
 ```{r}
 data_recipe <- recipe(npp ~ ., data = data_train) %>% 
-  step_rm(c(ensemble, site)) 
+  #step_naomit()
+  step_rm(c(ensemble, site, year)) 
   # update_role(ensemble, new_role = "ID") %>% 
   # update_role(site, new_role = "ID")
 #step_rm to remove predictors
@@ -299,6 +330,7 @@ use model predictions to get wild type npp using current (mean across ensemble?)
 get data
 ```{r}
 example_wt_data <- ens_params_env %>% 
+  filter(year == 2019)
   select(-npp) %>%
   group_by(site) %>% 
   summarise_all(mean) %>% 
