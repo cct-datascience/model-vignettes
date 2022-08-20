@@ -379,102 +379,6 @@ options to improve model:
 - reduce features?
 - hypertune parameters
 
-### Examples Predicting from model
-
-Use model predictions to get wild type npp using median values from sensitivity analysis
-
-```{r}
-
-load('/data/tests/ed2_SR_recent_sa/sensitivity.samples.NOENSEMBLEID.Rdata')
-example_wt_data <- as.data.frame(sa.samples$SetariaWT['50',]) %>%
-  janitor::clean_names()
-
-```
-
-
-```{r}
-newx <- cbind(example_wt_data, 
-              mean_temp = 18.26, 
-              mean_vpd = 1140, 
-              mean_precip = 3.4,
-              mean_srad = 311, 
-              mean_swe = 32)
-
-npp_pred <- predict(model_fit, newx, type = "numeric")
-```
-
-set up grid by adding environmental data for new sites, and keeping same param values
-
-```{r}
-splits <- function(x, n = 4){
-  xx <- range(x)
-  pts <- seq(min(x), max(x), length.out = n)
-}
-d <- data_train %>% 
-  select(mean_temp, mean_vpd, mean_precip, mean_srad, mean_swe) %>% 
-  summarise(mean_temp   = splits(mean_temp),
-            mean_vpd = splits(mean_vpd),
-            mean_precip = splits(mean_precip),
-            mean_srad = splits(mean_srad),
-            mean_swe = splits(mean_swe))
-
-met_preds <- expand.grid(df = d)
-
-newpreds <- data.frame(example_wt_data, met_preds)
-
-npp_pred <- predict(model_fit, 
-                    newpreds, 
-                    type = "numeric")
-#npp_pred_ci <- predict(model_fit, newpreds, type = "pred_int")
-
-sa <- sa.samples$SetariaWT
-newpreds_lowtemp <- newpreds %>% 
-  mutate(stomatal_slope = sa$stomatal_slope[1],
-         cuticular_cond = sa$cuticular_cond[1])
-
-newpreds_antho <- newpreds %>% 
-  mutate(quantum_efficiency = sa$quantum_efficiency[1])
-
-newpreds_short <- newpreds %>% 
-  mutate(fineroot2leaf = sa$fineroot2leaf[1])
-
-npp_pred_lowtemp <- predict(model_fit, 
-                            newpreds_lowtemp, 
-                            type = "numeric")$.pred
-
-npp_pred_antho <- predict(model_fit, 
-                            newpreds_antho, 
-                            type = "numeric")$.pred
-npp_pred_short <- predict(model_fit, 
-                            newpreds_short, 
-                            type = "numeric")$.pred
-
-d <- npp_pred - npp_pred_lowtemp
-
-df <- data.frame(npp = npp_pred,
-                 npp_antho = npp_pred_antho,
-                 npp_short = npp_pred_short,
-                 npp_lowt  = npp_pred_lowtemp,
-                 d = d, 
-                 mat = newpreds$mean_temp, 
-                 map = newpreds$mean_precip*365)
-
-df_long <- df %>% 
-  pivot_longer(cols = starts_with('npp'))
-
-ggplot(data = df_long, aes(x = mat, y = map, color = value)) +
-  geom_point() +
-  facet_wrap(~name)
-
-ggplot(data = df, aes(x = mat, y = map, color = npp)) +
-  geom_point()
-
-```
-
-change by 10% or +/- 1 SD
-fineroot2leaf, would be higher with shorter plant
-quantum_efficiency, would be lower with antho plant
-stomatal_slope, would be higher with cooler leaf
 
 ### Save environment
 
@@ -553,22 +457,40 @@ newmets_mean_summer <- newmets_all  %>%
 ```
 
 ```{r}
-
+sa <- sa.samples$SetariaWT
+example_wt_data 
 newpreds <- cbind(example_wt_data,
                   newmets_mean_summer) %>% 
   left_join(newsites %>% mutate(site = as.character(site)), by = 'site')
 ```
 
 
+### Step 2 create parameterizations for mutants
+
+
+#### 2.1 WT
+
+Use model predictions to get wild type npp using median values from sensitivity analysis
+
 ```{r}
 
-newpreds_lowtemp <- newpreds %>% 
-  mutate(stomatal_slope = sa$stomatal_slope[1],
-         cuticular_cond = sa$cuticular_cond[1])
+load('/data/tests/ed2_SR_recent_sa/sensitivity.samples.NOENSEMBLEID.Rdata')
+example_wt_data <- as.data.frame(sa.samples$SetariaWT['50',]) %>%
+  janitor::clean_names()
+
+```
 
 
-sa <- sa.samples$SetariaWT
+#### 2.2 Mutants
 
+change by 25% or +/- 1 SD
+
+- fineroot2leaf, would be higher with shorter plant
+- quantum_efficiency, would be lower with antho plant
+- stomatal_slope & cuticular conductance, would be higher with cooler leaf
+
+
+```{r}
 newpreds_lowtemp <- newpreds %>% 
   mutate(stomatal_slope = 0.75 * stomatal_slope,#sa$stomatal_slope[1],
          cuticular_cond = 0.75 * cuticular_cond)#sa$cuticular_cond[1])
