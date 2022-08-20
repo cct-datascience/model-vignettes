@@ -65,6 +65,12 @@ sites <- bind_rows(sites, site_WL) %>%
          lon = as.numeric(lon))
 
 ```
+```{r}
+library(leaflet)
+leaflet(sites) %>% addTiles() %>%
+  addCircleMarkers(lng = ~lon, lat = ~lat, 
+             popup = ~name)
+```
 
 ### Step 1: ensemble results data
 
@@ -164,7 +170,6 @@ for(i in 1:nrow(sites)){
                     lon = site$lon, 
                     start = year(ymd(site$start)),
                     end = 2019 #year(ymd(site$end))
-                                #    for some reason site WL only says it goes to 2015 
                     )
     mets[[site$name]] <- cbind(site = tmp$site,
                                lat = tmp$lat,
@@ -187,7 +192,7 @@ mets_mean_summer <- mets_all  %>%
 #  filter(year == min(year)) %>% 
   mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
          month = month(ymd(date))) %>% 
-  filter(month %in% c(7, 8)) %>% 
+  #filter(month %in% c(7, 8)) %>% 
   group_by(site, year) %>% 
   summarise(
     mean_temp = mymean((tmax..deg.c. + tmin..deg.c.)/2),
@@ -240,7 +245,7 @@ z <- aov(npp ~ ., data = ens_params_env %>% select(-ensemble, -site, -year, -mea
 zz <- z %>% 
   broom::tidy() %>% 
   mutate_if(is.numeric, signif, 3)
-
+zz
 zz %>% # print out names of variables to keep
   filter(p.value < 0.1) %>% 
   select(term) %>% 
@@ -265,9 +270,9 @@ accuracy vs interpretability? former
 for predicting, give it the same input data but change the quantum efficiency parameter? 
 
 
-### Random forest
 
-split dataset
+### subset dataset
+
 ```{r}
 set.seed(1234)
 ens_params_env %>% group_by(site, year) %>% summarise(n = n())
@@ -275,7 +280,7 @@ ens_params_env %>% group_by(site, year) %>% summarise(n = n())
 t <- ens_params_env %>% 
   filter(site == "WL" & year > 2012) %>% 
   select(-site, -year, -ensemble, # these are accounted for by other variables
-         -mean_srad, -mean_swe, -mean_dayl) # these aren't of primary interest
+         -mean_dayl) # these aren't of primary interest
 data_split <- initial_split(ens_params_env)
 data_train <- t #%>% #training(data_split) 
                 #train on entire thing. can always generate new test data 
@@ -287,6 +292,7 @@ data_train <- t #%>% #training(data_split)
 #data_test <- testing(data_split)
 
 ```
+## Random forest
 
 preprocess training data
 ```{r}
@@ -356,6 +362,7 @@ resamp_fit <- fit_resamples(resamp_wf, folds,
                             #metrics = metric_set(accuracy, sens, spec),
                             control = control_resamples(save_pred = TRUE))
 resamp_metrics <- collect_metrics(resamp_fit)
+resamp_metrics
 ```
 
 rmse: average deviation between predicted npp and measured npp; 0 means perfect fit, closer to zero is better
@@ -372,7 +379,7 @@ options to improve model:
 - reduce features?
 - hypertune parameters
 
-### Predicting from model
+### Examples Predicting from model
 
 Use model predictions to get wild type npp using median values from sensitivity analysis
 
@@ -384,17 +391,85 @@ example_wt_data <- as.data.frame(sa.samples$SetariaWT['50',]) %>%
 
 ```
 
-run model
+
 ```{r}
 newx <- cbind(example_wt_data, 
               mean_temp = 18.26, 
               mean_vpd = 1140, 
-              mean_precip = 3.4)
+              mean_precip = 3.4,
+              mean_srad = 311, 
+              mean_swe = 32)
 
-example_wt_data$npp_pred <- predict(model_fit, newx, type = "numeric")
+npp_pred <- predict(model_fit, newx, type = "numeric")
 ```
 
 set up grid by adding environmental data for new sites, and keeping same param values
+
+```{r}
+splits <- function(x, n = 4){
+  xx <- range(x)
+  pts <- seq(min(x), max(x), length.out = n)
+}
+d <- data_train %>% 
+  select(mean_temp, mean_vpd, mean_precip, mean_srad, mean_swe) %>% 
+  summarise(mean_temp   = splits(mean_temp),
+            mean_vpd = splits(mean_vpd),
+            mean_precip = splits(mean_precip),
+            mean_srad = splits(mean_srad),
+            mean_swe = splits(mean_swe))
+
+met_preds <- expand.grid(df = d)
+
+newpreds <- data.frame(example_wt_data, met_preds)
+
+npp_pred <- predict(model_fit, 
+                    newpreds, 
+                    type = "numeric")
+#npp_pred_ci <- predict(model_fit, newpreds, type = "pred_int")
+
+sa <- sa.samples$SetariaWT
+newpreds_lowtemp <- newpreds %>% 
+  mutate(stomatal_slope = sa$stomatal_slope[1],
+         cuticular_cond = sa$cuticular_cond[1])
+
+newpreds_antho <- newpreds %>% 
+  mutate(quantum_efficiency = sa$quantum_efficiency[1])
+
+newpreds_short <- newpreds %>% 
+  mutate(fineroot2leaf = sa$fineroot2leaf[1])
+
+npp_pred_lowtemp <- predict(model_fit, 
+                            newpreds_lowtemp, 
+                            type = "numeric")$.pred
+
+npp_pred_antho <- predict(model_fit, 
+                            newpreds_antho, 
+                            type = "numeric")$.pred
+npp_pred_short <- predict(model_fit, 
+                            newpreds_short, 
+                            type = "numeric")$.pred
+
+d <- npp_pred - npp_pred_lowtemp
+
+df <- data.frame(npp = npp_pred,
+                 npp_antho = npp_pred_antho,
+                 npp_short = npp_pred_short,
+                 npp_lowt  = npp_pred_lowtemp,
+                 d = d, 
+                 mat = newpreds$mean_temp, 
+                 map = newpreds$mean_precip*365)
+
+df_long <- df %>% 
+  pivot_longer(cols = starts_with('npp'))
+
+ggplot(data = df_long, aes(x = mat, y = map, color = value)) +
+  geom_point() +
+  facet_wrap(~name)
+
+ggplot(data = df, aes(x = mat, y = map, color = npp)) +
+  geom_point()
+
+```
 
 change by 10% or +/- 1 SD
 fineroot2leaf, would be higher with shorter plant
@@ -410,27 +485,50 @@ save.image('~/model-vignettes/ED2/ensembles_modeling/predict_growth.Rdata')
 ## Predictions
 
 ```{r}
-mets <- list()
-for(i in 1:nrow(sites)){
-    site <- sites[i,]
-    tmp <- 
-        download_daymet(
-                    site = site$site,
-                    lat = site$lat, 
-                    lon = site$lon, 
-                    start = year(ymd(site$start)),
-                    end = 2019 #year(ymd(site$end))
-                                #    for some reason site WL only says it goes to 2015 
-                    )
-    mets[[site$name]] <- cbind(site = tmp$site,
-                               lat = tmp$lat,
-                               lon = tmp$longitude,
-                               alt = tmp$altitude,
-                               tmp$data)
+mets_mean_summer %>% summarise(range)
+```
+
+
+#### Step 1. Create a grid of met data
+
+```{r}
+
+newlats <- seq(35, 40, by = 0.25)
+newlons <- seq(-105, -80, by = 0.25)
+n <- expand.grid(newlats, newlons)
+dim(n)
+newsites <- data.frame(site = 1:nrow(n), n)
+colnames(newsites) <- c('site', 'lat', 'lon')
+sitesfile <- paste0(tempdir(),"/sites.csv")
+write.table(newsites, sitesfile,
+           sep = ",",
+           col.names = TRUE,
+           row.names = FALSE,
+           quote = FALSE)
+ptm <- proc.time()
+df_batch <- download_daymet_batch(
+  file_location = sitesfile,
+  start = 2010,
+  end = 2010,
+  internal = TRUE)
+proc.time() - ptm
+
+newmets <- list()
+for(i in 1:length(df_batch)){
+  tmp <- df_batch[[i]]
+  newmets[[i]] <- cbind(site = tmp$site,
+                        lat = tmp$lat,
+                        lon = tmp$longitude,
+                        alt = tmp$altitude,
+                        tmp$data)
 }
 
-mets_all <- dplyr::bind_rows(mets)
-readr::write_csv(mets_all, 'mets_all.csv')
+```
+
+
+```{r}
+newmets_all <- dplyr::bind_rows(newmets)
+#readr::write_csv(mets_all, 'mets_all.csv')
 
 mymean <- function(x) {
     a <- mean(x, na.rm = TRUE)
@@ -438,12 +536,12 @@ mymean <- function(x) {
     return(b)
 }
 
-mets_mean_summer <- mets_all  %>% 
+newmets_mean_summer <- newmets_all  %>% 
 #  group_by(site) %>% 
 #  filter(year == min(year)) %>% 
   mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
          month = month(ymd(date))) %>% 
-  filter(month %in% c(7, 8)) %>% 
+  #filter(month %in% c(7, 8)) %>% 
   group_by(site, year) %>% 
   summarise(
     mean_temp = mymean((tmax..deg.c. + tmin..deg.c.)/2),
@@ -452,4 +550,124 @@ mets_mean_summer <- mets_all  %>%
     mean_srad = mymean(srad..W.m.2.),
     mean_swe = mymean(swe..kg.m.2.),
     mean_dayl = mymean(dayl..s.)/86400)
+```
+
+```{r}
+
+newpreds <- cbind(example_wt_data,
+                  newmets_mean_summer) %>% 
+  left_join(newsites %>% mutate(site = as.character(site)), by = 'site')
+```
+
+
+```{r}
+
+newpreds_lowtemp <- newpreds %>% 
+  mutate(stomatal_slope = sa$stomatal_slope[1],
+         cuticular_cond = sa$cuticular_cond[1])
+
+
+sa <- sa.samples$SetariaWT
+
+newpreds_lowtemp <- newpreds %>% 
+  mutate(stomatal_slope = 0.75 * stomatal_slope,#sa$stomatal_slope[1],
+         cuticular_cond = 0.75 * cuticular_cond)#sa$cuticular_cond[1])
+
+newpreds_antho <- newpreds %>% 
+  mutate(quantum_efficiency = 0.75 * quantum_efficiency)
+
+newpreds_short <- newpreds %>% 
+  mutate(fineroot2leaf = 1.25 * fineroot2leaf)#sa$fineroot2leaf[1])
+
+
+npp_pred <- predict(model_fit, 
+                    newpreds, 
+                    type = "numeric")$.pred
+npp_pred_lowtemp <- predict(model_fit, 
+                            newpreds_lowtemp, 
+                            type = "numeric")$.pred
+
+npp_pred_antho <- predict(model_fit, 
+                            newpreds_antho, 
+                            type = "numeric")$.pred
+npp_pred_short <- predict(model_fit, 
+                            newpreds_short, 
+                            type = "numeric")$.pred
+
+preds <- data.frame(lat     = newpreds$lat,
+                    lon     = newpreds$lon,
+                    wt      = npp_pred,
+                    lowtemp = npp_pred_lowtemp,
+                    anthox  = npp_pred_antho,
+                    short   = npp_pred_short)
+
+dpreds <- preds %>% 
+  transmute(lat = lat,
+            lon = lon,
+            d_lowtemp = (wt - lowtemp)/wt,
+            d_anthox  = (wt - anthox)/wt,
+            d_short   = (wt - short)/wt)
+```
+
+
+```{r}
+predslong <- preds %>% 
+  pivot_longer(cols = c(-lat, -lon))
+library(ggthemes)
+library(ggmap)
+library(usmap)
+ggplot(data = predslong) + 
+  geom_tile(aes(x = lon, y = lat, fill = value)) + 
+  theme_map() +
+  facet_wrap(~name)
+
+```
+
+```{r}
+NA_background <- map_data("state")
+
+p <- ggplot() +
+  geom_polygon(data = NA_background, 
+               aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = predslong, aes(x = lon, y = lat, fill = value), 
+              alpha = 0.9) +
+#  scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "darkblue", 
+#                       midpoint = 1, 
+#                       breaks = c(0.3, 1, 1.2), 
+#                       limits = c(0.3, 1.2)) +
+  coord_cartesian(xlim = c(-113, -75), ylim = c(30, 45)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  facet_wrap(~name)
+#  transition_manual(doy) +
+#  ggtitle('Day: {current_frame}')
+```
+
+```{p}
+
+dpredslong <- dpreds %>% 
+  pivot_longer(cols = c(-lat, -lon))
+dp <- ggplot() +
+  geom_polygon(data = NA_background, 
+               aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_raster(data = dpredslong, aes(x = lon, y = lat, fill = value), 
+              alpha = 0.9) +
+  # scale_fill_gradient2(low = "maroon", mid = "lightblue", high = "darkblue", 
+  #                      midpoint = 0, 
+  #                      breaks = c(-0.1, 0, 0.1), 
+  #                      limits = c(-0.1, 0.1)) +
+  coord_cartesian(xlim = c(-113, -75), ylim = c(30, 45)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  facet_wrap(~name)
+
+dp
 ```
