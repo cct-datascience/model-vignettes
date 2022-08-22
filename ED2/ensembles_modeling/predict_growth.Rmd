@@ -617,8 +617,44 @@ cowplot::plot_grid(plotlist = dp)
 ```{r}
 library(vip)
 library(tidymodels)
+library(ranger)
 library(dplyr)
+
+labels <- c(
+  mort2 = 'Mortality', 
+  growth_resp_factor = 'Growth Respiration', 
+  leaf_turnover_rate = 'Leaf Turnover Rate', 
+  leaf_width = 'Leaf Width', 
+  nonlocal_dispersal = 'Seed Dispersal', 
+  fineroot2leaf = 'Root:Leaf C allocation', 
+  root_turnover_rate = "Root Turnover Rate", 
+  seedling_mortality = "Seedling Mortality", 
+  stomatal_slope = "Stomatal Slope", 
+  quantum_efficiency = "Quantum Efficiency", 
+  vcmax = "Vcmax", 
+  r_fract = "Respiration Fraction", 
+  cuticular_cond = "Cuticular Conductance", 
+  root_respiration_rate = "Root Respiration", 
+  vm_low_temp = "Min Temp Photosynthesis", 
+  sla = "Specific Leaf Area", 
+  mean_temp = "Air Temperature", 
+  mean_vpd = "Vapor Pressure Deficit", 
+  mean_precip = "Precipitation", 
+  mean_srad = "Solar Radiation", 
+  mean_swe = "Soil Moisture"
+)
 model_fit%>% 
-  extract_fit_parsnip() %>% 
-  vip(num_features = 20)
+  extract_fit_parsnip()
+
+# requires tidymodels v1.0
+p <- model_fit%>% 
+  extract_fit_parsnip() %>%
+  vip(num_features = 10, geom = 'point') 
+
+pp <- p + theme_minimal() + scale_x_discrete(labels = labels) + scale_y_continuous(limits = c(80, 180))
+
+pp$layers[[1]]$aes_params$size <- 2
+
+  
+
 ```
