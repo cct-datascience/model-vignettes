@@ -357,8 +357,8 @@ Set up file of locations to get environmental variable data for.
 pred_sites_path <- "/data/output/daymet/ensembles_modeling/preds_sites.csv"
 
 if(!file.exists(pred_sites_path)){
-  pred_lats <- seq(35, 36, by = 0.25)
-  pred_lons <- seq(-105, -104, by = 0.25)
+  pred_lats <- seq(35, 40, by = 0.25)
+  pred_lons <- seq(-105, -80, by = 0.25)
   n <- expand.grid(pred_lats, pred_lons)
   pred_sites <- data.frame(site = 1:nrow(n), n)
   colnames(pred_sites) <- c('site', 'lat', 'lon')
@@ -375,14 +375,13 @@ Download data for those locations, and save out as a file because this can take 
 ```{r}
 pred_met_data_path <- "/data/output/daymet/ensembles_modeling/preds_met.csv"
 
+ptm <- proc.time()
 if(!file.exists(pred_met_data_path)){
-  ptm <- proc.time()
   df_batch <- download_daymet_batch(
     file_location = pred_sites_path,
     start = 2010,
-    end = 2010,
+    end = 2014,
     internal = TRUE)
-  proc.time() - ptm
   
   pred_mets <- list()
   for(i in 1:length(df_batch)){
@@ -396,6 +395,7 @@ if(!file.exists(pred_met_data_path)){
   pred_mets_all <- bind_rows(pred_mets)
   write_csv(pred_mets_all, pred_met_data_path)
 }
+proc.time() - ptm
 ```
 
 Get mean environmental variables of interest for July and August of each year by site. 
@@ -482,6 +482,7 @@ npp_pred_short <- predict(rf_fit,
                             type = "numeric")$.pred
 
 preds <- data.frame(site    = inputs_wt$site, 
+                    year    = inputs_wt$year, 
                     wt      = npp_pred,
                     hotleaf = npp_pred_hotleaf,
                     anthox  = npp_pred_antho,
@@ -490,7 +491,7 @@ preds <- data.frame(site    = inputs_wt$site,
   select(-site)
 
 preds_long <- preds %>% 
-  pivot_longer(cols = c(-lat, -lon))
+  pivot_longer(cols = c(-lat, -lon, -year))
 
 head(preds)
 ```
@@ -505,12 +506,13 @@ $$
 preds_perc_diff <- preds %>% 
   transmute(lat = lat,
             lon = lon,
+            year = year, 
             d_hotleaf = (hotleaf - wt) / wt * 100, 
             d_anthox  = (anthox - wt) / wt * 100, 
             d_short   = (short - wt) / wt * 100)
 
 preds_perc_diff_long <- preds_perc_diff %>% 
-  pivot_longer(cols = c(-lat, -lon))
+  pivot_longer(cols = c(-lat, -lon, -year))
 
 head(preds_perc_diff)
 ```
@@ -527,7 +529,7 @@ NA_map <- ggplot() +
                fill = "white", color = "black")
 ```
 
-Plot predictions values on map for all Setaria types. 
+Plot predictions values on map for all Setaria types. Due to not being able to install the `gifski` R package on Welsch, the commented out code to generating a gif by year has to be run outside of Welsch. 
 
 ```{r}
 NA_map +
@@ -539,14 +541,20 @@ NA_map +
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
   labs(x = "", y = "", fill = "") +
-  facet_wrap(~name)
-#  transition_manual(doy) +
-#  ggtitle('Day: {current_frame}')
+  facet_grid(name ~ year)
+# write.csv(preds_long, "predictions.csv", row.names = FALSE)
+#   facet_grid(~name) +
+#   transition_manual(year) +
+#   ggtitle('Year: {current_frame}')
+# 
+# animate(preds_gif)
+# anim_save("predictions.gif", animation = preds_gif)
 ```
 
-Plot percent difference between wild type Setaria and three modified plants on map. 
+Plot percent difference between wild type Setaria and three modified plants on map. Due to not being able to install the `gifski` R package on Welsch, the commented out code to generating a gif by year has to be run outside of Welsch. 
 
 ```{r}
+#write.csv(preds_perc_diff_long, "predictions_perc.csv", row.names = FALSE)
 dp <- list()  
 color_scales <- c("YlOrRd", "RdPu", "YlGnBu")
 
@@ -565,6 +573,9 @@ for(i in 1:length(unique(preds_perc_diff_long$name))){
           panel.grid.minor = element_line(colour = "grey")) +
     labs(x = "", y = "", fill = "") +
     facet_wrap(~name)
+  #   transition_manual(year) +
+  #   ggtitle('Year: {current_frame}')
+  # anim_save(paste0(dname, "_predictions.gif"), animation = dp[[dname]], height = 200, width = 600)
 }
 
 cowplot::plot_grid(plotlist = dp)

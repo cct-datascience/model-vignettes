@@ -574,8 +574,8 @@ Set up file of locations to get environmental variable data for.
 pred_sites_path <- "/data/output/daymet/ensembles_modeling/preds_sites.csv"
 
 if(!file.exists(pred_sites_path)){
-  pred_lats <- seq(35, 36, by = 0.25)
-  pred_lons <- seq(-105, -104, by = 0.25)
+  pred_lats <- seq(35, 40, by = 0.25)
+  pred_lons <- seq(-105, -80, by = 0.25)
   n <- expand.grid(pred_lats, pred_lons)
   pred_sites <- data.frame(site = 1:nrow(n), n)
   colnames(pred_sites) <- c('site', 'lat', 'lon')
@@ -593,14 +593,13 @@ can take a long time depending on number of sites.
 ``` r
 pred_met_data_path <- "/data/output/daymet/ensembles_modeling/preds_met.csv"
 
+ptm <- proc.time()
 if(!file.exists(pred_met_data_path)){
-  ptm <- proc.time()
   df_batch <- download_daymet_batch(
     file_location = pred_sites_path,
     start = 2010,
-    end = 2010,
+    end = 2014,
     internal = TRUE)
-  proc.time() - ptm
   
   pred_mets <- list()
   for(i in 1:length(df_batch)){
@@ -614,7 +613,11 @@ if(!file.exists(pred_met_data_path)){
   pred_mets_all <- bind_rows(pred_mets)
   write_csv(pred_mets_all, pred_met_data_path)
 }
+proc.time() - ptm
 ```
+
+    ##    user  system elapsed 
+    ##   0.005   0.000   0.004
 
 Get mean environmental variables of interest for July and August of each
 year by site.
@@ -645,15 +648,15 @@ head(pred_mets_mean_summer)
 ```
 
     ## # A tibble: 6 x 8
-    ## # Groups:   site [6]
+    ## # Groups:   site [2]
     ##    site  year mean_temp mean_vpd mean_precip mean_srad mean_swe mean_dayl
     ##   <dbl> <dbl>     <dbl>    <dbl>       <dbl>     <dbl>    <dbl>     <dbl>
     ## 1     1  2010      23.4    1229         2.00      450.        0     0.570
-    ## 2     2  2010      23.6     936.        2.00      460.        0     0.571
-    ## 3     3  2010      20.6    1265         2.36      439.        0     0.571
-    ## 4     4  2010      20.5    1359         2.39      436.        0     0.572
-    ## 5     5  2010      19.4    1246         4.00      436.        0     0.573
-    ## 6     6  2010      23.9    1216         2.11      452.        0     0.570
+    ## 2     1  2011      25.6     865.        1.60      451.        0     0.570
+    ## 3     1  2012      24.1     810.        1.52      462.        0     0.569
+    ## 4     1  2013      23.3    1186         2.65      445.        0     0.570
+    ## 5     1  2014      22.8    1482         2.68      419.        0     0.570
+    ## 6     2  2010      23.6     936.        2.00      460.        0     0.571
 
 ### Create parameter sets
 
@@ -683,21 +686,21 @@ inputs_wt <- cbind(pred_mets_mean_summer, params_wt)
 inputs_wt
 ```
 
-    ## # A tibble: 25 x 24
-    ## # Groups:   site [25]
+    ## # A tibble: 10,605 x 24
+    ## # Groups:   site [2,121]
     ##     site  year mean_temp mean_vpd mean_precip mean_srad mean_swe mean_dayl mort2
     ##    <dbl> <dbl>     <dbl>    <dbl>       <dbl>     <dbl>    <dbl>     <dbl> <dbl>
     ##  1     1  2010      23.4    1229         2.00      450.        0     0.570  20.0
-    ##  2     2  2010      23.6     936.        2.00      460.        0     0.571  20.0
-    ##  3     3  2010      20.6    1265         2.36      439.        0     0.571  20.0
-    ##  4     4  2010      20.5    1359         2.39      436.        0     0.572  20.0
-    ##  5     5  2010      19.4    1246         4.00      436.        0     0.573  20.0
-    ##  6     6  2010      23.9    1216         2.11      452.        0     0.570  20.0
-    ##  7     7  2010      23.7    1209         2.43      447.        0     0.571  20.0
-    ##  8     8  2010      21.5    1282         2.56      439.        0     0.571  20.0
-    ##  9     9  2010      21.3    1274         2.48      440.        0     0.572  20.0
-    ## 10    10  2010      20.9    1354         3.02      438.        0     0.573  20.0
-    ## # … with 15 more rows, and 15 more variables: growth_resp_factor <dbl>,
+    ##  2     1  2011      25.6     865.        1.60      451.        0     0.570  20.0
+    ##  3     1  2012      24.1     810.        1.52      462.        0     0.569  20.0
+    ##  4     1  2013      23.3    1186         2.65      445.        0     0.570  20.0
+    ##  5     1  2014      22.8    1482         2.68      419.        0     0.570  20.0
+    ##  6     2  2010      23.6     936.        2.00      460.        0     0.571  20.0
+    ##  7     2  2011      25.8     843.        1.43      454.        0     0.571  20.0
+    ##  8     2  2012      24.1     688.        1.01      475.        0     0.570  20.0
+    ##  9     2  2013      23.6    1034         2.21      460.        0     0.571  20.0
+    ## 10     2  2014      23.0    1166         1.25      449.        0     0.571  20.0
+    ## # … with 10,595 more rows, and 15 more variables: growth_resp_factor <dbl>,
     ## #   leaf_turnover_rate <dbl>, leaf_width <dbl>, nonlocal_dispersal <dbl>,
     ## #   fineroot2leaf <dbl>, root_turnover_rate <dbl>, seedling_mortality <dbl>,
     ## #   stomatal_slope <dbl>, quantum_efficiency <dbl>, vcmax <dbl>, r_fract <dbl>,
@@ -742,6 +745,7 @@ npp_pred_short <- predict(rf_fit,
                             type = "numeric")$.pred
 
 preds <- data.frame(site    = inputs_wt$site, 
+                    year    = inputs_wt$year, 
                     wt      = npp_pred,
                     hotleaf = npp_pred_hotleaf,
                     anthox  = npp_pred_antho,
@@ -750,18 +754,18 @@ preds <- data.frame(site    = inputs_wt$site,
   select(-site)
 
 preds_long <- preds %>% 
-  pivot_longer(cols = c(-lat, -lon))
+  pivot_longer(cols = c(-lat, -lon, -year))
 
 head(preds)
 ```
 
-    ##         wt  hotleaf   anthox    short   lat     lon
-    ## 1 3.065622 3.135708 3.873364 3.099888 35.00 -105.00
-    ## 2 2.751445 2.771513 3.606341 2.815145 35.25 -105.00
-    ## 3 3.312191 3.383422 4.062899 3.336621 35.50 -105.00
-    ## 4 3.942440 4.041419 4.994960 3.976245 35.75 -105.00
-    ## 5 5.368634 5.432234 7.585475 5.506483 36.00 -105.00
-    ## 6 3.065622 3.135708 3.873364 3.099888 35.00 -104.75
+    ##   year       wt  hotleaf   anthox    short   lat  lon
+    ## 1 2010 3.065622 3.135708 3.873364 3.099888 35.00 -105
+    ## 2 2011 2.892494 2.919489 3.759044 2.964141 35.00 -105
+    ## 3 2012 2.892494 2.919489 3.759044 2.964141 35.00 -105
+    ## 4 2013 5.985762 6.200064 7.634942 6.010254 35.00 -105
+    ## 5 2014 6.641088 6.878824 8.580335 6.676455 35.00 -105
+    ## 6 2010 2.751445 2.771513 3.606341 2.815145 35.25 -105
 
 Getting percent difference between wild type predictions and three
 modified plants predictions.
@@ -774,23 +778,24 @@ percent difference = \frac{mod - wt}{wt} * 100
 preds_perc_diff <- preds %>% 
   transmute(lat = lat,
             lon = lon,
+            year = year, 
             d_hotleaf = (hotleaf - wt) / wt * 100, 
             d_anthox  = (anthox - wt) / wt * 100, 
             d_short   = (short - wt) / wt * 100)
 
 preds_perc_diff_long <- preds_perc_diff %>% 
-  pivot_longer(cols = c(-lat, -lon))
+  pivot_longer(cols = c(-lat, -lon, -year))
 
 head(preds_perc_diff)
 ```
 
-    ##     lat     lon d_hotleaf d_anthox   d_short
-    ## 1 35.00 -105.00  2.286206 26.34840 1.1177408
-    ## 2 35.25 -105.00  0.729365 31.07080 2.3151391
-    ## 3 35.50 -105.00  2.150564 22.66500 0.7375888
-    ## 4 35.75 -105.00  2.510606 26.69717 0.8574811
-    ## 5 36.00 -105.00  1.184663 41.29248 2.5676790
-    ## 6 35.00 -104.75  2.286206 26.34840 1.1177408
+    ##     lat  lon year d_hotleaf d_anthox   d_short
+    ## 1 35.00 -105 2010 2.2862065 26.34840 1.1177408
+    ## 2 35.00 -105 2011 0.9332816 29.95859 2.4770022
+    ## 3 35.00 -105 2012 0.9332816 29.95859 2.4770022
+    ## 4 35.00 -105 2013 3.5802047 27.55172 0.4091750
+    ## 5 35.00 -105 2014 3.5797806 29.20075 0.5325432
+    ## 6 35.25 -105 2010 0.7293650 31.07080 2.3151391
 
 ### Plot predictions
 
@@ -804,7 +809,9 @@ NA_map <- ggplot() +
                fill = "white", color = "black")
 ```
 
-Plot predictions values on map for all Setaria types.
+Plot predictions values on map for all Setaria types. Due to not being
+able to install the `gifski` R package on Welsch, the commented out code
+to generating a gif by year has to be run outside of Welsch.
 
 ``` r
 NA_map +
@@ -816,20 +823,28 @@ NA_map +
         panel.grid.major = element_line(colour = "grey"),
         panel.grid.minor = element_line(colour = "grey")) +
   labs(x = "", y = "", fill = "") +
-  facet_wrap(~name)
+  facet_grid(name ~ year)
 ```
 
 ![](predict_growth_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 ``` r
-#  transition_manual(doy) +
-#  ggtitle('Day: {current_frame}')
+# write.csv(preds_long, "predictions.csv", row.names = FALSE)
+#   facet_grid(~name) +
+#   transition_manual(year) +
+#   ggtitle('Year: {current_frame}')
+# 
+# animate(preds_gif)
+# anim_save("predictions.gif", animation = preds_gif)
 ```
 
 Plot percent difference between wild type Setaria and three modified
-plants on map.
+plants on map. Due to not being able to install the `gifski` R package
+on Welsch, the commented out code to generating a gif by year has to be
+run outside of Welsch.
 
 ``` r
+#write.csv(preds_perc_diff_long, "predictions_perc.csv", row.names = FALSE)
 dp <- list()  
 color_scales <- c("YlOrRd", "RdPu", "YlGnBu")
 
@@ -848,6 +863,9 @@ for(i in 1:length(unique(preds_perc_diff_long$name))){
           panel.grid.minor = element_line(colour = "grey")) +
     labs(x = "", y = "", fill = "") +
     facet_wrap(~name)
+  #   transition_manual(year) +
+  #   ggtitle('Year: {current_frame}')
+  # anim_save(paste0(dname, "_predictions.gif"), animation = dp[[dname]], height = 200, width = 600)
 }
 
 cowplot::plot_grid(plotlist = dp)
