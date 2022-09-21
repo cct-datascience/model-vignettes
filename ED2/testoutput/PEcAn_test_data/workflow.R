@@ -16,7 +16,7 @@ settings$outdir
 
 # Prepare settings --------------------------------------------------------
 settings <- prepare.settings(settings, force = FALSE) 
-write.settings(settings, outputdir = settings$outdir, outputfile = paste0("pecan_checked.xml"))
+write.settings(settings, outputdir = settings$outdir, outputfile = "pecan_checked.xml")
 settings <- do_conversions(settings)
 
 # Query trait database ----------------------------------------------------
