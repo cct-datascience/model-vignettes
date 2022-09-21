@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <pecan>
   <info>
-    <notes>EBI Energy farm</notes>
+    <notes>ED2 dev version test</notes>
   </info>
   <outdir>/home/ericrscott/model-vignettes/ED2/testoutput/two_pfts/outdir/</outdir>
   <database>
