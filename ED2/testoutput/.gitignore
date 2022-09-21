@@ -1,0 +1,4 @@
+**/outdir/out
+**/outdir/pft
+**/outdir/run
+*.Rdata
