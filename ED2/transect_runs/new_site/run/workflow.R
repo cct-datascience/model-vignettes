@@ -59,17 +59,10 @@ runModule_start_model_runs(settings, stop.on.error = FALSE)
 
 # Results post-processing -------------------------------------------------
 
-## Convert and consolidate ED2 .h5 files to .nc files
-## NOTE: this is supposed to get run by runModule_start_model_runs() but is
-## currently broken and needs to be run manually. Might get fixed once PEcAn
-## container on HPC is updated so check for .nc files in outdir before running
-## this
+## Convert and consolidate ED2 .h5 files to .nc files NOTE: this is supposed to
+## get run on the HPC but is currently broken and needs to be run manually on
+## Welsch after .h5 files are copied over.
 
-# TODO: Check how many ensembles failed (and why?) by looking for empty dirs
-
-# This "works" but the .nc files produced are not useable, I think, because they
-# don't indicate which values come from which PFT.  There is a workaround in
-# plot.R
 
 ## use 2 cores to speed up
 plan(multisession, workers = 2)
@@ -81,6 +74,7 @@ with_progress({
 
   future_walk(dirs, ~{
     p() #progress bar
+    #TODO: args need updating, specifically pfts
     model2netcdf.ED2(
       .x,
       settings$run$site$lat,
