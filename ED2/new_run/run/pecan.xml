@@ -4,8 +4,8 @@
     <!--Edit this-->
     <notes>site name</notes>
   </info>
-  <!-- Edit the outdir name to replace SN with the two-letter abreviation for this site -->  
-  <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_SN</outdir>
+  <!-- Edit the outdir path to include a two-letter abreviation for this site -->  
+  <outdir>/data/output/pecan_runs/new_run</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>

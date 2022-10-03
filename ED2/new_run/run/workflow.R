@@ -8,7 +8,7 @@ library(PEcAn.all)
 # Read in settings --------------------------------------------------------
 
 #edit this path
-inputfile <- "ED2/transect_runs/new_site/run/pecan.xml"
+inputfile <- "ED2/new_run/run/pecan.xml"
 
 #check that inputfile exists, because read.settings() doesn't do that!
 if (file.exists(inputfile)) {
@@ -34,13 +34,12 @@ runModule.run.meta.analysis(settings)
 
 # Write model run configs -----------------------------------------------------
 
-# This will write config files locally and attempt to copy them to your HPC.  In
-# my experience, this copying fails, but it doesn't matter because the next step
-# ALSO attempts to copy the config files to the HPC.
-
+## This will write config files locally.
 runModule.run.write.configs(settings)
 
 # Start model runs --------------------------------------------------------
+
+## This copies config files to the HPC and starts the run
 runModule_start_model_runs(settings, stop.on.error = FALSE)
 
 ## If for some reason the above function tries to copy files back from HPC before
