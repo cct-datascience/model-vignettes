@@ -4,8 +4,6 @@
 
 # Load packages -----------------------------------------------------------
 library(PEcAn.all)
-library(furrr)
-library(progressr)
 
 # Read in settings --------------------------------------------------------
 
@@ -58,36 +56,33 @@ runModule_start_model_runs(settings, stop.on.error = FALSE)
 # system(cmd)
 
 # Results post-processing -------------------------------------------------
-
+library(furrr)
+library(progressr)
 ## Convert and consolidate ED2 .h5 files to .nc files NOTE: this is supposed to
 ## get run on the HPC but is currently broken and needs to be run manually on
 ## Welsch after .h5 files are copied over.
 
-
-## use 2 cores to speed up
+### use 2 cores to speed up
 plan(multisession, workers = 2)
 
 dirs <- list.dirs(file.path(settings$outdir, "out"), recursive = FALSE)
+pfts <- PEcAn.ED2:::extract_pfts(settings$pfts)
 
 with_progress({
   p <- progressor(steps = length(dirs))
-
+  
   future_walk(dirs, ~{
     p() #progress bar
-    #TODO: args need updating, specifically pfts
     model2netcdf.ED2(
       .x,
       settings$run$site$lat,
       settings$run$site$lon,
       settings$run$start.date,
       settings$run$end.date,
-      settings$pfts
+      pfts
     )
   })
 })
-
-### DON'T remove .h5 files.  The .nc files are currently malformed and you need
-### the raw output for plotting.
 
 # Model analyses ----------------------------------------------------------
 
@@ -96,8 +91,3 @@ get.results(settings)
 
 ## Run ensemble analysis on model output
 runModule.run.ensemble.analysis(settings)
-
-#The run.ensemble.analysis() step fails because whatever output the
-#ensemble.output...Rdata file didn't grab the ensemble ID correctly
-# run manually: 
-run.ensemble.analysis(settings, ensemble.id = "NOENSEMBLEID")
