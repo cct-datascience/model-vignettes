@@ -1,18 +1,10 @@
-
-# Load packages -----------------------------------------------------------
 library(PEcAn.settings)
 library(ncdf4)
 library(lubridate)
 library(tidyverse)
 library(units)
 
-
-# Load settings -----------------------------------------------------------
-# Edit this path!
-settings <- read.settings("ED2/testoutput/new_run/outdir/pecan_checked.xml")
-
-
-# Pull in results ---------------------------------------------------------
+settings <- read.settings("ED2/testoutput/ED2_dev/outdir/pecan_checked.xml")
 nc_files <- list.files(settings$modeloutdir, "*.nc$", recursive = TRUE, full.names = TRUE)
 
 nc_to_df <- function(nc, ensemble) {
@@ -38,8 +30,6 @@ npp_all <-
   map_dfr(nc_files, nc_to_df) %>% 
   mutate(NPP = set_units(NPP, "kg m-2 s-1"))
 
-
-# Summarize results -------------------------------------------------------
 npp_monthly <- 
   npp_all %>% 
   group_by(datetime) %>%
@@ -56,7 +46,6 @@ npp_monthly <-
   ))
 
 
-# Plot results ------------------------------------------------------------
 ggplot(npp_monthly, aes(x = datetime)) +
   geom_line(data = npp_all, aes(y = NPP, group = ensemble), alpha = 0.2) + 
   geom_ribbon(aes(ymin = lcl_95, ymax = ucl_95, fill = "95%"), alpha = 0.3) +
@@ -66,5 +55,3 @@ ggplot(npp_monthly, aes(x = datetime)) +
   scale_x_datetime(date_breaks = "1 month", date_labels = "%Y-%m") +
   scale_fill_discrete("CIs") +
   theme_classic()
-
-ggsave(file.path(settings$outdir, "npp_by_pft.png"))
