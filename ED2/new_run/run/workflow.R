@@ -37,51 +37,24 @@ runModule.run.meta.analysis(settings)
 ## This will write config files locally.
 runModule.run.write.configs(settings)
 
+# Modify job.sh to run R inside singularity container.  
+# This is a workaround for https://github.com/PecanProject/pecan/issues/2540
+
+job_scripts <- list.files(settings$rundir, "job.sh", recursive = TRUE, full.names = TRUE)
+#TODO: could get this from settings under the assumption that the .sh "ED binary" has same naming convention as .sif file
+container_path <- "/groups/dlebauer/ed2_results/global_inputs/pecan-dev_ed2-dev.sif"
+
+purrr::walk(job_scripts, function(x) {
+  job_sh <- readLines(x)
+  cmd <- paste0("singularity run ", container_path, " /usr/local/bin/Rscript")
+  job_sh_mod <- stringr::str_replace(job_sh, "Rscript", cmd)
+  writeLines(job_sh_mod, x)
+})
+
 # Start model runs --------------------------------------------------------
 
 ## This copies config files to the HPC and starts the run
 runModule_start_model_runs(settings, stop.on.error = FALSE)
-
-## If for some reason the above function tries to copy files back from HPC before
-## runs are finished, this code will manually copy it back.
-#  
-# cmd <- 
-#   paste0(
-#     "rsync -az -q ",
-#     "'", settings$host$name, ":", settings$host$outdir, "' ",
-#     "'", settings$outdir, "'"
-#   )
-# 
-# system(cmd)
-
-# Results post-processing -------------------------------------------------
-library(furrr)
-library(progressr)
-## Convert and consolidate ED2 .h5 files to .nc files NOTE: this is supposed to
-## get run on the HPC but is currently broken and needs to be run manually on
-## Welsch after .h5 files are copied over.
-
-### use 2 cores to speed up
-plan(multisession, workers = 2)
-
-dirs <- list.dirs(file.path(settings$outdir, "out"), recursive = FALSE)
-pfts <- PEcAn.ED2:::extract_pfts(settings$pfts)
-
-with_progress({
-  p <- progressor(steps = length(dirs))
-  
-  future_walk(dirs, ~{
-    p() #progress bar
-    model2netcdf.ED2(
-      .x,
-      settings$run$site$lat,
-      settings$run$site$lon,
-      settings$run$start.date,
-      settings$run$end.date,
-      pfts
-    )
-  })
-})
 
 # Model analyses ----------------------------------------------------------
 
