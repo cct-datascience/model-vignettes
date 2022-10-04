@@ -44,7 +44,7 @@ purrr::walk(job_scripts, function(x) {
 # Start model runs --------------------------------------------------------
 runModule_start_model_runs(settings, stop.on.error = FALSE)
 
-#sometimes outdir/out still doesn't get copied over.  Not sure why...
+#sometimes outdir/out still doesn't get copied over on the first try.  Not sure why...
 
 # Model analyses ----------------------------------------------------------
 

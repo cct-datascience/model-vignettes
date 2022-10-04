@@ -107,7 +107,7 @@
    </thsum>
   </inputs>
   <start.date>2004-07-01</start.date>
-  <end.date>2004-08-01</end.date>
+  <end.date>2004-10-01</end.date>
  </run>
  <host>
   <name>puma</name>
@@ -121,8 +121,8 @@
    <mpirun>module load openmpi3; mpirun</mpirun>
   </modellauncher>
   <prerun>module load openmpi3 R</prerun>
-  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-18-16-15/run</rundir>
-  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-18-16-15/out</outdir>
+  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-19-01-21/run</rundir>
+  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-19-01-21/out</outdir>
  </host>
  <settings.info>
   <deprecated.settings.fixed>TRUE</deprecated.settings.fixed>
@@ -130,7 +130,7 @@
   <checked>TRUE</checked>
  </settings.info>
  <workflow>
-  <id>2022-10-04-18-16-15</id>
+  <id>2022-10-04-19-01-21</id>
  </workflow>
  <rundir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev/outdir//run</rundir>
  <modeloutdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev/outdir//out</modeloutdir>
