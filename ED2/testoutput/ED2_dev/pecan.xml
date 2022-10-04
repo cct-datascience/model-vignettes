@@ -34,7 +34,7 @@
   </meta.analysis>
 
   <ensemble>
-    <size>1</size>
+    <size>2</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
