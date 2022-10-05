@@ -25,13 +25,16 @@ source("~/model-vignettes/BioCro/DARPA/plot_MA.R")
 # ----------------------------------------------------------------------
 treatments <- c("rn", "hn")
 for(trt in treatments){
-  
+
   # Open, read in, and modify settings file for PEcAn run
-  settings_file <- normalizePath(paste0("../inputs/pecan.", trt, ".xml"))
+  settings_file <- normalizePath(paste0("~/model-vignettes/BioCro/DARPA/temp_comparison/inputs/pecan.", trt, ".xml"))
   settings <- PEcAn.settings::read.settings(settings_file) 
   settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
   PEcAn.settings::write.settings(settings, outputfile = paste0("pecan.CHECKED.", trt, ".xml"))
   settings <- PEcAn.workflow::do_conversions(settings)
+  
+  # Outputs will be saved here:
+  settings$outdir
   
   # Query the trait database for data and priors
   settings <- PEcAn.workflow::runModule.get.trait.data(settings)
@@ -60,7 +63,7 @@ for(trt in treatments){
   
   # Run ecosystem model (in folders 'run' and 'out')
   st <- proc.time()
-  PEcAn.remote::runModule.start.model.runs(settings, stop.on.error = FALSE)
+  PEcAn.workflow::runModule_start_model_runs(settings, stop.on.error = FALSE)
   en <- proc.time()
   dur <- (en - st)/60/60
   print(paste0(settings$ensemble$size, " ensembles completed in ", round(dur[3], 4), " hours"))

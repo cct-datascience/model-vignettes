@@ -8,7 +8,7 @@ We can definitely use one experiment's data (the second one), which we have alre
 
 ### Download data
 
-These data are in [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data).
+These data are in [the project's private data repo](https://github.com/cct-datascience/model-vignettes-data).
 
 ``` r
 library(readxl)

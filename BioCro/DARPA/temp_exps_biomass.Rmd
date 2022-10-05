@@ -43,7 +43,7 @@ if(!file.exists("temp_exps_results/temp_exps_results1/sensitivity.results.NOENSE
 
 ```
 
-Plot results against measured biomass. Control data are downloaded from [the project's private data repo](https://github.com/az-digitalag/model-vignettes-data) and should be in `model-vignettes-data` in your home directory. The following code cleans up that biomass data, calculating number of days between treatment starting and biomass harvest, and converts biomass units from milligrams to megagrams per hectare (each plant grown in pot with 103 cm2 area). 
+Plot results against measured biomass. Control data are downloaded from [the project's private data repo](https://github.com/cct-datascience/model-vignettes-data) and should be in `model-vignettes-data` in your home directory. The following code cleans up that biomass data, calculating number of days between treatment starting and biomass harvest, and converts biomass units from milligrams to megagrams per hectare (each plant grown in pot with 103 cm2 area). 
 
 This also pulls in and cleans up the biomass data estimated from BioCro, then plots biomass measurements against this. 
 

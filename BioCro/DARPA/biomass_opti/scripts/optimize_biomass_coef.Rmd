@@ -13,7 +13,7 @@ Optimizing biomass coefficients so that biomass estimates from BioCro as closely
 
 First, read in necessary input data for the chamber experiment 2, 31_31_430 treatment that has biomass data from 6 time points: 
 
-* BioCro [config](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/inputs/ch_config.xml) file (copied from a PEcAn run by [generate_weather_config.R](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/generate_weather_config.R) and updated by [collate_biomass.R](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/collate_biomass.R)
+* BioCro [config](https://github.com/cct-datascience/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/inputs/ch_config.xml) file (copied from a PEcAn run by [generate_weather_config.R](https://github.com/cct-datascience/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/generate_weather_config.R) and updated by [collate_biomass.R](https://github.com/cct-datascience/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/collate_biomass.R)
 * weather file (created by generate_weather_config.R)
 * biomass file (created by collate_biomass.R)
 
@@ -251,4 +251,4 @@ ggplot() +
   facet_wrap(~name)
 ```
 
-After running this script, see the [modify_constants_file.R](https://github.com/az-digitalag/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/modify_constants_file.R), which uses the saved results to update the BioCro config files for the PEcAn experiments. 
+After running this script, see the [modify_constants_file.R](https://github.com/cct-datascience/model-vignettes/tree/master/BioCro/DARPA/biomass_opti/scripts/modify_constants_file.R), which uses the saved results to update the BioCro config files for the PEcAn experiments. 
