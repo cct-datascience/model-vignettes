@@ -3,6 +3,7 @@ Setting up an ED2 run
 
 ### Setting up a new site
 
+0.  In ~/.ssh/config use the nickname "puma" and include username.  Basically, be able to log on to HPC with `ssh puma` without a password.
 1.  Set up files and folders
   - Copy this `new_run` folder and its contents and re-name it
 2.  Get MERRA weather for site and dates
