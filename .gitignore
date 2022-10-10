@@ -49,6 +49,7 @@ docs/
 
 # Output files
 *.csv
+*.Rdata
 *.RData
 *_results/
 *.html
