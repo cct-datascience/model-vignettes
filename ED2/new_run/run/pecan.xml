@@ -68,7 +68,7 @@
     <binary>/groups/dlebauer/ed2_results/global_inputs/pecan-dev_ed2-dev.sh</binary>
     <id>14</id>
     <!-- ED2IN template that corresponds with dev version of ED2.  This path is *inside* the singularity container -->
-    <edin>/pecan/models/ed/inst/ED2IN.r2.2.0.github</edin>
+    <revision>2.2.0.github</revision>
     <config.header>
       <radiation>
         <lai_min>0.01</lai_min>
