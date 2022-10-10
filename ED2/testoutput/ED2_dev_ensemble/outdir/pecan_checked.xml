@@ -3,7 +3,7 @@
  <info>
   <notes>ED2 dev version test</notes>
  </info>
- <outdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev/outdir/</outdir>
+ <outdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev_ensemble/outdir/</outdir>
  <database>
   <bety>
    <driver>PostgreSQL</driver>
@@ -19,12 +19,12 @@
   <pft>
    <name>SetariaWT</name>
    <ed2_pft_number>1</ed2_pft_number>
-   <outdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev/outdir//pft/SetariaWT</outdir>
+   <outdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev_ensemble/outdir//pft/SetariaWT</outdir>
   </pft>
   <pft>
    <name>ebifarm.c3grass</name>
    <ed2_pft_number>5</ed2_pft_number>
-   <outdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev/outdir//pft/ebifarm.c3grass</outdir>
+   <outdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev_ensemble/outdir//pft/ebifarm.c3grass</outdir>
   </pft>
  </pfts>
  <meta.analysis>
@@ -37,7 +37,7 @@
   <update>TRUE</update>
  </meta.analysis>
  <ensemble>
-  <size>2</size>
+  <size>20</size>
   <variable>NPP</variable>
   <samplingspace>
    <parameters>
@@ -121,8 +121,8 @@
    <mpirun>module load openmpi3; mpirun</mpirun>
   </modellauncher>
   <prerun>module load openmpi3 R</prerun>
-  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-19-01-21/run</rundir>
-  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-19-01-21/out</outdir>
+  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-21-04-12/run</rundir>
+  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-04-21-04-12/out</outdir>
  </host>
  <settings.info>
   <deprecated.settings.fixed>TRUE</deprecated.settings.fixed>
@@ -130,8 +130,8 @@
   <checked>TRUE</checked>
  </settings.info>
  <workflow>
-  <id>2022-10-04-19-01-21</id>
+  <id>2022-10-04-21-04-12</id>
  </workflow>
- <rundir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev/outdir//run</rundir>
- <modeloutdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev/outdir//out</modeloutdir>
+ <rundir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev_ensemble/outdir//run</rundir>
+ <modeloutdir>/home/ericrscott/model-vignettes/ED2/testoutput/ED2_dev_ensemble/outdir//out</modeloutdir>
 </pecan>

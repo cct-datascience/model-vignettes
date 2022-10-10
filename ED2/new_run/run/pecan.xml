@@ -4,8 +4,8 @@
     <!--Edit this-->
     <notes>site name</notes>
   </info>
-  <!-- Edit the outdir name to replace SN with the two-letter abreviation for this site -->  
-  <outdir>/data/output/pecan_runs/transect_runs/ed2_transect_SN</outdir>
+  <!-- Edit the outdir path to include a two-letter abreviation for this site -->  
+  <outdir>/data/output/pecan_runs/new_run</outdir>
   <database>
     <bety>
       <driver>PostgreSQL</driver>
@@ -31,6 +31,7 @@
   </pfts>
 
   <meta.analysis>
+    <!-- This should be increased to more like 50000 for final runs -->
     <iter>3000</iter>
     <random.effects>TRUE</random.effects>
     <threshold>1.2</threshold>
@@ -51,6 +52,7 @@
   </sensitivity.analysis>
 -->
   <ensemble>
+    <!-- This should be increased for final runs -->
     <size>50</size>
     <variable>NPP</variable>
     <samplingspace>
@@ -62,9 +64,11 @@
 
   <model>
     <type>ED2</type>
-    <binary>/groups/dlebauer/ed2_results/global_inputs/ed2_2.2.0_singularity.sh</binary>
+    <!-- this is the development version of ED2 and PEcAn.ED2 -->
+    <binary>/groups/dlebauer/ed2_results/global_inputs/pecan-dev_ed2-dev.sh</binary>
     <id>14</id>
-    <edin>/pecan/models/ed/inst/ED2IN.r2.2.0</edin>
+    <!-- ED2IN template that corresponds with dev version of ED2.  This path is *inside* the singularity container -->
+    <revision>2.2.0.github</revision>
     <config.header>
       <radiation>
         <lai_min>0.01</lai_min>
@@ -105,14 +109,14 @@
   </run>
   
   <host>
-      <!-- edit to whatever is in your .ssh/config -->
+      <!-- edit to whatever nickname is in your .ssh/config -->
       <name>puma</name>
       <!-- don't edit the rest unless you know what you're doing -->
       <folder>/groups/dlebauer/ed2_results/pecan_remote</folder>
       <qsub>sbatch --job-name=@NAME@ --account=dlebauer --ntasks=28 --nodes=3 --time=25:00:00 -o @STDOUT@ -e @STDERR@</qsub>
       <qsub.jobid>.* ([0-9]+)</qsub.jobid>
       <qstat>'squeue --job @JOBID@ &amp;> /dev/null || echo DONE'</qstat>
-      <prerun>module load openmpi3</prerun>
+      <job.sh>module load openmpi3 R</job.sh>
       <modellauncher>
         <binary>/groups/dlebauer/ed2_results/pecan/contrib/modellauncher/modellauncher</binary>
         <qsub.extra>--partition=standard</qsub.extra>

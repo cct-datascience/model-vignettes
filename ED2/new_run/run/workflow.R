@@ -1,8 +1,14 @@
+# This may take a long time to run.  Run as a background job if you don't want
+# to tie up your R session.  In RStudio click the "Source" drop-down and choose
+# "Source as Local Job"
+
 # Load packages -----------------------------------------------------------
 library(PEcAn.all)
 
 # Read in settings --------------------------------------------------------
-inputfile <- "ED2/testoutput/ED2_dev/pecan.xml"
+
+#edit this path
+inputfile <- "ED2/new_run/run/pecan.xml"
 
 #check that inputfile exists, because read.settings() doesn't do that!
 if (file.exists(inputfile)) {
@@ -15,8 +21,9 @@ if (file.exists(inputfile)) {
 settings$outdir
 
 # Prepare settings --------------------------------------------------------
+#TODO: check that dates are sensible?
 settings <- prepare.settings(settings, force = FALSE) 
-write.settings(settings, outputdir = settings$outdir, outputfile = "pecan_checked.xml")
+write.settings(settings, outputfile = paste0("pecan_checked_", Sys.Date(), ".xml"))
 settings <- do_conversions(settings)
 
 # Query trait database ----------------------------------------------------
@@ -26,9 +33,12 @@ settings <- runModule.get.trait.data(settings)
 runModule.run.meta.analysis(settings)
 
 # Write model run configs -----------------------------------------------------
+
+## This will write config files locally.
 runModule.run.write.configs(settings)
 
-# Modify job.sh to run R inside singularity container
+# Modify job.sh to run R inside singularity container.  
+# This is a workaround for https://github.com/PecanProject/pecan/issues/2540
 
 job_scripts <- list.files(settings$rundir, "job.sh", recursive = TRUE, full.names = TRUE)
 #TODO: could get this from settings under the assumption that the .sh "ED binary" has same naming convention as .sif file
@@ -42,9 +52,9 @@ purrr::walk(job_scripts, function(x) {
 })
 
 # Start model runs --------------------------------------------------------
-runModule_start_model_runs(settings, stop.on.error = FALSE)
 
-#sometimes outdir/out still doesn't get copied over on the first try.  Not sure why...
+## This copies config files to the HPC and starts the run
+runModule_start_model_runs(settings, stop.on.error = FALSE)
 
 # Model analyses ----------------------------------------------------------
 

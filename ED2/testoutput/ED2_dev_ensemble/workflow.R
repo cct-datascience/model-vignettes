@@ -2,7 +2,7 @@
 library(PEcAn.all)
 
 # Read in settings --------------------------------------------------------
-inputfile <- "ED2/testoutput/ED2_dev/pecan.xml"
+inputfile <- "ED2/testoutput/ED2_dev_ensemble/pecan.xml"
 
 #check that inputfile exists, because read.settings() doesn't do that!
 if (file.exists(inputfile)) {
