@@ -1,0 +1,170 @@
+---
+title: "New Sites"
+author: "Eric Scott"
+date: "2022-10-10"
+output: html_document
+---
+
+```{r setup}
+library(tidyverse)
+```
+
+David copied weather and site/patch files over from Mike's server.  This is a table describing how files correspond to sites:
+
+```{r}
+sites <- read_csv("https://gist.githubusercontent.com/dlebauer/66686e60bac92535585ddf7a0dfaeae2/raw/fb3f9c9a625f4a9e79221fe36906e3b7afae5f8c/cohort_met_files.csv")
+mandifore_raw <- sites %>% filter(str_detect(sitename, "MANDIFORE")) #only copied MANDIFORE sites
+colnames(mandifore_raw)
+```
+
+- `site_id`: BETTY site ID.  E.g. http://welsch.cyverse.org:8000/bety/sites/1000001024
+- `sitename`: Long name of site
+- `lon`, `lat`: location
+- `format_name`: whether the path is to the met drivers or to the cohort files
+- `file_path`: the path it was copied from. 
+- `filename`: On Welsch these are at /data/input/...
+- `start_date`, `end_date`, time range in dmy_hms format
+- `duration`: end_date - start_date?
+- `created_at`: when the file was created?
+
+We don't need all columns to generate pecan.xml files.
+
+```{r}
+mandifore <- 
+  mandifore_raw %>% 
+  select(-duration, -created_at, -file_path) %>% 
+  mutate(across(ends_with("_date"), lubridate::dmy_hms)) %>% 
+  arrange(site_id, format_name)
+mandifore
+```
+
+Only keep site_id's that have both `format_name`s
+
+```{r}
+mandifore <- 
+  mandifore %>%
+  group_by(site_id) %>%
+  filter(n()==2)
+```
+
+Split MET and cohort data and re-combine
+
+```{r}
+met <-
+  mandifore %>% 
+  filter(format_name == "ed.met_driver_header files format") %>% 
+  rename_with(~paste0("met_", .), c(filename, start_date, end_date)) %>% 
+  select(-format_name)
+
+cohort <- 
+  mandifore %>% 
+  filter(format_name == "ED2.cohort") %>% 
+  rename(cohort_filename = filename) %>% 
+  select(-format_name)
+
+new_sites <- full_join(met, cohort, by = c("site_id", "sitename", "lon", "lat")) %>% 
+  ungroup()
+new_sites
+```
+
+Now `start_date` and `end_date` refer to the start and end of the cohort file (which may not be important) and `met_start_date` and `met_end_date` refer to start and end of the MET data.
+
+## Setting up new runs
+
+Would be nice to do this as programmatically as possible...
+
+1. copy over some kinda template
+2. rename folder with sitename or truncated sitename or site ID
+3. edit pecan.xml with new site ID, site name, start and end dates, MET drivers, and cohort files
+
+## Test run
+
+To figure out how to automate all this, start by picking a site (literally at random) and setting up a run:
+
+```{r}
+set.seed(123)
+(s <- slice_sample(new_sites, n = 1))
+```
+
+1. make dir
+
+```{r}
+wd <- here::here("ED2", "MANDIFORE_runs", s$sitename)
+dir.create(wd)
+```
+
+2. Create pecan.xml
+
+```{r}
+#TODO: update to a project-specific template eventually
+template <- here::here("ED2", "new_run", "run", "pecan.xml")
+file.copy(template, file.path(wd, "pecan.xml"))
+```
+
+
+3. Customize pecan.xml
+
+I think this will be easiest to work with it in list format
+
+```{r}
+#need dev version of PEcAn.settings to strip comments
+# remotes::install_github("pecanproject/pecan", subdir = "base/settings")
+library(PEcAn.settings) 
+settings <- read.settings(file.path(wd, "pecan.xml"))
+```
+
+Outdir
+
+For now I'll put it inside the run folder.  Later move to `/data/`
+
+```{r}
+settings$outdir <- file.path(wd, "outdir")
+dir.create(settings$outdir)
+```
+
+
+Site name
+
+```{r}
+settings$info$notes <- s$sitename
+```
+
+Site ID
+
+```{r}
+settings$run$site$id <- s$site_id
+```
+
+MET start and end
+
+```{r}
+settings$run$site$met.start <- format(s$met_start_date, "%Y-%m-%d %H:%M:%S")
+settings$run$site$met.end <- format(s$met_end_date, "%Y-%m-%d %H:%M:%S")
+```
+
+Inputs
+
+```{r}
+settings$run$inputs$met <- file.path("/data", "input", s$met_filename)
+
+files <- list.files(file.path("../../../../../data/input/", s$cohort_filename))
+
+settings$run$inputs$pss <- file.path("/data", "input", files[str_detect(files, "\\.pss$")])
+settings$run$inputs$css <- file.path("/data", "input", files[str_detect(files, "\\.css$")])
+settings$run$inputs$site <- file.path("/data", "input", files[str_detect(files, "\\.site$")])
+```
+
+
+check settings
+
+```{r}
+settings <- prepare.settings(settings)
+write.settings(settings, outputfile = "settings_checked.xml")
+```
+
+
+Will this run as is, or do I need to specify PFTs extracted from cohort files??
+
+TODO:
+- Move MET files and cohort files to HPC
+- Make sure the dir they are moved to is mounted in the "ED2 binary" .sh script on the HPC
