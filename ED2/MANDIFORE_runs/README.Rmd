@@ -161,7 +161,7 @@ PEcAn.remote::remote.copy.to(
 ```
 
 ```{r}
-base <- "/groups/dlebauer/data/sites/mandifore"
+base <- "/data/sites/mandifore"
 
 settings$run$inputs$met <- file.path(base, s$met_filename)
 

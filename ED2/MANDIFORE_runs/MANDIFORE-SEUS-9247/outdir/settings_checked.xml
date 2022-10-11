@@ -75,7 +75,7 @@
   </site>
   <inputs>
    <met>
-    <path>/groups/dlebauer/data/sites/mandifore/NARR_ED2_site_1-18168</path>
+    <path>/data/sites/mandifore/NARR_ED2_site_1-18168</path>
    </met>
    <veg>
     <path>/data/oge2OLD/OGE2_</path>
@@ -90,13 +90,13 @@
     <path>/data/ed_inputs/</path>
    </thsum>
    <pss>
-    <path>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss</path>
+    <path>/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss</path>
    </pss>
    <css>
-    <path>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css</path>
+    <path>/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css</path>
    </css>
    <site>
-    <path>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.5lon-81.5.site</path>
+    <path>/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.5lon-81.5.site</path>
    </site>
   </inputs>
   <start.date>2001-01-01</start.date>
@@ -114,8 +114,8 @@
    <mpirun>module load openmpi3; mpirun</mpirun>
   </modellauncher>
   <prerun>module load openmpi3 R</prerun>
-  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/run</rundir>
-  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/out</outdir>
+  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-25-34/run</rundir>
+  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-25-34/out</outdir>
  </host>
  <settings.info>
   <deprecated.settings.fixed>TRUE</deprecated.settings.fixed>
@@ -123,7 +123,7 @@
   <checked>TRUE</checked>
  </settings.info>
  <workflow>
-  <id>2022-10-11-20-36-49</id>
+  <id>2022-10-11-22-25-34</id>
  </workflow>
  <rundir>/home/ericrscott/model-vignettes/ED2/MANDIFORE_runs/MANDIFORE-SEUS-9247/outdir/run</rundir>
  <modeloutdir>/home/ericrscott/model-vignettes/ED2/MANDIFORE_runs/MANDIFORE-SEUS-9247/outdir/out</modeloutdir>
