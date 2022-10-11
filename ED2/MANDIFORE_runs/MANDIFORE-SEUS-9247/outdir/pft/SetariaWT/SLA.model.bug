@@ -17,7 +17,7 @@ model
    }
    beta.ghs[1]  <- 0                               
    beta.ghs[2]  ~ dnorm(0, 0.01)
-  beta.o    ~ dweib (5, 0.0000000032)#BBB
+  beta.o    ~ dweib (5, 3.2e-09)#BBB
    tau.site  ~ dgamma(0.01, 0.01)
    tau.trt   ~ dgamma(0.01, 0.01)
   prec.y    ~ dgamma(0.01, 0.01)     

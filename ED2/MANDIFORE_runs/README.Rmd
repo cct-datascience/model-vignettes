@@ -163,7 +163,7 @@ PEcAn.remote::remote.copy.to(
 ```{r}
 base <- "/data/sites/mandifore"
 
-settings$run$inputs$met <- file.path(base, s$met_filename)
+settings$run$inputs$met <- file.path(base, s$met_filename, "ED_MET_DRIVER_HEADER")
 
 files <- list.files(file.path("/data/input/", s$cohort_filename))
 

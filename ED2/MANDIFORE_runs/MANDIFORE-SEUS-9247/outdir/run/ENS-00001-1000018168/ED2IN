@@ -378,8 +378,8 @@ $ED_NL
    ! FFILOUT -- Path and prefix for analysis files (all but history/restart).              !
    ! SFILOUT -- Path and prefix for history files.                                         !
    !---------------------------------------------------------------------------------------!
-   NL%FFILOUT = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/out/ENS-00001-1000018168/analysis'
-   NL%SFILOUT = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/out/ENS-00001-1000018168/history'
+   NL%FFILOUT = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/out/ENS-00001-1000018168/analysis'
+   NL%SFILOUT = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/out/ENS-00001-1000018168/history'
    !---------------------------------------------------------------------------------------!
 
 
@@ -456,7 +456,7 @@ $ED_NL
    !              path+prefix will be used, as the history for every grid must have come   !
    !              from the same simulation.                                                !
    !---------------------------------------------------------------------------------------!
-   NL%SFILIN = '/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.'
+   NL%SFILIN = '/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.'
    !---------------------------------------------------------------------------------------!
 
 
@@ -677,7 +677,7 @@ $ED_NL
    NL%SLCOL_DATABASE = 'myinpmain/soil_data/colour/LC2007JGRB/LC2007JGRB_'
    NL%PLANTATION_FILE = ''
    NL%THSUMS_DATABASE = '/data/ed_inputs/'
-   NL%ED_MET_DRIVER_DB = '/groups/dlebauer/data/sites/mandifore/NARR_ED2_site_1-18168'
+   NL%ED_MET_DRIVER_DB = '/data/sites/mandifore/NARR_ED2_site_1-18168/ED_MET_DRIVER_HEADER'
    NL%OBSTIME_DB = ''
    NL%SOILSTATE_DB = '/mypath/soil_data/temp+moist/STW1996OCT.dat'
    NL%SOILDEPTH_DB = '/mypath/soil_data/depth/H250mBRD/H250mBRD_'
@@ -2019,8 +2019,8 @@ $ED_NL
    !               simulation.                                                             !
    ! PHENPATH   -- path and prefix of the prescribed phenology data.                       !
    !---------------------------------------------------------------------------------------!
-   NL%IEDCNFGF = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/run/ENS-00001-1000018168/config.xml'
-   NL%EVENT_FILE = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/run/ENS-00001-1000018168/myevents.xml'
+   NL%IEDCNFGF = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/run/ENS-00001-1000018168/config.xml'
+   NL%EVENT_FILE = '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/run/ENS-00001-1000018168/myevents.xml'
    !---------------------------------------------------------------------------------------!
 
 

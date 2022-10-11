@@ -49,7 +49,7 @@
 -->
   <ensemble>
     <!-- This should be increased for final runs -->
-    <size>50</size>
+    <size>5</size>
     <variable>NPP</variable>
     <samplingspace>
       <parameters>
