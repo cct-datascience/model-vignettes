@@ -144,15 +144,33 @@ settings$run$site$met.end <- format(s$met_end_date, "%Y-%m-%d %H:%M:%S")
 
 Inputs
 
+Copy files over to HPC
+
 ```{r}
-settings$run$inputs$met <- file.path("/data", "input", s$met_filename)
+PEcAn.remote::remote.copy.to(
+  settings$host,
+  src = file.path("/data/input", s$met_filename),
+  dst = "/groups/dlebauer/data/sites/mandifore"
+)
+PEcAn.remote::remote.copy.to(
+  settings$host,
+  src = file.path("/data/input", s$cohort_filename),
+  dst = "/groups/dlebauer/data/sites/mandifore"
+)
+```
+
+```{r}
+settings$run$inputs$met <- 
+  file.path("/groups/dlebauer/data/sites/mandifore", s$met_filename)
 
 files <- list.files(file.path("../../../../../data/input/", s$cohort_filename))
 
-settings$run$inputs$pss <- file.path("/data", "input", files[str_detect(files, "\\.pss$")])
-settings$run$inputs$css <- file.path("/data", "input", files[str_detect(files, "\\.css$")])
-settings$run$inputs$site <- file.path("/data", "input", files[str_detect(files, "\\.site$")])
+#TODO: fix these
+settings$run$inputs$pss <- file.path("/groups/dlebauer/data/sites/mandifore", files[str_detect(files, "\\.pss$")])
+settings$run$inputs$css <- file.path("/groups/dlebauer/data/sites/mandifore", files[str_detect(files, "\\.css$")])
+settings$run$inputs$site <- file.path("/groups/dlebauer/data/sites/mandifore", files[str_detect(files, "\\.site$")])
 ```
+
 
 
 check settings
