@@ -20,6 +20,7 @@
    <name>SetariaWT</name>
    <ed2_pft_number>1</ed2_pft_number>
    <outdir>/home/ericrscott/model-vignettes/ED2/MANDIFORE_runs/MANDIFORE-SEUS-9247/outdir/pft/SetariaWT</outdir>
+   <posteriorid>9000001490</posteriorid>
   </pft>
  </pfts>
  <meta.analysis>
@@ -74,9 +75,7 @@
    <lon>-81.072417</lon>
   </site>
   <inputs>
-   <met>
-    <path>/data/input/NARR_ED2_site_1-18168</path>
-   </met>
+   <met>/groups/dlebauer/data/sites/mandifore/NARR_ED2_site_1-18168</met>
    <veg>
     <path>/data/oge2OLD/OGE2_</path>
    </veg>
@@ -89,15 +88,9 @@
    <thsum>
     <path>/data/ed_inputs/</path>
    </thsum>
-   <pss>
-    <path>/data/input/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss</path>
-   </pss>
-   <css>
-    <path>/data/input/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css</path>
-   </css>
-   <site>
-    <path>/data/input/siteid1000018168.fia2000.radius0.075.lat35.5lon-81.5.site</path>
-   </site>
+   <pss>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss</pss>
+   <css>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css</css>
+   <site>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.5lon-81.5.site</site>
   </inputs>
   <start.date>2001-01-01</start.date>
   <end.date>2003-12-31</end.date>

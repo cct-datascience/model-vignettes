@@ -160,15 +160,18 @@ PEcAn.remote::remote.copy.to(
 ```
 
 ```{r}
-settings$run$inputs$met <- 
-  file.path("/groups/dlebauer/data/sites/mandifore", s$met_filename)
+base <- "/groups/dlebauer/data/sites/mandifore"
 
-files <- list.files(file.path("../../../../../data/input/", s$cohort_filename))
+settings$run$inputs$met <- file.path(base, s$met_filename)
 
-#TODO: fix these
-settings$run$inputs$pss <- file.path("/groups/dlebauer/data/sites/mandifore", files[str_detect(files, "\\.pss$")])
-settings$run$inputs$css <- file.path("/groups/dlebauer/data/sites/mandifore", files[str_detect(files, "\\.css$")])
-settings$run$inputs$site <- file.path("/groups/dlebauer/data/sites/mandifore", files[str_detect(files, "\\.site$")])
+files <- list.files(file.path("/data/input/", s$cohort_filename))
+
+settings$run$inputs$pss <-
+  file.path(base, s$cohort_filename, files[str_detect(files, "\\.pss$")])
+settings$run$inputs$css <-
+  file.path(base, s$cohort_filename, files[str_detect(files, "\\.css$")])
+settings$run$inputs$site <-
+  file.path(base, s$cohort_filename, files[str_detect(files, "\\.site$")])
 ```
 
 
@@ -180,9 +183,3 @@ settings <- prepare.settings(settings)
 write.settings(settings, outputfile = "settings_checked.xml")
 ```
 
-
-Will this run as is, or do I need to specify PFTs extracted from cohort files??
-
-TODO:
-- Move MET files and cohort files to HPC
-- Make sure the dir they are moved to is mounted in the "ED2 binary" .sh script on the HPC
