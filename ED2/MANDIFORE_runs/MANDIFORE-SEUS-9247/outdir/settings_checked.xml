@@ -20,7 +20,6 @@
    <name>SetariaWT</name>
    <ed2_pft_number>1</ed2_pft_number>
    <outdir>/home/ericrscott/model-vignettes/ED2/MANDIFORE_runs/MANDIFORE-SEUS-9247/outdir/pft/SetariaWT</outdir>
-   <posteriorid>9000001490</posteriorid>
   </pft>
  </pfts>
  <meta.analysis>
@@ -75,7 +74,9 @@
    <lon>-81.072417</lon>
   </site>
   <inputs>
-   <met>/groups/dlebauer/data/sites/mandifore/NARR_ED2_site_1-18168</met>
+   <met>
+    <path>/groups/dlebauer/data/sites/mandifore/NARR_ED2_site_1-18168</path>
+   </met>
    <veg>
     <path>/data/oge2OLD/OGE2_</path>
    </veg>
@@ -88,9 +89,15 @@
    <thsum>
     <path>/data/ed_inputs/</path>
    </thsum>
-   <pss>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss</pss>
-   <css>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css</css>
-   <site>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.5lon-81.5.site</site>
+   <pss>
+    <path>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss</path>
+   </pss>
+   <css>
+    <path>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css</path>
+   </css>
+   <site>
+    <path>/groups/dlebauer/data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.5lon-81.5.site</path>
+   </site>
   </inputs>
   <start.date>2001-01-01</start.date>
   <end.date>2003-12-31</end.date>
@@ -107,8 +114,8 @@
    <mpirun>module load openmpi3; mpirun</mpirun>
   </modellauncher>
   <prerun>module load openmpi3 R</prerun>
-  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-10-20-21-55/run</rundir>
-  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-10-20-21-55/out</outdir>
+  <rundir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/run</rundir>
+  <outdir>/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-20-36-49/out</outdir>
  </host>
  <settings.info>
   <deprecated.settings.fixed>TRUE</deprecated.settings.fixed>
@@ -116,7 +123,7 @@
   <checked>TRUE</checked>
  </settings.info>
  <workflow>
-  <id>2022-10-10-20-21-55</id>
+  <id>2022-10-11-20-36-49</id>
  </workflow>
  <rundir>/home/ericrscott/model-vignettes/ED2/MANDIFORE_runs/MANDIFORE-SEUS-9247/outdir/run</rundir>
  <modeloutdir>/home/ericrscott/model-vignettes/ED2/MANDIFORE_runs/MANDIFORE-SEUS-9247/outdir/out</modeloutdir>

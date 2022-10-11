@@ -32,7 +32,7 @@ We don't need all columns to generate pecan.xml files.
 ```{r}
 mandifore <- 
   mandifore_raw %>% 
-  select(-duration, -created_at, -file_path) %>% 
+  dplyr::select(-duration, -created_at, -file_path) %>% 
   mutate(across(ends_with("_date"), lubridate::dmy_hms)) %>% 
   arrange(site_id, format_name)
 mandifore
@@ -54,15 +54,16 @@ met <-
   mandifore %>% 
   filter(format_name == "ed.met_driver_header files format") %>% 
   rename_with(~paste0("met_", .), c(filename, start_date, end_date)) %>% 
-  select(-format_name)
+  dplyr::select(-format_name)
 
 cohort <- 
   mandifore %>% 
   filter(format_name == "ED2.cohort") %>% 
   rename(cohort_filename = filename) %>% 
-  select(-format_name)
+  dplyr::select(-format_name)
 
-new_sites <- full_join(met, cohort, by = c("site_id", "sitename", "lon", "lat")) %>% 
+new_sites <- 
+  full_join(met, cohort, by = c("site_id", "sitename", "lon", "lat")) %>% 
   ungroup()
 new_sites
 ```
