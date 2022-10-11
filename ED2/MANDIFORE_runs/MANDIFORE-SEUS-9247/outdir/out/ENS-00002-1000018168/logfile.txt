@@ -1,0 +1,112 @@
+Logging on 2022/10/11_15:46:08
+Lmod has detected the following error: The following module(s) are unknown:
+"singularity"
+
+Please check the spelling or version number. Also try "module spider ..."
+It is also possible your cache file is out-of-date; it may help to try:
+  $ module --ignore-cache load "singularity"
+
+Also make sure that all modulefiles written in TCL start with the string
+#%Module
+
+
+
+/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/run/ENS-00002-1000018168
++---------------- MPI parallel info: --------------------+
++  - Machnum  =      0
++  - Machsize =      1
++---------------- OMP parallel info: --------------------+
++  - thread  use:       1
++  - threads max:       1
++  - cpu     use:       1
++  - cpus    max:       1
++  Note: Max vals are for node, not sockets.
++--------------------------------------------------------+
+ + Read namelist information.
+ + Copy most namelist variables.
+ + Check whether to restore the run.
+ + Copy initialisation-dependent variables.
++------------------------------------------------------------+
+|           Ecosystem Demography Model, version 2.2           
++------------------------------------------------------------+
+|  Input namelist filename is ED2IN
+|
+|  Single process execution on INITIAL run.
++------------------------------------------------------------+
+  => Generating the land/sea mask.
+ + Work allocation, node     1;
+ + Polygon array allocation, node     1;
+ + Memory successfully allocated on none     1;
+ [+] Init_random_seed...
+ [+] Load_Ed_Ecosystem_Params...
+----------------------------------------
+  Treefall disturbance parameters:
+  - LAMBDA_REF  =  1.25000E-02
+  - LAMBDA_EFF  =  1.25000E-02
+  - TIME2CANOPY =  0.00000E+00
+----------------------------------------
+ [+] Checking for XML config...
+ count xml pft : /groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/run/ENS-00002-1000018168/config.xml
+ NPFT =            1
+ MAXPFT =            1
+ Opening ED2 XML Config file/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/run/ENS-00002-1000018168/config.xml
+ EXTERN READ FROM FILE ::           0
+ MET READ FROM FILE ::           0
+ CAN_AIR READ FROM FILE ::           0
+ MISC READ FROM FILE ::           0
+ ED_MISC READ FROM FILE ::           1
+ Number of land use types to be read from file =     0
+ NPFT =            1
+ PFT's READ FROM FILE ::           1
+ PFTCONST READ FROM FILE ::           0
+ HYDROLOGY READ FROM FILE ::           0
+ SCENARIO READ FROM FILE ::           0
+ LAPSE READ FROM FILE ::           0
+ CANOPY RADIATION READ FROM FILE ::           1
+ BUDGET READ FROM FILE ::           0
+ SOIL READ FROM FILE ::           0
+ DECOMPOSITION READ FROM FILE ::           0
+ FUSEFISS READ FROM FILE ::           0
+ HORIZONTAL SHADING READ FROM FILE ::           0
+ DISTURBANCE READ FROM FILE ::           0
+ PHENOLOGY READ FROM FILE ::           0
+ PHYSIOLOGY READ FROM FILE ::           0
+ INITCOND READ FROM FILE ::           0
+ TOPMODEL enabled, setting ISOILBC to 0
+ [+] Init_derived_params_after_xml...
+ [+] Write parameters to xml...
+ Wrote Config Record:/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/out/ENS-00002-1000018168/history.xml
+ [+] Alloc_Soilgrid...
+ [+] Set_Polygon_Coordinates...
+ [+] Sfcdata_ED...
+ [+] Load_Ecosystem_State...
+ + Doing sequential initialization over nodes.
+ + Initializing from ED restart file. Node: 001
+ [-] filelist_f: Checking prefix:  /data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.
+                 Prefix length:       80
+ +  Showing all     3 files:
+   [-] File #:      1 /data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css
+   [-] File #:      2 /data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss
+   [-] File #:      3 /data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.5lon-81.5.site
+Using patch file: /data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.pss
+Using cohort file: /data/sites/mandifore/FIA_ED2_site_1-18168/siteid1000018168.fia2000.radius0.075.lat35.4979lon-81.0724.css
+I found a cohort with PFT=     8  and it is not in your include_these_pft...
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+ 
+--------------------------------------------------------------
+                     !!! FATAL ERROR !!!                      
+--------------------------------------------------------------
+    ---> File:        ed_history_io.f90
+    ---> Subroutine:  read_ed10_ed20_history_file
+    ---> Reason:      Invalid PFT in history file
+--------------------------------------------------------------
+ ED execution halts (see previous error message)...
+--------------------------------------------------------------
+Note: The following floating-point exceptions are signalling: IEEE_OVERFLOW_FLAG
+STOP fatal_error
+ERROR IN MODEL RUN
+Logfile is located at '/groups/dlebauer/ed2_results/pecan_remote/2022-10-11-22-34-46/out/ENS-00002-1000018168/logfile.txt'
+************************************************* End Log 2022/10/11_15:46:08
+
