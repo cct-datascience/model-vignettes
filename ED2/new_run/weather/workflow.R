@@ -19,7 +19,7 @@ driver_path_local
 # Edit `host` to be whatever is in your .ssh/config
 host <- "puma"
 
-driver_path_hpc <- file.path(paste0(host, ":"), "groups/dlebauer/ed2_results/inputs/julianp/sites", basename(driver_path_local))
+driver_path_hpc <- file.path(paste0(host, ":"), "/groups/dlebauer/data/sites", basename(driver_path_local))
 driver_path_hpc
 system2("rsync", args = c(
   "-a", "-q", "--delete",
