@@ -1,6 +1,6 @@
 ---
 title: "Predicting Setaria growth by modeling ensemble results"
-author: Kristina Riemer
+author: Kristina Riemer & David LeBauer
 output: github_document
 ---
 
@@ -11,14 +11,17 @@ sites and times. Inputs that can be changed are parameter values and site-level
 environmental variables. 
 
 Necessary packages: 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(PEcAn.settings)
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(leaflet)
 library(daymetr)
 library(ggplot2)
 library(tidymodels)
+library(readr)
+library(vip)
 ```
 
 
@@ -31,9 +34,11 @@ Steps:
 
 1. Get cumulative monthly NPP by ensemble and site (from ensemble.ts .Rdata file, which has hourly values by ensemble)
 2. Get parameter values for each ensemble run (from ensemble.samples .Rdata file; same across years)
-3. Get monthly environmental values for each site and year (lookup from MERRA or another gridded resource)
+3. Get monthly environmental values for each site and year (lookup from Daymet)
 
-Five sites: 
+### Step 0: get site info
+
+We currently have ED2 results for five sites across North America. Get dataframe of site coordinates and run dates. 
 
 ```{r}
 sites <- c()
@@ -48,7 +53,7 @@ for(site in site_list_kr){
   sites <- bind_rows(sites, site)
 }
 
-pecan_xml_NC <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_NC/pecan_checked_2022-08-12.xml")
+pecan_xml_NC <- read.settings("/data/output/pecan_runs/transect_runs/ed2_transect_NC/pecan_checked.xml")
 site_NC <- data.frame(name = "North Carolina Loblolly Pine (US-NC2)", id = pecan_xml_NC$run$site$id,
                      lat = pecan_xml_NC$run$site$lat, lon = pecan_xml_NC$run$site$lon, 
                      start = pecan_xml_NC$run$start.date, end = pecan_xml_NC$run$end.date, 
@@ -63,18 +68,22 @@ site_WL <- data.frame(name = pecan_xml_WL$run$site$name, id = pecan_xml_WL$run$s
 sites <- bind_rows(sites, site_WL) %>% 
   mutate(lat = as.numeric(lat), 
          lon = as.numeric(lon))
+sites
+```
 
+Plot site locations. 
+
+```{r}
+# leaflet(sites) %>% addTiles() %>%
+#   addCircleMarkers(lng = ~lon, lat = ~lat, 
+#              popup = ~name)
 ```
 
 ### Step 1: ensemble results data
 
-Code from [`plot.R`](https://github.com/cct-datascience/model-vignettes/blob/6a77020a1218334cc8243f3f4b038fb99c947006/ED2/SR_recent_mult_set_run/plot.R)
+From dataframe of ED2 results for all ensemble runs daily results, summarize data to include only the Setaria PFT and August dates. 
 
-Get this by PFT, for Setaria
-To limit to just Setaria PFT, need to pull directly from ED2 h5 files, use npp_out csv file
-TODO: generate npp_out for three previous sites
-Just August of first year, to start
-This comes monthly? 
+Code from [`plot.R`](https://github.com/cct-datascience/model-vignettes/blob/6a77020a1218334cc8243f3f4b038fb99c947006/ED2/SR_recent_mult_set_run/plot.R)
 
 ```{r}
 site_list_ec <- c("NC", "WL")
@@ -105,12 +114,12 @@ ens_results <- ens_results%>%
   mutate(year = year(ymd(date))) %>% 
   select(-date)
 
+head(ens_results)
 ```
 
 ### Step 2: parameter values
 
-For only Setaria PFT? 
-Assuming order of ensembles is the same in this file as in the ensembles result
+Getting dataframe of parameter values for each ensemble run for each site. We assume the order of ensembles in the .Rdata file is in ascending order, and are only using values for Setaria.
 
 ```{r}
 params <- c()
@@ -142,20 +151,25 @@ for(site in site_list_kr){
   rm(ens.samples)
 }
 
+head(params)
 ```
 
 Combine parameters with ensemble results by site and ensemble. 
 
 ```{r}
 ens_params <- left_join(ens_results, params, by = c("ensemble", "site"))
+head(ens_params)
 ```
 
 ### Step 3: environmental data
 
+Download data for these sites and years from [Daymet](https://daymet.ornl.gov/overview). 
 
-```{r cache=TRUE}
-mets <- list()
-for(i in 1:nrow(sites)){
+```{r}
+met_data_path <- "/data/output/daymet/ensembles_modeling/model_met.csv"
+if(!file.exists(met_data_path)){
+  mets <- list()
+  for(i in 1:nrow(sites)){
     site <- sites[i,]
     tmp <- 
         download_daymet(
@@ -163,18 +177,24 @@ for(i in 1:nrow(sites)){
                     lat = site$lat, 
                     lon = site$lon, 
                     start = year(ymd(site$start)),
-                    end = 2019 #year(ymd(site$end))
-                                #    for some reason site WL only says it goes to 2015 
+                    end = 2019
                     )
     mets[[site$name]] <- cbind(site = tmp$site,
                                lat = tmp$lat,
                                lon = tmp$longitude,
                                alt = tmp$altitude,
                                tmp$data)
-}
+    }
 
-mets_all <- dplyr::bind_rows(mets)
-readr::write_csv(mets_all, 'mets_all.csv')
+  mets_all <- dplyr::bind_rows(mets)
+  write_csv(mets_all, met_data_path)
+}
+```
+
+Get mean environmental variables of interest for July and August of each year by site. 
+
+```{r, message=FALSE, warning=FALSE}
+met_data <- read_csv(met_data_path)
 
 mymean <- function(x) {
     a <- mean(x, na.rm = TRUE)
@@ -182,9 +202,7 @@ mymean <- function(x) {
     return(b)
 }
 
-mets_mean_summer <- mets_all  %>% 
-#  group_by(site) %>% 
-#  filter(year == min(year)) %>% 
+mets_mean_summer <- met_data %>% 
   mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
          month = month(ymd(date))) %>% 
   filter(month %in% c(7, 8)) %>% 
@@ -196,26 +214,24 @@ mets_mean_summer <- mets_all  %>%
     mean_srad = mymean(srad..W.m.2.),
     mean_swe = mymean(swe..kg.m.2.),
     mean_dayl = mymean(dayl..s.)/86400)
+
+head(mets_mean_summer)
 ```
 
 ```{r}
 ens_params_env <- left_join(ens_params, mets_mean_summer, by = c("site", "year")) %>%
   janitor::clean_names()
+
+head(ens_params_env)
 ```
 
 
 ## Model
 
-Machine learning model for prediction? 
+Using a random forest model to model NPP for each site with environmental data and parameter values. Will use to predict using different parameter values and environmental data as input. 
 
-Need to get new environmental data given a site and time
+Investigating relationship between NPP and possible features of interest. 
 
-Goal: predict NPP given parameter and environmental input, so for modified Setaria at new site
-
-supervised learning, regression
-features (=variables, or columns in data) should be independent and informative (remove some params and env? are measured params more informative?)
-linear relationships? 
-which of these are photosynthetic params? 
 ```{r}
 ggplot(ens_params_env, aes(x = quantum_efficiency, y = npp)) +
   geom_point() + 
@@ -231,75 +247,47 @@ ggplot(ens_params_env, aes(x = mean_precip, y = npp)) +
 
 ### Simple models
 
+Use anova to determine which parameter and environmental variables have a significant effect on NPP. 
+
 ```{r}
-aov(npp ~ ., data = ens_params_env) %>% 
+sig_vars <- aov(npp ~ ., 
+                data = ens_params_env %>% select(-ensemble, -site, -year, -mean_dayl)) %>% 
   broom::tidy() %>% 
-  mutate_if(is.numeric, signif, 3)
-
-z <- aov(npp ~ ., data = ens_params_env %>% select(-ensemble, -site, -year, -mean_dayl)) 
-zz <- z %>% 
-  broom::tidy() %>% 
-  mutate_if(is.numeric, signif, 3)
-
-zz %>% # print out names of variables to keep
+  mutate_if(is.numeric, signif, 3) %>% 
   filter(p.value < 0.1) %>% 
-  select(term) %>% 
-  gsub('\"', '', .) %>% 
-  paste0(collapse = ', ')
-options(scipen=2)
+  select(term)
+sig_vars
+```
+
+Assessing linear relationship between parameter and environmental variables and NPP. 
+
+```{r}
 lm(npp ~ ., data = ens_params_env) %>% 
   broom::tidy() %>% 
   mutate_if(is.numeric, signif, 3)
-
 ```
 
-only sensible if we remove year, ensemble, site
+### Prepare data for machine learning models
 
-### Advanced models
+Generate training data. Choosing to hold out no testing data from this dataset because it is limited in size, and only including data with a large number of ensembles. Also only including features that had statistically significant impact in ANOVA and the parameters relevant to the three modified plants. 
 
-
-naive bayes? -nope, for classification
-decision tree or random forest? (latter is more accurate than interpretable)
-accuracy vs interpretability? former
-
-for predicting, give it the same input data but change the quantum efficiency parameter? 
-
-
-### Random forest
-
-split dataset
 ```{r}
 set.seed(1234)
 ens_params_env %>% group_by(site, year) %>% summarise(n = n())
 
-t <- ens_params_env %>% 
-  filter(site == "WL" & year > 2012) %>% 
-  select(-site, -year, -ensemble, # these are accounted for by other variables
-         -mean_srad, -mean_swe, -mean_dayl) # these aren't of primary interest
-data_split <- initial_split(ens_params_env)
-data_train <- t #%>% #training(data_split) 
-                #train on entire thing. can always generate new test data 
-  # select(-ensemble, -site, -year)
-  #select(npp, mort2, growth_resp_factor, leaf_turnover_rate, leaf_width, fineroot2leaf, seedling_mortality, mean_vpd, mean_precip, mean_srad)
-  # select what is significant from aov above
-  # 
-
-#data_test <- testing(data_split)
-
+data_train <- ens_params_env %>% 
+  filter(!(site == "WL" & year > 2012)) %>% 
+  select(npp, stomatal_slope, cuticular_cond, quantum_efficiency, fineroot2leaf, sig_vars$term)
 ```
 
-preprocess training data
+Preprocess training data, including removing features that are not useful or of interest. 
 ```{r}
-data_recipe <- recipe(npp ~ ., data = data_train) #%>% 
-  #step_naomit()
-  # step_rm(c(ensemble, site, year)) 
-  # update_role(ensemble, new_role = "ID") %>% 
-  # update_role(site, new_role = "ID")
-#step_rm to remove predictors
+data_recipe <- recipe(npp ~ ., data = data_train)
 ```
 
+### Model with linear regression
 
-### Linear Regression
+Set up model, create workflow, fit model to training data, and use cross-validation to generate model metrics to evaluate. 
 
 ```{r}
 lm_model <- 
@@ -310,127 +298,110 @@ lm_wf <- workflow() %>%
   add_recipe(data_recipe) %>% 
   add_model(lm_model)
 
-model_fit <- lm_wf %>% 
+lm_fit <- lm_wf %>% 
   fit(data = data_train)
 
-folds <- vfold_cv(data_train)
-resamp_wf <- workflow() %>% 
+lm_folds <- vfold_cv(data_train)
+lm_resamp_wf <- workflow() %>% 
   add_recipe(data_recipe) %>% 
   add_model(lm_model)
-resamp_fit <- fit_resamples(resamp_wf, folds, 
-                            #metrics = metric_set(accuracy, sens, spec),
+lm_resamp_fit <- fit_resamples(lm_resamp_wf, lm_folds, 
                             control = control_resamples(save_pred = TRUE))
-resamp_metrics <- collect_metrics(resamp_fit)
-
-resamp_metrics
+lm_resamp_metrics <- collect_metrics(lm_resamp_fit)
 ```
 
-### Random Forest
-specify model
+### Model with random forest
+
+Set up model, create workflow, fit model to training data, and use cross-validation to generate model metrics to evaluate. 
+
 ```{r}
 rf_model <- rand_forest() %>% 
   set_mode("regression") %>% 
-  set_engine("ranger")
-```
+  set_engine("ranger", importance = 'impurity')
 
-do workflow
-```{r}
-data_wf <- workflow() %>% 
+rf_wf <- workflow() %>% 
   add_recipe(data_recipe) %>% 
   add_model(rf_model)
-```
 
-fit model
-```{r}
-model_fit <- data_wf %>% 
+rf_fit <- rf_wf %>% 
   fit(data = data_train)
-```
 
-cross-validate data and evaluate
-```{r}
-folds <- vfold_cv(data_train)
-resamp_wf <- workflow() %>% 
+rf_folds <- vfold_cv(data_train)
+rf_resamp_wf <- workflow() %>% 
   add_recipe(data_recipe) %>% 
   add_model(rf_model)
-resamp_fit <- fit_resamples(resamp_wf, folds, 
-                            #metrics = metric_set(accuracy, sens, spec),
+rf_resamp_fit <- fit_resamples(rf_resamp_wf, rf_folds, 
                             control = control_resamples(save_pred = TRUE))
-resamp_metrics <- collect_metrics(resamp_fit)
+rf_resamp_metrics <- collect_metrics(rf_resamp_fit)
+rf_resamp_metrics
 ```
 
-rmse: average deviation between predicted npp and measured npp; 0 means perfect fit, closer to zero is better
-rsq; how much variation in npp explained by predictor variables; from 0 to 1, closer to 1 is better
+Metrics definitions: 
+
+- `rmse`: average deviation between predicted NPP and measured NPP; 0 means perfect fit, closer to zero is better
+- `rsq`: how much variation in NPP explained by predictor variables; from 0 to 1, closer to 1 is better
 
 ```{r}
-rmse <- resamp_metrics %>% filter(.metric == 'rmse') %>% select(mean) 
-rmse/mean(data_train$npp) #this is high, want it below 10%? 
-```
-
-
-options to improve model: 
-
-- reduce features?
-- hypertune parameters
-
-### Predicting from model
-
-Use model predictions to get wild type npp using median values from sensitivity analysis
-
-```{r}
-
-load('/data/tests/ed2_SR_recent_sa/sensitivity.samples.NOENSEMBLEID.Rdata')
-example_wt_data <- as.data.frame(sa.samples$SetariaWT['50',]) %>%
-  janitor::clean_names()
-
-```
-
-run model
-```{r}
-newx <- cbind(example_wt_data, 
-              mean_temp = 18.26, 
-              mean_vpd = 1140, 
-              mean_precip = 3.4)
-
-example_wt_data$npp_pred <- predict(model_fit, newx, type = "numeric")
-```
-
-set up grid by adding environmental data for new sites, and keeping same param values
-
-change by 10% or +/- 1 SD
-fineroot2leaf, would be higher with shorter plant
-quantum_efficiency, would be lower with antho plant
-stomatal_slope, would be higher with cooler leaf
-
-### Save environment
-
-```{r}
-save.image('~/model-vignettes/ED2/ensembles_modeling/predict_growth.Rdata')
+rf_rmse <- rf_resamp_metrics %>% filter(.metric == 'rmse') %>% select(mean) 
+rf_rmse/mean(data_train$npp) #this is high, want it below 10%? 
 ```
 
 ## Predictions
 
-```{r}
-mets <- list()
-for(i in 1:nrow(sites)){
-    site <- sites[i,]
-    tmp <- 
-        download_daymet(
-                    site = site$site,
-                    lat = site$lat, 
-                    lon = site$lon, 
-                    start = year(ymd(site$start)),
-                    end = 2019 #year(ymd(site$end))
-                                #    for some reason site WL only says it goes to 2015 
-                    )
-    mets[[site$name]] <- cbind(site = tmp$site,
-                               lat = tmp$lat,
-                               lon = tmp$longitude,
-                               alt = tmp$altitude,
-                               tmp$data)
-}
 
-mets_all <- dplyr::bind_rows(mets)
-readr::write_csv(mets_all, 'mets_all.csv')
+### Get environmental data for predictions
+
+Set up file of locations to get environmental variable data for. 
+
+```{r}
+pred_sites_path <- "/data/output/daymet/ensembles_modeling/preds_sites.csv"
+
+if(!file.exists(pred_sites_path)){
+  pred_lats <- seq(35, 40, by = 0.25)
+  pred_lons <- seq(-105, -80, by = 0.25)
+  n <- expand.grid(pred_lats, pred_lons)
+  pred_sites <- data.frame(site = 1:nrow(n), n)
+  colnames(pred_sites) <- c('site', 'lat', 'lon')
+  write.table(pred_sites, pred_sites_path,
+              sep = ",",
+              col.names = TRUE,
+              row.names = FALSE,
+              quote = FALSE)
+}
+```
+
+Download data for those locations, and save out as a file because this can take a long time depending on number of sites. 
+
+```{r}
+pred_met_data_path <- "/data/output/daymet/ensembles_modeling/preds_met.csv"
+
+ptm <- proc.time()
+if(!file.exists(pred_met_data_path)){
+  df_batch <- download_daymet_batch(
+    file_location = pred_sites_path,
+    start = 2010,
+    end = 2014,
+    internal = TRUE)
+  
+  pred_mets <- list()
+  for(i in 1:length(df_batch)){
+    tmp <- df_batch[[i]]
+    pred_mets[[i]] <- cbind(site = tmp$site,
+                          lat = tmp$lat,
+                          lon = tmp$longitude,
+                          alt = tmp$altitude,
+                          tmp$data)
+    }
+  pred_mets_all <- bind_rows(pred_mets)
+  write_csv(pred_mets_all, pred_met_data_path)
+}
+proc.time() - ptm
+```
+
+Get mean environmental variables of interest for July and August of each year by site. 
+
+```{r, message=FALSE, warning=FALSE}
+pred_mets <- read_csv(pred_met_data_path)
 
 mymean <- function(x) {
     a <- mean(x, na.rm = TRUE)
@@ -438,9 +409,7 @@ mymean <- function(x) {
     return(b)
 }
 
-mets_mean_summer <- mets_all  %>% 
-#  group_by(site) %>% 
-#  filter(year == min(year)) %>% 
+pred_mets_mean_summer <- pred_mets  %>% 
   mutate(date = as.Date(yday - 1, origin = paste0(year, "-01-01")), 
          month = month(ymd(date))) %>% 
   filter(month %in% c(7, 8)) %>% 
@@ -452,4 +421,198 @@ mets_mean_summer <- mets_all  %>%
     mean_srad = mymean(srad..W.m.2.),
     mean_swe = mymean(swe..kg.m.2.),
     mean_dayl = mymean(dayl..s.)/86400)
+
+head(pred_mets_mean_summer)
+```
+
+### Create parameter sets
+
+Generating sets of parameter values for wild type Setaria, and three modified Setaria plants. Parameter values are increased or decreased by 25% for modified plants, as specified in the list below. 
+
+1. `hotleaf`: parameters stomatal slope and cuticular conductance are lower resulting in warmer temperature leaves
+2. `antho`: plants with increased anthocyanin production have lower quantum efficiency
+3. `short`: plants that are shorter in height would have higher fine root to leaf carbon allocation
+
+The wild type parameter values, which are used to generate the other parameter sets, come from an ED2 run at the Santa Ritas site. The median quantile for values are used. 
+
+```{r, message=FALSE, warning=FALSE}
+load('/data/tests/ed2_SR_recent_sa/sensitivity.samples.NOENSEMBLEID.Rdata')
+
+params_wt <- data.frame(sa.samples$SetariaWT) %>% 
+  filter(row.names(.) == "50") %>% 
+  janitor::clean_names()
+  
+inputs_wt <- cbind(pred_mets_mean_summer, params_wt)
+inputs_wt
+```
+
+Modified Setaria plants have parameter lists that are generated based on the wild type values. 
+
+```{r}
+inputs_hotleaf <- inputs_wt %>% 
+  mutate(stomatal_slope = 0.75 * stomatal_slope,
+         cuticular_cond = 0.75 * cuticular_cond)
+
+inputs_antho <- inputs_wt %>% 
+  mutate(quantum_efficiency = 0.75 * quantum_efficiency)
+
+inputs_short <- inputs_wt %>% 
+  mutate(fineroot2leaf = 1.25 * fineroot2leaf)
+```
+
+### Get predictions
+
+Generate predictions of NPP for all four types of Setaria at all sites, combined and cleaned up in a single dataframe. 
+
+```{r}
+npp_pred <- predict(rf_fit, 
+                    inputs_wt, 
+                    type = "numeric")$.pred
+
+npp_pred_hotleaf <- predict(rf_fit, 
+                            inputs_hotleaf, 
+                            type = "numeric")$.pred
+
+npp_pred_antho <- predict(rf_fit, 
+                            inputs_antho, 
+                            type = "numeric")$.pred
+
+npp_pred_short <- predict(rf_fit, 
+                            inputs_short, 
+                            type = "numeric")$.pred
+
+preds <- data.frame(site    = inputs_wt$site, 
+                    year    = inputs_wt$year, 
+                    wt      = npp_pred,
+                    hotleaf = npp_pred_hotleaf,
+                    anthox  = npp_pred_antho,
+                    short   = npp_pred_short) %>% 
+  left_join(., pred_mets %>% select(site, lat, lon) %>% distinct(), by = "site") %>% 
+  select(-site)
+
+preds_long <- preds %>% 
+  pivot_longer(cols = c(-lat, -lon, -year))
+
+head(preds)
+```
+
+Getting percent difference between wild type predictions and three modified plants predictions. 
+
+$$
+percent difference = \frac{mod - wt}{wt} * 100
+$$
+
+```{r}
+preds_perc_diff <- preds %>% 
+  transmute(lat = lat,
+            lon = lon,
+            year = year, 
+            d_hotleaf = (hotleaf - wt) / wt * 100, 
+            d_anthox  = (anthox - wt) / wt * 100, 
+            d_short   = (short - wt) / wt * 100)
+
+preds_perc_diff_long <- preds_perc_diff %>% 
+  pivot_longer(cols = c(-lat, -lon, -year))
+
+head(preds_perc_diff)
+```
+
+### Plot predictions
+
+Create background map for all plots. 
+
+```{r}
+NA_background <- map_data("state")
+NA_map <- ggplot() +
+  geom_polygon(data = NA_background, 
+               aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black")
+```
+
+Plot predictions values on map for all Setaria types. Due to not being able to install the `gifski` R package on Welsch, the commented out code to generating a gif by year has to be run outside of Welsch. 
+
+```{r}
+NA_map +
+  geom_raster(data = preds_long, aes(x = lon, y = lat, fill = value), 
+              alpha = 0.9) +
+  coord_cartesian(xlim = c(-108, -78), ylim = c(33, 42)) +
+  theme_classic(base_size = 12) +
+  theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+        panel.grid.major = element_line(colour = "grey"),
+        panel.grid.minor = element_line(colour = "grey")) +
+  labs(x = "", y = "", fill = "") +
+  facet_grid(name ~ year)
+# write.csv(preds_long, "predictions.csv", row.names = FALSE)
+#   facet_grid(~name) +
+#   transition_manual(year) +
+#   ggtitle('Year: {current_frame}')
+# 
+# animate(preds_gif)
+# anim_save("predictions.gif", animation = preds_gif)
+```
+
+Plot percent difference between wild type Setaria and three modified plants on map. Due to not being able to install the `gifski` R package on Welsch, the commented out code to generating a gif by year has to be run outside of Welsch. 
+
+```{r}
+#write.csv(preds_perc_diff_long, "predictions_perc.csv", row.names = FALSE)
+dp <- list()  
+color_scales <- c("YlOrRd", "RdPu", "YlGnBu")
+
+for(i in 1:length(unique(preds_perc_diff_long$name))){
+  dname <- unique(preds_perc_diff_long$name)[i]
+  df <- preds_perc_diff_long %>% 
+    filter(name == dname)
+  dp[[dname]] <- NA_map +
+    geom_raster(data = df, aes(x = lon, y = lat, fill = value), 
+              alpha = 0.9) +
+  scale_fill_distiller(palette = color_scales[i]) +
+    coord_cartesian(xlim = c(-108, -78), ylim = c(33, 42))  +
+    theme_classic(base_size = 12) +
+    theme(panel.background = element_rect(fill = "grey", colour = "grey"), 
+          panel.grid.major = element_line(colour = "grey"),
+          panel.grid.minor = element_line(colour = "grey")) +
+    labs(x = "", y = "", fill = "") +
+    facet_wrap(~name)
+  #   transition_manual(year) +
+  #   ggtitle('Year: {current_frame}')
+  # anim_save(paste0(dname, "_predictions.gif"), animation = dp[[dname]], height = 200, width = 600)
+}
+
+cowplot::plot_grid(plotlist = dp)
+```
+
+There are two possible measures of importance for random forest models. The first uses randomly shuffled left out data called OOB. The second, which we chose to use above when specifying the model, is the residual sum of squares of node impurity. 
+
+The `vip` R package requires a newer version of R than Welsch currently has, so this chunk has to be run with the saved out model fit in a different instance of RStudio. 
+
+```{r, eval=FALSE}
+labels <- c(
+  mort2 = 'Mortality', 
+  growth_resp_factor = 'Growth Respiration', 
+  leaf_turnover_rate = 'Leaf Turnover Rate', 
+  leaf_width = 'Leaf Width', 
+  nonlocal_dispersal = 'Seed Dispersal', 
+  fineroot2leaf = 'Root:Leaf C Allocation', 
+  root_turnover_rate = "Root Turnover Rate", 
+  seedling_mortality = "Seedling Mortality", 
+  stomatal_slope = "Stomatal Slope", 
+  quantum_efficiency = "Quantum Efficiency", 
+  vcmax = "Vcmax", 
+  r_fract = "Respiration Fraction", 
+  cuticular_cond = "Cuticular Conductance", 
+  root_respiration_rate = "Root Respiration", 
+  vm_low_temp = "Min Temp Photosynthesis", 
+  sla = "Specific Leaf Area", 
+  mean_temp = "Air Temperature", 
+  mean_vpd = "Vapor Pressure Deficit", 
+  mean_precip = "Precipitation", 
+  mean_srad = "Solar Radiation", 
+  mean_swe = "Soil Moisture"
+)
+
+rf_fit %>% 
+  extract_fit_parsnip() %>%
+  vip(num_features = 10, geom = 'point') + 
+  theme_minimal() + 
+  scale_x_discrete(labels = labels)
 ```
